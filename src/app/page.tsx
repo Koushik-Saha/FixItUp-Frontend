@@ -38,7 +38,7 @@ export default function HomePage() {
     {
       id: '1',
       name: 'iPhone 15 Pro Max',
-      image: 'https://images.unsplash.com/photo-1696446702883-69bf4a342753?w=400&h=400&fit=crop',
+      image: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400&h=400&fit=crop',
       price: 1199,
       originalPrice: 1299,
       discount: 8,
