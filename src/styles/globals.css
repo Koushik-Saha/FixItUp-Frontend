@@ -7,32 +7,32 @@
     /* Color System */
     --background: 0 0% 100%;
     --foreground: 0 0% 10%;
-    
+
     --card: 0 0% 100%;
     --card-foreground: 0 0% 10%;
-    
+
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
-    
+
     --primary: 217 91% 60%; /* #3B82F6 */
     --primary-foreground: 0 0% 100%;
-    
+
     --secondary: 240 5% 96%;
     --secondary-foreground: 0 0% 10%;
-    
+
     --muted: 240 5% 96%;
     --muted-foreground: 240 4% 46%;
-    
+
     --accent: 240 5% 96%;
     --accent-foreground: 0 0% 10%;
-    
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
+
     --border: 240 6% 90%;
     --input: 240 6% 90%;
     --ring: 217 91% 60%;
-    
+
     --radius: 0.5rem;
 
     /* Custom Fonts */
@@ -41,32 +41,32 @@
   }
 
   .dark {
-    --background: 0 0% 6%; /* #0F0F0F */
+    --background: 0 0% 10%;
     --foreground: 0 0% 98%;
-    
-    --card: 0 0% 10%;
+
+    --card: 0 0% 14%;
     --card-foreground: 0 0% 98%;
-    
-    --popover: 0 0% 10%;
+
+    --popover: 0 0% 14%;
     --popover-foreground: 0 0% 98%;
-    
+
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    
-    --secondary: 240 4% 16%;
+
+    --secondary: 240 4% 20%;
     --secondary-foreground: 0 0% 98%;
-    
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
-    
-    --accent: 240 4% 16%;
+
+    --muted: 240 4% 20%;
+    --muted-foreground: 240 5% 70%;
+
+    --accent: 240 4% 20%;
     --accent-foreground: 0 0% 98%;
-    
-    --destructive: 0 63% 31%;
+
+    --destructive: 0 63% 50%;
     --destructive-foreground: 0 0% 98%;
-    
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
+
+    --border: 240 4% 25%;
+    --input: 240 4% 20%;
     --ring: 217 91% 60%;
   }
 }
@@ -75,7 +75,7 @@
   * {
     @apply border-border;
   }
-  
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -93,7 +93,7 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-neutral-100 dark:bg-neutral-900;
+    @apply bg-neutral-100 dark:bg-neutral-800;
   }
 
   ::-webkit-scrollbar-thumb {
@@ -111,7 +111,7 @@
 
   /* Selection */
   ::selection {
-    @apply bg-retail-primary/20 text-foreground;
+    @apply bg-retail-primary/20;
   }
 }
 
@@ -180,18 +180,18 @@
   /* Fade Edges for Horizontal Scroll */
   .fade-edges {
     mask-image: linear-gradient(
-      to right,
-      transparent,
-      black 5%,
-      black 95%,
-      transparent
+            to right,
+            transparent,
+            black 5%,
+            black 95%,
+            transparent
     );
     -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      black 5%,
-      black 95%,
-      transparent
+            to right,
+            transparent,
+            black 5%,
+            black 95%,
+            transparent
     );
   }
 }
@@ -209,11 +209,23 @@
 .animate-shimmer {
   animation: shimmer 2s infinite;
   background: linear-gradient(
-    to right,
-    #f6f7f8 0%,
-    #edeef1 20%,
-    #f6f7f8 40%,
-    #f6f7f8 100%
+          to right,
+          #f6f7f8 0%,
+          #edeef1 20%,
+          #f6f7f8 40%,
+          #f6f7f8 100%
+  );
+  background-size: 1000px 100%;
+}
+
+/* Dark mode shimmer */
+.dark .animate-shimmer {
+  background: linear-gradient(
+          to right,
+          #1a1a1a 0%,
+          #2a2a2a 20%,
+          #1a1a1a 40%,
+          #1a1a1a 100%
   );
   background-size: 1000px 100%;
 }
