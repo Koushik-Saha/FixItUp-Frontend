@@ -11,45 +11,45 @@ import { useState } from 'react'
 // Example: Apple iPhone Models
 const APPLE_IPHONE_MODELS = [
     // iPhone 15 Series
-    { id: 'iphone-15-pro-max', name: 'iPhone 15 Pro Max', year: 2023, image: 'https://images.unsplash.com/photo-1696446702883-69bf4a342753?w=300', productCount: 234, popular: true },
-    { id: 'iphone-15-pro', name: 'iPhone 15 Pro', year: 2023, image: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300', productCount: 198, popular: true },
-    { id: 'iphone-15-plus', name: 'iPhone 15 Plus', year: 2023, image: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300', productCount: 176, popular: true },
-    { id: 'iphone-15', name: 'iPhone 15', year: 2023, image: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300', productCount: 156, popular: true },
+    { id: 'iphone-15-pro-max', name: 'iPhone 15 Pro Max', year: 2023, image: '/images/iphone-15-pro-max.jpg', productCount: 234, popular: true },
+    { id: 'iphone-15-pro', name: 'iPhone 15 Pro', year: 2023, image: '/images/iphone-15-pro.jpg', productCount: 198, popular: true },
+    { id: 'iphone-15-plus', name: 'iPhone 15 Plus', year: 2023, image: '/images/iphone-15-plus.jpg', productCount: 176, popular: true },
+    { id: 'iphone-15', name: 'iPhone 15', year: 2023, image: '/images/iphone-15.jpg', productCount: 156, popular: true },
 
     // iPhone 14 Series
-    { id: 'iphone-14-pro-max', name: 'iPhone 14 Pro Max', year: 2022, image: 'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=300', productCount: 312, popular: true },
-    { id: 'iphone-14-pro', name: 'iPhone 14 Pro', year: 2022, image: 'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=300', productCount: 289, popular: true },
-    { id: 'iphone-14-plus', name: 'iPhone 14 Plus', year: 2022, image: 'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=300', productCount: 245, popular: false },
-    { id: 'iphone-14', name: 'iPhone 14', year: 2022, image: 'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=300', productCount: 267, popular: false },
+    { id: 'iphone-14-pro-max', name: 'iPhone 14 Pro Max', year: 2022, image: '/images/iphone-14-pro-max.jpg', productCount: 312, popular: true },
+    { id: 'iphone-14-pro', name: 'iPhone 14 Pro', year: 2022, image: '/images/iphone-14-pro.jpg', productCount: 289, popular: true },
+    { id: 'iphone-14-plus', name: 'iPhone 14 Plus', year: 2022, image: '/images/iphone-14-plus.jpg', productCount: 245, popular: false },
+    { id: 'iphone-14', name: 'iPhone 14', year: 2022, image: '/images/iphone-14.jpg', productCount: 267, popular: false },
 
     // iPhone 13 Series
-    { id: 'iphone-13-pro-max', name: 'iPhone 13 Pro Max', year: 2021, image: 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=300', productCount: 389, popular: false },
-    { id: 'iphone-13-pro', name: 'iPhone 13 Pro', year: 2021, image: 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=300', productCount: 342, popular: false },
-    { id: 'iphone-13-mini', name: 'iPhone 13 Mini', year: 2021, image: 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=300', productCount: 198, popular: false },
-    { id: 'iphone-13', name: 'iPhone 13', year: 2021, image: 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=300', productCount: 301, popular: false },
+    { id: 'iphone-13-pro-max', name: 'iPhone 13 Pro Max', year: 2021, image: '/images/iphone-13-pro-max.jpg', productCount: 389, popular: false },
+    { id: 'iphone-13-pro', name: 'iPhone 13 Pro', year: 2021, image: '/images/iphone-13-pro.jpg', productCount: 342, popular: false },
+    { id: 'iphone-13-mini', name: 'iPhone 13 Mini', year: 2021, image: '/images/iphone-13-mini.jpg', productCount: 198, popular: false },
+    { id: 'iphone-13', name: 'iPhone 13', year: 2021, image: '/images/iphone-13.jpg', productCount: 301, popular: false },
 
     // iPhone 12 Series
-    { id: 'iphone-12-pro-max', name: 'iPhone 12 Pro Max', year: 2020, image: 'https://images.unsplash.com/photo-1605787020600-b9ebd5df1d07?w=300', productCount: 267, popular: false },
-    { id: 'iphone-12-pro', name: 'iPhone 12 Pro', year: 2020, image: 'https://images.unsplash.com/photo-1605787020600-b9ebd5df1d07?w=300', productCount: 234, popular: false },
-    { id: 'iphone-12-mini', name: 'iPhone 12 Mini', year: 2020, image: 'https://images.unsplash.com/photo-1605787020600-b9ebd5df1d07?w=300', productCount: 176, popular: false },
-    { id: 'iphone-12', name: 'iPhone 12', year: 2020, image: 'https://images.unsplash.com/photo-1605787020600-b9ebd5df1d07?w=300', productCount: 289, popular: false },
+    { id: 'iphone-12-pro-max', name: 'iPhone 12 Pro Max', year: 2020, image: '/images/iphone-12-pro-max.jpg', productCount: 267, popular: false },
+    { id: 'iphone-12-pro', name: 'iPhone 12 Pro', year: 2020, image: '/images/iphone-12-pro.jpg', productCount: 234, popular: false },
+    { id: 'iphone-12-mini', name: 'iPhone 12 Mini', year: 2020, image: '/images/iphone-12-mini.jpg', productCount: 176, popular: false },
+    { id: 'iphone-12', name: 'iPhone 12', year: 2020, image: '/images/iphone-12.jpg', productCount: 289, popular: false },
 
     // iPhone 11 Series
-    { id: 'iphone-11-pro-max', name: 'iPhone 11 Pro Max', year: 2019, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 198, popular: false },
-    { id: 'iphone-11-pro', name: 'iPhone 11 Pro', year: 2019, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 176, popular: false },
-    { id: 'iphone-11', name: 'iPhone 11', year: 2019, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 234, popular: false },
+    { id: 'iphone-11-pro-max', name: 'iPhone 11 Pro Max', year: 2019, image: '/images/iphone-11-pro-max.jpg', productCount: 198, popular: false },
+    { id: 'iphone-11-pro', name: 'iPhone 11 Pro', year: 2019, image: '/images/iphone-11-pro.jpg', productCount: 176, popular: false },
+    { id: 'iphone-11', name: 'iPhone 11', year: 2019, image: '/images/iphone-11.jpg', productCount: 234, popular: false },
 
     // Older Models
-    { id: 'iphone-xr', name: 'iPhone XR', year: 2018, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 156, popular: false },
-    { id: 'iphone-xs-max', name: 'iPhone XS Max', year: 2018, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 134, popular: false },
-    { id: 'iphone-xs', name: 'iPhone XS', year: 2018, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 123, popular: false },
-    { id: 'iphone-x', name: 'iPhone X', year: 2017, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 167, popular: false },
-    { id: 'iphone-8-plus', name: 'iPhone 8 Plus', year: 2017, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 145, popular: false },
-    { id: 'iphone-8', name: 'iPhone 8', year: 2017, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 156, popular: false },
-    { id: 'iphone-7-plus', name: 'iPhone 7 Plus', year: 2016, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 98, popular: false },
-    { id: 'iphone-7', name: 'iPhone 7', year: 2016, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 112, popular: false },
-    { id: 'iphone-se-2022', name: 'iPhone SE (2022)', year: 2022, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 89, popular: false },
-    { id: 'iphone-se-2020', name: 'iPhone SE (2020)', year: 2020, image: 'https://images.unsplash.com/photo-1574755393849-623942496936?w=300', productCount: 67, popular: false },
+    { id: 'iphone-xr', name: 'iPhone XR', year: 2018, image: '/images/iphone-xr.jpg', productCount: 156, popular: false },
+    { id: 'iphone-xs-max', name: 'iPhone XS Max', year: 2018, image: '/images/iphone-xs-max.jpg', productCount: 134, popular: false },
+    { id: 'iphone-xs', name: 'iPhone XS', year: 2018, image: '/images/iphone-xs.jpg', productCount: 123, popular: false },
+    { id: 'iphone-x', name: 'iPhone X', year: 2017, image: '/images/iphone-x.jpg', productCount: 167, popular: false },
+    { id: 'iphone-8-plus', name: 'iPhone 8 Plus', year: 2017, image: '/images/iphone-8-plus.jpg', productCount: 145, popular: false },
+    { id: 'iphone-8', name: 'iPhone 8', year: 2017, image: '/images/iphone-8.jpg', productCount: 156, popular: false },
+    { id: 'iphone-7-plus', name: 'iPhone 7 Plus', year: 2016, image: '/images/iphone-7-plus.jpg', productCount: 98, popular: false },
+    { id: 'iphone-7', name: 'iPhone 7', year: 2016, image: '/images/iphone-7.jpg', productCount: 112, popular: false },
+    { id: 'iphone-se-2022', name: 'iPhone SE (2022)', year: 2022, image: '/images/iphone-se-2022.jpg', productCount: 89, popular: false },
+    { id: 'iphone-se-2020', name: 'iPhone SE (2020)', year: 2020, image: '/images/iphone-se-2020.jpg', productCount: 67, popular: false },
 ]
 
 export default function BrandModelsPage() {

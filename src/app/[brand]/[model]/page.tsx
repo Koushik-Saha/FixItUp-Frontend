@@ -63,7 +63,7 @@ export default function ModelProductTypesPage() {
                         {/* Product Image */}
                         <div className="w-32 h-32 bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-700 rounded-2xl p-4 flex items-center justify-center">
                             <img
-                                src="https://images.unsplash.com/photo-1696446702883-69bf4a342753?w=300"
+                                src="/images/iphone-15-pro-max.jpg"
                                 alt="iPhone 15 Pro Max"
                                 className="w-full h-full object-contain"
                             />
