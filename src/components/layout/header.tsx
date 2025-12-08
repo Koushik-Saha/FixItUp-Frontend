@@ -178,7 +178,7 @@ export function Header() {
                 <Search className="h-5 w-5" />
               </Button>
 
-              <Link href="/wishlist">
+              <Link href="/stores">
                 <div>
                   <span className="text-sm">Find In-Store</span>
                 </div>
