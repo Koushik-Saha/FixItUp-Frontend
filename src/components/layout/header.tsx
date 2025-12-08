@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import Image from 'next/image'
 import {
   ShoppingCart,
   Search,
@@ -19,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useAuthStore, useCartStore, useWishlistStore, useUIStore } from '@/store'
+import {CategorySection} from "@/components/category-section";
 
 // All US Phone Brands
 const PHONE_BRANDS = [
@@ -137,17 +139,23 @@ export function Header() {
           <div className="flex items-center justify-between gap-4">
 
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2 rounded-xl">
-                <ShoppingCart className="h-6 w-6 text-white" />
+            <Link href="/" className="flex items-center gap-3 flex-shrink-0">
+              <div className="relative w-12 h-12">
+                <Image
+                    src="/images/fix_it_logo.png"
+                    alt="Max Fit IT"
+                    fill
+                    className="object-contain"
+                    priority
+                />
               </div>
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold text-neutral-900 dark:text-white">
+              <div>
+                <div className="text-xl font-bold text-black dark:text-white">
                   Max Fit IT
-                </h1>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                </div>
+                <div className="text-xs text-neutral-500">
                   Wholesale B2B & B2C California, USA
-                </p>
+                </div>
               </div>
             </Link>
 
@@ -169,6 +177,12 @@ export function Header() {
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Search className="h-5 w-5" />
               </Button>
+
+              <Link href="/wishlist">
+                <div>
+                  <span className="text-sm">Find In-Store</span>
+                </div>
+              </Link>
 
               {/* Wishlist */}
               <Link href="/wishlist">
@@ -227,10 +241,10 @@ export function Header() {
             className="border-t border-neutral-200 dark:border-neutral-800"
             onMouseLeave={handleMenuLeave}
         >
-          <div className="container">
-            <nav className="hidden lg:flex items-center gap-1">
+            <CategorySection />
+            {/*<nav className="hidden lg:flex items-center gap-1">
 
-              {/* Shop by Device - Mega Menu */}
+               Shop by Device - Mega Menu
               <div
                   className="relative"
                   onMouseEnter={() => handleMenuEnter('devices')}
@@ -240,12 +254,12 @@ export function Header() {
                   <ChevronDown className="h-4 w-4" />
                 </button>
 
-                {/* Mega Menu Dropdown */}
+                 Mega Menu Dropdown
                 {activeMenu === 'devices' && (
                     <div className="absolute top-full left-0 w-screen max-w-6xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xl rounded-lg mt-0 z-50">
                       <div className="p-8">
 
-                        {/* Device Type Selection */}
+                         Device Type Selection
                         <div className="grid grid-cols-3 gap-6 mb-8">
                           <button
                               onClick={() => setActiveDevice('phones')}
@@ -293,7 +307,7 @@ export function Header() {
                           </button>
                         </div>
 
-                        {/* Brand Grid - Phones */}
+                         Brand Grid - Phones
                         {activeDevice === 'phones' && (
                             <div>
                               <h4 className="text-sm font-bold text-neutral-500 dark:text-neutral-400 mb-4">
@@ -334,7 +348,7 @@ export function Header() {
                             </div>
                         )}
 
-                        {/* Brand Grid - Laptops */}
+                         Brand Grid - Laptops
                         {activeDevice === 'laptops' && (
                             <div>
                               <h4 className="text-sm font-bold text-neutral-500 dark:text-neutral-400 mb-4">
@@ -375,7 +389,7 @@ export function Header() {
                             </div>
                         )}
 
-                        {/* Brand Grid - Tablets */}
+                         Brand Grid - Tablets
                         {activeDevice === 'tablets' && (
                             <div>
                               <h4 className="text-sm font-bold text-neutral-500 dark:text-neutral-400 mb-4">
@@ -421,7 +435,7 @@ export function Header() {
                 )}
               </div>
 
-              {/* Shop by Category - Mega Menu */}
+               Shop by Category - Mega Menu
               <div
                   className="relative"
                   onMouseEnter={() => handleMenuEnter('categories')}
@@ -461,7 +475,7 @@ export function Header() {
                 )}
               </div>
 
-              {/* Other Navigation Links */}
+               Other Navigation Links
               <Link
                   href="/deals"
                   className="px-4 py-3 text-sm font-semibold text-red-600 hover:text-red-700 transition-colors"
@@ -483,8 +497,7 @@ export function Header() {
                 Wholesale B2B
               </Link>
 
-            </nav>
-          </div>
+            </nav>*/}
         </div>
 
         {/* Mobile Menu */}

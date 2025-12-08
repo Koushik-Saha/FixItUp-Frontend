@@ -20,6 +20,8 @@ import {
   ShoppingCart
 } from 'lucide-react'
 import {Payment} from "@/components/layout/payment";
+import {CategorySection} from "@/components/category-section";
+import {StoreLocations} from "@/components/store-locations";
 
 // Categories Data
 const categories = [
@@ -250,6 +252,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Store */}
+        <StoreLocations />
 
         {/* Why Shop With Us */}
         <section className="py-12 bg-white dark:bg-neutral-950">
