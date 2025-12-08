@@ -3,6 +3,9 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import '@/styles/globals.css'
 import { Providers } from '@/components/providers'
 import { Toaster } from 'sonner'
+import {Footer} from "@/components/layout/footer";
+import { Header } from '@/components/layout/header'
+import {Payment} from "@/components/layout/payment";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -62,25 +65,21 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({
-  children,
-}: Readonly<{
+                                     children,
+                                   }: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
-      >
-        <Providers>
-          {children}
-          <Toaster
-            position="top-right"
-            richColors
-            closeButton
-            duration={3000}
-          />
-        </Providers>
+      <html lang="en">
+      <body className={inter.className}>
+      <Providers>
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </div>
+      </Providers>
       </body>
-    </html>
+      </html>
   )
 }

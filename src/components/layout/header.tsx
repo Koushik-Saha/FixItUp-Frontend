@@ -125,7 +125,7 @@ export function Header() {
                   Help
                 </Link>
                 <Link href="/wholesale" className="hover:text-blue-400 transition-colors">
-                  Wholesale B2B
+                  Wholesale B2B & B2C
                 </Link>
               </div>
             </div>
@@ -143,10 +143,10 @@ export function Header() {
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-xl font-bold text-neutral-900 dark:text-white">
-                  HRWireless
+                  Max Fit IT
                 </h1>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  Wholesale B2B California, USA
+                  Wholesale B2B & B2C California, USA
                 </p>
               </div>
             </Link>

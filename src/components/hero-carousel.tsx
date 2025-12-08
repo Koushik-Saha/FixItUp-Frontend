@@ -78,7 +78,7 @@ const HERO_SLIDES = [
     },
     {
         id: 5,
-        badge: 'Wholesale B2B',
+        badge: 'Wholesale B2B & B2C',
         badgeColor: 'bg-orange-500',
         title: 'Bulk Orders & Wholesale Pricing',
         description: 'Special pricing for businesses, repair shops, and resellers. Get the best wholesale rates on all products.',

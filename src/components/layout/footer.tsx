@@ -1,206 +1,348 @@
 'use client'
 
 import Link from 'next/link'
-import { Facebook, Twitter, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useState } from 'react'
 import { Input } from '@/components/ui/input'
-
-const footerLinks = {
-  shop: [
-    { name: 'All Products', href: '/products' },
-    { name: 'iPhone Parts', href: '/products?brand=apple' },
-    { name: 'Samsung Parts', href: '/products?brand=samsung' },
-    { name: 'Tools', href: '/products?category=tools' },
-    { name: 'Accessories', href: '/products?category=accessories' },
-  ],
-  support: [
-    { name: 'Contact Us', href: '/support/contact' },
-    { name: 'Shipping Info', href: '/support/shipping' },
-    { name: 'Returns & Refunds', href: '/support/returns' },
-    { name: 'Warranty', href: '/support/warranty' },
-    { name: 'FAQ', href: '/support/faq' },
-  ],
-  business: [
-    { name: 'Apply Now', href: '/auth/business-application' },
-    { name: 'Wholesale Pricing', href: '/business/pricing' },
-    { name: 'Bulk Orders', href: '/business/bulk-order' },
-    { name: 'Terms & Conditions', href: '/business/terms' },
-  ],
-  company: [
-    { name: 'About Us', href: '/about' },
-    { name: 'Careers', href: '/careers' },
-    { name: 'Blog', href: '/blog' },
-    { name: 'Press', href: '/press' },
-  ],
-  legal: [
-    { name: 'Privacy Policy', href: '/legal/privacy' },
-    { name: 'Terms of Service', href: '/legal/terms' },
-    { name: 'Cookie Policy', href: '/legal/cookies' },
-  ],
-}
-
-const socialLinks = [
-  { name: 'Facebook', icon: Facebook, href: 'https://facebook.com' },
-  { name: 'Twitter', icon: Twitter, href: 'https://twitter.com' },
-  { name: 'Instagram', icon: Instagram, href: 'https://instagram.com' },
-  { name: 'YouTube', icon: Youtube, href: 'https://youtube.com' },
-]
+import { Button } from '@/components/ui/button'
+import {
+    Facebook,
+    Twitter,
+    Instagram,
+    Youtube,
+    Send,
+    Star,
+    X
+} from 'lucide-react'
 
 export function Footer() {
-  return (
-    <footer className="border-t border-neutral-200 bg-neutral-950 text-white dark:border-neutral-800">
-      {/* Main Footer */}
-      <div className="container py-12 md:py-16">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">
-          {/* Company Info */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-retail">
-                <span className="text-xl font-bold">M</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-bold">Max Phone Repair</span>
-                <span className="text-xs text-neutral-400">
-                  Quality Parts for Every Device
-                </span>
-              </div>
-            </div>
-            <p className="mt-4 text-sm text-neutral-400">
-              Your trusted source for professional phone repair parts. From screens to batteries, tools to accessories - we've got everything you need.
-            </p>
+    const [email, setEmail] = useState('')
+    const [showDiscount, setShowDiscount] = useState(true)
 
-            {/* Contact Info */}
-            <div className="mt-6 space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-retail-primary" />
-                <a href="tel:+18005551234" className="hover:text-retail-primary">
-                  (800) 555-1234
-                </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-retail-primary" />
-                <a
-                  href="mailto:support@maxphonerepair.com"
-                  className="hover:text-retail-primary"
-                >
-                  support@maxphonerepair.com
-                </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-retail-primary" />
-                <span>Santa Barbara, CA 93101</span>
-              </div>
+    const handleNewsletterSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        console.log('Newsletter signup:', email)
+        setEmail('')
+    }
+
+    return (
+        <footer className="bg-black text-white">
+
+            {/* Top Banner - Klarna */}
+            <div className="bg-neutral-900 py-3 text-center border-b border-neutral-800">
+                <div className="container flex items-center justify-center gap-3">
+          <span className="text-sm md:text-base">
+            Shop now. Pay in 4 interest-free installments.
+          </span>
+                    <div className="bg-pink-200 px-3 py-1 rounded">
+                        <span className="text-black font-bold text-sm">Klarna.</span>
+                    </div>
+                </div>
             </div>
 
-            {/* Social Links */}
-            <div className="mt-6 flex gap-3">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-800 transition-colors hover:bg-retail-primary"
-                >
-                  <social.icon className="h-4 w-4" />
-                </a>
-              ))}
+            {/* Main Footer Content */}
+            <div className="container py-12 md:py-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
+
+                    {/* Newsletter Column */}
+                    <div className="lg:col-span-1">
+                        <h3 className="text-lg font-bold mb-4 tracking-wide">NEWSLETTER</h3>
+                        <form onSubmit={handleNewsletterSubmit} className="space-y-4">
+                            <div className="flex gap-2">
+                                <Input
+                                    type="email"
+                                    placeholder="Enter your email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="bg-white text-black border-0 rounded-full px-4"
+                                    required
+                                />
+                                <Button
+                                    type="submit"
+                                    className="bg-blue-600 hover:bg-blue-700 rounded-full px-6"
+                                >
+                                    SIGN UP
+                                </Button>
+                            </div>
+                            <p className="text-xs text-neutral-400">
+                                By continuing, you agree to hear from CASETIFY! For more details, please refer to our Privacy Policy.
+                            </p>
+                        </form>
+
+                        {/* Social Media */}
+                        <div className="mt-8">
+                            <h4 className="text-sm font-bold mb-4 tracking-wide">LET'S BE FRIENDS</h4>
+                            <div className="flex gap-3">
+                                <Link href="https://instagram.com" target="_blank" className="bg-white text-black p-2 rounded-full hover:bg-neutral-200 transition-colors">
+                                    <Instagram className="h-5 w-5" />
+                                </Link>
+                                <Link href="https://facebook.com" target="_blank" className="bg-white text-black p-2 rounded-full hover:bg-neutral-200 transition-colors">
+                                    <Facebook className="h-5 w-5" />
+                                </Link>
+                                <Link href="https://twitter.com" target="_blank" className="bg-white text-black p-2 rounded-full hover:bg-neutral-200 transition-colors">
+                                    <Twitter className="h-5 w-5" />
+                                </Link>
+                                <Link href="https://pinterest.com" target="_blank" className="bg-white text-black p-2 rounded-full hover:bg-neutral-200 transition-colors">
+                                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z"/>
+                                    </svg>
+                                </Link>
+                                <Link href="https://tiktok.com" target="_blank" className="bg-white text-black p-2 rounded-full hover:bg-neutral-200 transition-colors">
+                                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                                    </svg>
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* CASETIFY Club Column */}
+                    <div>
+                        <h3 className="text-lg font-bold mb-4 tracking-wide">CASETIFY Club</h3>
+                        <ul className="space-y-3">
+                            <li>
+                                <Link href="/mobile-app" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Get Co-Lab Mobile App
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/authentication" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    CASETIFY Authentication
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/promo-codes" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Promo Codes & Coupons
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/gift-cards" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Purchase Gift Cards
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/student-discount" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Student Discounts
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/reviews" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Reviews
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/travel" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    CASETIFY Travel
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* Device Column */}
+                    <div>
+                        <h3 className="text-lg font-bold mb-4 tracking-wide">DEVICE</h3>
+
+                        {/* Apple Section */}
+                        <div className="mb-6">
+                            <h4 className="text-sm font-bold mb-3">Apple</h4>
+                            <ul className="space-y-2">
+                                <li>
+                                    <Link href="/phones/apple/iphone-17-pro-max" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                        iPhone 17 Pro Max
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/phones/apple/iphone-17-pro" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                        iPhone 17 Pro
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/phones/apple/iphone-air" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                        iPhone Air
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/phones/apple/iphone-17" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                        iPhone 17
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Samsung Section */}
+                        <div>
+                            <h4 className="text-sm font-bold mb-3">Samsung</h4>
+                            <ul className="space-y-2">
+                                <li>
+                                    <Link href="/phones/samsung/galaxy-s25-ultra" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                        Galaxy S25 Ultra
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/phones/samsung/galaxy-s25" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                        Galaxy S25
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/phones/samsung/galaxy-s25-plus" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                        Galaxy S25+
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/phones/samsung/galaxy-z-flip7" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                        Galaxy Z Flip7
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/phones/samsung/galaxy-z-fold7" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                        Galaxy Z Fold7
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* About CASETIFY Column */}
+                    <div>
+                        <h3 className="text-lg font-bold mb-4 tracking-wide">ABOUT CASETIFY</h3>
+                        <ul className="space-y-3">
+                            <li>
+                                <Link href="/faq" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    FAQ
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/contact" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Contact
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/about" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    About Us
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/standard" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    #TheCASETIFYStandard
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/customization" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    #CASETIFYCustomization
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/sustainability" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    #CASETIFYSustainability
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/press" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Press
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/careers" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Careers
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/visit" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Visit Us
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* Get Help Column */}
+                    <div>
+                        <h3 className="text-lg font-bold mb-4 tracking-wide">GET HELP</h3>
+                        <ul className="space-y-3">
+                            <li>
+                                <Link href="/faqs" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    FAQs
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/satisfaction-guarantee" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    100% Satisfaction Guaranteed
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/track-order" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    TRACK MY ORDER
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/contact-us" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Contact Us
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                </div>
             </div>
-          </div>
 
-          {/* Shop Links */}
-          <div>
-            <h3 className="font-semibold">Shop</h3>
-            <ul className="mt-4 space-y-2 text-sm">
-              {footerLinks.shop.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-neutral-400 transition-colors hover:text-white"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support Links */}
-          <div>
-            <h3 className="font-semibold">Support</h3>
-            <ul className="mt-4 space-y-2 text-sm">
-              {footerLinks.support.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-neutral-400 transition-colors hover:text-white"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Business Links */}
-          <div>
-            <h3 className="font-semibold">Business Accounts</h3>
-            <ul className="mt-4 space-y-2 text-sm">
-              {footerLinks.business.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-neutral-400 transition-colors hover:text-white"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div className="lg:col-span-2">
-            <h3 className="font-semibold">Stay Updated</h3>
-            <p className="mt-2 text-sm text-neutral-400">
-              Get the latest deals and product updates
-            </p>
-            <form className="mt-4 flex gap-2">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="bg-neutral-800 border-neutral-700"
-              />
-              <Button variant="retail-primary" type="submit">
-                Subscribe
-              </Button>
-            </form>
-            <p className="mt-2 text-xs text-neutral-500">
-              By subscribing, you agree to our Privacy Policy
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Bar */}
-      <div className="border-t border-neutral-800">
-        <div className="container py-6">
-          <div className="flex flex-col items-center justify-between gap-4 text-sm text-neutral-400 md:flex-row">
-            <p>© 2024 Max Phone Repair. All rights reserved.</p>
-            <div className="flex flex-wrap gap-6">
-              {footerLinks.legal.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="hover:text-white"
-                >
-                  {link.name}
-                </Link>
-              ))}
+            {/* Trustpilot Reviews Section */}
+            <div className="border-t border-neutral-800 py-6 bg-black">
+                <div className="container">
+                    <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+                        <span className="text-sm">Average</span>
+                        <div className="flex gap-1">
+                            <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                            <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                            <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                            <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                            <Star className="h-5 w-5 fill-neutral-600 text-neutral-600" />
+                        </div>
+                        <span className="text-sm">
+              <span className="underline">146,628 reviews on</span>
+            </span>
+                        <div className="flex items-center gap-2">
+                            <Star className="h-5 w-5 fill-green-400 text-green-400" />
+                            <span className="font-bold">Trustpilot</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </footer>
-  )
+
+            {/* Bottom Bar */}
+            <div className="border-t border-neutral-800 py-4">
+                <div className="container">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-neutral-400">
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                            <span>© 2024 CASETIFY</span>
+                            <span>|</span>
+                            <Link href="/privacy" className="hover:text-white transition-colors">
+                                Privacy Policy
+                            </Link>
+                            <span>|</span>
+                            <Link href="/terms" className="hover:text-white transition-colors">
+                                Terms and Conditions
+                            </Link>
+                        </div>
+                        <button className="bg-white text-black p-3 rounded-full hover:bg-neutral-200 transition-colors">
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Discount Banner (Bottom Left) */}
+            {showDiscount && (
+                <div className="fixed bottom-6 left-6 bg-white text-black px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 z-50">
+                    <span className="font-bold">Get 10% Off</span>
+                    <button
+                        onClick={() => setShowDiscount(false)}
+                        className="hover:bg-neutral-200 rounded-full p-1 transition-colors"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
+        </footer>
+    )
 }

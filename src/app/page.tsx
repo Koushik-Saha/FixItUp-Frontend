@@ -19,6 +19,7 @@ import {
   Heart,
   ShoppingCart
 } from 'lucide-react'
+import {Payment} from "@/components/layout/payment";
 
 // Categories Data
 const categories = [
@@ -37,7 +38,7 @@ const featuredDeals = [
   {
     id: 1,
     name: 'iPhone 15 Pro Max',
-    image: '/images/iphone-15-pro-max.jpg',
+    image: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=800&h=800&fit=crop&q=80',
     originalPrice: 1199,
     salePrice: 1099,
     discount: 8,
@@ -49,7 +50,7 @@ const featuredDeals = [
   {
     id: 2,
     name: 'AirPods Pro 2nd Gen',
-    image: '/images/airpods-pro.jpg',
+    image: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=800&h=800&fit=crop&q=80',
     originalPrice: 249,
     salePrice: 199,
     discount: 20,
@@ -61,7 +62,7 @@ const featuredDeals = [
   {
     id: 3,
     name: 'Samsung Galaxy Watch 6',
-    image: '/images/galaxy-watch.jpg',
+    image: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=800&h=800&fit=crop&q=80',
     originalPrice: 399,
     salePrice: 279,
     discount: 30,
@@ -73,7 +74,7 @@ const featuredDeals = [
   {
     id: 4,
     name: 'Sony WH-1000XM5',
-    image: '/images/sony-headphones.jpg',
+    image: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=800&h=800&fit=crop&q=80',
     originalPrice: 399,
     salePrice: 299,
     discount: 25,
@@ -329,6 +330,8 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        <Payment />
 
       </div>
   )
