@@ -145,7 +145,7 @@ export function Payment() {
                             </div>
                             <div className="text-neutral-600 dark:text-neutral-400 space-y-2">
                                 <p className="text-sm">
-                                    <span className="font-semibold">CASETIFY offers</span>
+                                    <span className="font-semibold">Max Fix IT offers</span>
                                 </p>
                                 <p className="text-sm">
                                     "10-day No Questions Asked Return or Exchange"

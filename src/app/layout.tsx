@@ -20,7 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Max Phone Repair - Professional Phone Repair Parts',
+  title: 'Max Fix IT - Professional Phone Repair Parts',
   description:
     'Quality phone repair parts for every device. Screens, batteries, cameras, tools and more. Wholesale pricing for businesses.',
   keywords: [
@@ -31,9 +31,9 @@ export const metadata: Metadata = {
     'wholesale phone parts',
     'repair tools',
   ],
-  authors: [{ name: 'Max Phone Repair' }],
-  creator: 'Max Phone Repair',
-  publisher: 'Max Phone Repair',
+  authors: [{ name: 'Max Fix IT' }],
+  creator: 'Max Fix IT',
+  publisher: 'Max Fix IT',
   robots: {
     index: true,
     follow: true,
@@ -42,8 +42,8 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://maxphonerepair.com',
-    siteName: 'Max Phone Repair',
-    title: 'Max Phone Repair - Professional Phone Repair Parts',
+    siteName: 'Max Fix IT',
+    title: 'Max Fix IT - Professional Phone Repair Parts',
     description:
       'Quality phone repair parts for every device. Screens, batteries, cameras, tools and more.',
     images: [
@@ -51,13 +51,13 @@ export const metadata: Metadata = {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Max Phone Repair',
+        alt: 'Max Fix IT',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Max Phone Repair - Professional Phone Repair Parts',
+    title: 'Max Fix IT - Professional Phone Repair Parts',
     description:
       'Quality phone repair parts for every device. Screens, batteries, cameras, tools and more.',
     images: ['/og-image.jpg'],

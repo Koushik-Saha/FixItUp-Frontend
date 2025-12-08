@@ -143,7 +143,7 @@ export function Header() {
               <div className="relative w-12 h-12">
                 <Image
                     src="/images/fix_it_logo.png"
-                    alt="Max Fit IT"
+                    alt="Max Fix IT"
                     fill
                     className="object-contain"
                     priority
@@ -151,7 +151,7 @@ export function Header() {
               </div>
               <div>
                 <div className="text-xl font-bold text-black dark:text-white">
-                  Max Fit IT
+                  Max Fix IT
                 </div>
                 <div className="text-xs text-neutral-500">
                   Wholesale B2B & B2C California, USA

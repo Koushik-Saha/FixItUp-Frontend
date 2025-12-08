@@ -1,4 +1,4 @@
-# 🚀 Max Phone Repair - Installation & Setup Guide
+# 🚀 Max Fix IT - Installation & Setup Guide
 
 ## Prerequisites
 

@@ -64,7 +64,7 @@ export function Footer() {
                                 </Button>
                             </div>
                             <p className="text-xs text-neutral-400">
-                                By continuing, you agree to hear from CASETIFY! For more details, please refer to our Privacy Policy.
+                                By continuing, you agree to hear from Max Fix IT! For more details, please refer to our Privacy Policy.
                             </p>
                         </form>
 
@@ -95,9 +95,9 @@ export function Footer() {
                         </div>
                     </div>
 
-                    {/* CASETIFY Club Column */}
+                    {/* Max Fix IT Club Column */}
                     <div>
-                        <h3 className="text-lg font-bold mb-4 tracking-wide">CASETIFY Club</h3>
+                        <h3 className="text-lg font-bold mb-4 tracking-wide">Max Fix IT Club</h3>
                         <ul className="space-y-3">
                             <li>
                                 <Link href="/mobile-app" className="text-sm text-neutral-300 hover:text-white transition-colors">
@@ -106,7 +106,7 @@ export function Footer() {
                             </li>
                             <li>
                                 <Link href="/authentication" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    CASETIFY Authentication
+                                    Max Fix IT Authentication
                                 </Link>
                             </li>
                             <li>
@@ -131,7 +131,7 @@ export function Footer() {
                             </li>
                             <li>
                                 <Link href="/travel" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    CASETIFY Travel
+                                    Max Fix IT Travel
                                 </Link>
                             </li>
                         </ul>
@@ -201,9 +201,9 @@ export function Footer() {
                         </div>
                     </div>
 
-                    {/* About CASETIFY Column */}
+                    {/* About Max Fix IT Column */}
                     <div>
-                        <h3 className="text-lg font-bold mb-4 tracking-wide">ABOUT CASETIFY</h3>
+                        <h3 className="text-lg font-bold mb-4 tracking-wide">ABOUT Max Fix IT</h3>
                         <ul className="space-y-3">
                             <li>
                                 <Link href="/faq" className="text-sm text-neutral-300 hover:text-white transition-colors">
@@ -222,17 +222,17 @@ export function Footer() {
                             </li>
                             <li>
                                 <Link href="/standard" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    #TheCASETIFYStandard
+                                    #TheMax Fix ITStandard
                                 </Link>
                             </li>
                             <li>
                                 <Link href="/customization" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    #CASETIFYCustomization
+                                    #Max Fix ITCustomization
                                 </Link>
                             </li>
                             <li>
                                 <Link href="/sustainability" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    #CASETIFYSustainability
+                                    #Max Fix ITSustainability
                                 </Link>
                             </li>
                             <li>
@@ -311,7 +311,7 @@ export function Footer() {
                 <div className="container">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-neutral-400">
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                            <span>© 2024 CASETIFY</span>
+                            <span>© 2024 Max Fix IT</span>
                             <span>|</span>
                             <Link href="/privacy" className="hover:text-white transition-colors">
                                 Privacy Policy
