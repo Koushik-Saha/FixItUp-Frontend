@@ -146,7 +146,7 @@ export default function CheckoutPage() {
                 payment: paymentMethod,
                 discount: appliedDiscount,
                 subtotal,
-                shipping: shipping,
+                // shipping: shipping,
                 tax,
                 total
             }

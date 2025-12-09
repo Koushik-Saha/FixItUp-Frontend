@@ -143,7 +143,7 @@ export function Header() {
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 flex-shrink-0">
-              <div className="relative w-12 h-12">
+              <div className="relative w-16 h-16">
                 <Image
                     src="/images/fix_it_logo.png"
                     alt="Max Fix IT"

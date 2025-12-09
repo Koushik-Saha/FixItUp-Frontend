@@ -55,7 +55,7 @@ export default function OrderConfirmationPage() {
             amount: 139.98
         },
         subtotal: 139.98,
-        shipping: 0,
+        shippingCount: 0,
         tax: 12.25,
         total: 152.23,
         estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
@@ -234,7 +234,7 @@ export default function OrderConfirmationPage() {
                                 </div>
                                 <div className="flex justify-between text-neutral-700 dark:text-neutral-300">
                                     <span>Shipping</span>
-                                    <span>{order.shipping === 0 ? 'FREE' : `$${order.shipping.toFixed(2)}`}</span>
+                                    <span>{order.shippingCount === 0 ? 'FREE' : `$${order.shippingCount.toFixed(2)}`}</span>
                                 </div>
                                 <div className="flex justify-between text-neutral-700 dark:text-neutral-300">
                                     <span>Tax</span>
