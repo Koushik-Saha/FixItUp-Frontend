@@ -112,7 +112,7 @@ export function Header() {
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
                   <Phone className="h-3 w-3" />
-                  <span>626-347-5662</span>
+                  <span>818-402-4931</span>
                 </div>
                 <div className="hidden xl:flex items-center gap-2">
                   <span>✅ Free Shipping on Orders $50+</span>
@@ -229,7 +229,7 @@ export function Header() {
                     </Button>
                   </Link>
               ) : (
-                  <Link href="/login" className="hidden lg:block">
+                  <Link href="/auth/login" className="hidden lg:block">
                     <Button size="sm">
                       Sign In
                     </Button>
