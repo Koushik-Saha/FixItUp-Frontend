@@ -260,7 +260,7 @@ export function CategorySection() {
     })
     const [hoveredModel, setHoveredModel] = useState<string | null>(null)
 
-    const brands = ['Apple', 'Samsung', 'Motorola', 'Google', 'Other Parts', 'Game Console', 'Accessories', 'Tools & Supplies', 'Refurbishing', 'Board Components', 'Pre-Owned Devices']
+    const brands = ['Apple', 'Samsung', 'Motorola', 'Google', 'Other Parts', 'Game Console', 'Accessories', 'Tools & Supplies']
 
     const togglePinSubcategory = (brand: string, subcat: string) => {
         setPinnedSubcategory(prev => ({
@@ -319,6 +319,15 @@ export function CategorySection() {
                                 {brand}
                             </button>
                         ))}
+                        <Link href="/wholesale/apply">
+                            <span className="relative py-3 px-1 text-sm font-medium">Wholesale Apply</span>
+                        </Link>
+                        <Link href="/wholesale">
+                            <span className="relative py-3 px-1 text-sm font-medium">Wholesale Portal</span>
+                        </Link>
+                        <Link href="/repairs">
+                            <span className="relative py-3 px-1 text-sm font-medium">Repair</span>
+                        </Link>
                     </div>
                 </div>
             </div>
