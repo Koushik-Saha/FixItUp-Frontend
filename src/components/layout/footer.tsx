@@ -27,7 +27,7 @@ export function Footer() {
     return (
         <footer className="bg-black text-white">
 
-            {/* Top Banner - Klarna */}
+             {/*Top Banner - Klarna
             <div className="bg-neutral-900 py-3 text-center border-b border-neutral-800">
                 <div className="container flex items-center justify-center gap-3">
           <span className="text-sm md:text-base">
@@ -37,7 +37,7 @@ export function Footer() {
                         <span className="text-black font-bold text-sm">Klarna.</span>
                     </div>
                 </div>
-            </div>
+            </div>*/}
 
             {/* Main Footer Content */}
             <div className="container py-12 md:py-16">
@@ -258,8 +258,18 @@ export function Footer() {
                         <h3 className="text-lg font-bold mb-4 tracking-wide">GET HELP</h3>
                         <ul className="space-y-3">
                             <li>
-                                <Link href="/faqs" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                <Link href="/faq" className="text-sm text-neutral-300 hover:text-white transition-colors">
                                     FAQs
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/term-and-condition" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Terms And Condition
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/privacy-policy" className="text-sm text-neutral-300 hover:text-white transition-colors">
+                                    Privacy Policy
                                 </Link>
                             </li>
                             <li>
@@ -293,14 +303,14 @@ export function Footer() {
                             <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                             <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                             <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                            <Star className="h-5 w-5 fill-neutral-600 text-neutral-600" />
+                            <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                         </div>
                         <span className="text-sm">
-              <span className="underline">146,628 reviews on</span>
+              <span className="underline">100+ reviews on</span>
             </span>
                         <div className="flex items-center gap-2">
                             <Star className="h-5 w-5 fill-green-400 text-green-400" />
-                            <span className="font-bold">Trustpilot</span>
+                            <span className="font-bold">Yelp/Google</span>
                         </div>
                     </div>
                 </div>
