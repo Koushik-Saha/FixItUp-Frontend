@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import {useEffect, useState} from 'react'
 import { User, MapPin, Package, Wrench, Shield, Edit, Key, Download, Eye } from 'lucide-react'
+import {useRouter} from "next/navigation";
+import {useAuth} from "@/hooks/useAuth";
 
 const TABS = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -12,6 +14,29 @@ const TABS = [
 ]
 
 export default function CustomerDashboard() {
+    const router = useRouter();
+    const { user, isLoading, init, applyWholesale, logout } = useAuth();
+
+    useEffect(() => {
+        init();
+    }, [init]);
+
+    useEffect(() => {
+        if (!isLoading && !user) {
+            router.push("/auth/login");
+        }
+    }, [isLoading, user, router]);
+
+    if (isLoading || !user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <div className="text-slate-500 text-sm">Loading dashboard...</div>
+            </div>
+        );
+    }
+
+    const fullName = `${user.firstName} ${user.lastName}`;
+
     const [activeTab, setActiveTab] = useState('profile')
     const [profile, setProfile] = useState({ firstName: 'John', lastName: 'Smith', email: 'john@example.com', phone: '(555) 123-4567' })
     const [addresses, setAddresses] = useState([

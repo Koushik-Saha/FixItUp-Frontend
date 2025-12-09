@@ -229,7 +229,7 @@ export function Header() {
                     </Button>
                   </Link>
               ) : (
-                  <Link href="/login" className="hidden lg:block">
+                  <Link href="/auth/login" className="hidden lg:block">
                     <Button size="sm">
                       Sign In
                     </Button>
