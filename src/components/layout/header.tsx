@@ -120,11 +120,14 @@ export function Header() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <Link href="/track-order" className="hover:text-blue-400 transition-colors">
+                <Link href="/order-tracking" className="hover:text-blue-400 transition-colors">
                   Track Order
                 </Link>
-                <Link href="/help" className="hover:text-blue-400 transition-colors">
-                  Help
+                <Link href="/contact-us" className="hover:text-blue-400 transition-colors">
+                  Contact US
+                </Link>
+                <Link href="/about-us" className="hover:text-blue-400 transition-colors">
+                  About US
                 </Link>
                 <Link href="/wholesale" className="hover:text-blue-400 transition-colors">
                   Wholesale B2B & B2C
@@ -209,19 +212,19 @@ export function Header() {
               </Link>
 
               {/* User Account */}
-              {isAuthenticated ? (
-                  <Link href="/account">
+              {/*{isAuthenticated ? (*/}
+                  <Link href="/dashboard">
                     <Button variant="ghost" size="icon" className="hidden sm:flex">
                       <User className="h-5 w-5" />
                     </Button>
                   </Link>
-              ) : (
+              {/*) : (*/}
                   <Link href="/login">
                     <Button size="sm" className="hidden sm:flex">
                       Sign In
                     </Button>
                   </Link>
-              )}
+              {/*)}*/}
 
               {/* Mobile Menu */}
               <Button
