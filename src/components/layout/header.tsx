@@ -120,11 +120,14 @@ export function Header() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <Link href="/track-order" className="hover:text-blue-400 transition-colors">
+                <Link href="/order-tracking" className="hover:text-blue-400 transition-colors">
                   Track Order
                 </Link>
-                <Link href="/help" className="hover:text-blue-400 transition-colors">
-                  Help
+                <Link href="/contact-us" className="hover:text-blue-400 transition-colors">
+                  Contact US
+                </Link>
+                <Link href="/about-us" className="hover:text-blue-400 transition-colors">
+                  About US
                 </Link>
                 <Link href="/wholesale" className="hover:text-blue-400 transition-colors">
                   Wholesale B2B & B2C
@@ -140,10 +143,10 @@ export function Header() {
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 flex-shrink-0">
-              <div className="relative w-12 h-12">
+              <div className="relative w-16 h-16">
                 <Image
                     src="/images/fix_it_logo.png"
-                    alt="Max Fit IT"
+                    alt="Max Fix IT"
                     fill
                     className="object-contain"
                     priority
@@ -151,7 +154,7 @@ export function Header() {
               </div>
               <div>
                 <div className="text-xl font-bold text-black dark:text-white">
-                  Max Fit IT
+                  Max Fix IT
                 </div>
                 <div className="text-xs text-neutral-500">
                   Wholesale B2B & B2C California, USA
@@ -178,7 +181,7 @@ export function Header() {
                 <Search className="h-5 w-5" />
               </Button>
 
-              <Link href="/wishlist">
+              <Link href="/stores">
                 <div>
                   <span className="text-sm">Find In-Store</span>
                 </div>
@@ -209,19 +212,19 @@ export function Header() {
               </Link>
 
               {/* User Account */}
-              {isAuthenticated ? (
-                  <Link href="/account">
+              {/*{isAuthenticated ? (*/}
+                  <Link href="/dashboard">
                     <Button variant="ghost" size="icon" className="hidden sm:flex">
                       <User className="h-5 w-5" />
                     </Button>
                   </Link>
-              ) : (
+              {/*) : (*/}
                   <Link href="/login">
                     <Button size="sm" className="hidden sm:flex">
                       Sign In
                     </Button>
                   </Link>
-              )}
+              {/*)}*/}
 
               {/* Mobile Menu */}
               <Button
