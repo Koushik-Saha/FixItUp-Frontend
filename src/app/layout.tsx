@@ -20,6 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://fix-it-up-frontend.vercel.app/"),
   title: 'Max Fix IT - Professional Phone Repair Parts',
   description:
     'Quality phone repair parts for every device. Screens, batteries, cameras, tools and more. Wholesale pricing for businesses.',

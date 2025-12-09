@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { Search, X, Pin } from 'lucide-react'
+import Link from 'next/link'
 
 // Compatibility data
 const COMPATIBILITY_DATA: {[key: string]: string[]} = {
@@ -18,154 +18,154 @@ const COMPATIBILITY_DATA: {[key: string]: string[]} = {
     'Galaxy S25 Ultra': ['SM-S928B', 'SM-S928U'],
 }
 
-// Apple Watch data
+// Apple Watch data - UPDATED WITH SHOP LINKS
 const APPLE_WATCH_DATA = {
     columns: [
         {
             title: 'Watch',
             items: [
-                { name: 'Series Ultra (3rd Gen) (49MM)', link: '/apple/watch/ultra-3-49mm', new: true },
-                { name: 'Series 10 (46MM)', link: '/apple/watch/series-10-46mm' },
-                { name: 'Series 10 (42MM)', link: '/apple/watch/series-10-42mm' },
-                { name: 'Series 9 (45MM)', link: '/apple/watch/series-9-45mm' },
-                { name: 'Series 9 (41MM)', link: '/apple/watch/series-9-41mm' },
-                { name: 'Series Ultra (2nd Gen) (49MM)', link: '/apple/watch/ultra-2-49mm' },
-                { name: 'Series Ultra (1st Gen) (49MM)', link: '/apple/watch/ultra-1-49mm' },
+                { name: 'Series Ultra (3rd Gen) (49MM)', link: '/shop?category=apple&device=Apple+Watch+Ultra+3', new: true },
+                { name: 'Series 10 (46MM)', link: '/shop?category=apple&device=Apple+Watch+Series+10' },
+                { name: 'Series 10 (42MM)', link: '/shop?category=apple&device=Apple+Watch+Series+10' },
+                { name: 'Series 9 (45MM)', link: '/shop?category=apple&device=Apple+Watch+Series+9' },
+                { name: 'Series 9 (41MM)', link: '/shop?category=apple&device=Apple+Watch+Series+9' },
+                { name: 'Series Ultra (2nd Gen) (49MM)', link: '/shop?category=apple&device=Apple+Watch+Ultra+2' },
+                { name: 'Series Ultra (1st Gen) (49MM)', link: '/shop?category=apple&device=Apple+Watch+Ultra' },
             ],
-            viewAll: '/apple/watch/all'
+            viewAll: '/shop?category=apple&type=Watch'
         },
         {
             title: '',
             items: [
-                { name: 'Series SE (1st Gen) (40MM)', link: '/apple/watch/se-1-40mm' },
-                { name: 'Series 5 (44MM)', link: '/apple/watch/series-5-44mm' },
-                { name: 'Series 5 (40MM)', link: '/apple/watch/series-5-40mm' },
-                { name: 'Series 4 (44MM)', link: '/apple/watch/series-4-44mm' },
-                { name: 'Series 4 (40MM)', link: '/apple/watch/series-4-40mm' },
-                { name: 'Series 3 (42MM)', link: '/apple/watch/series-3-42mm' },
-                { name: 'Series 3 (38MM)', link: '/apple/watch/series-3-38mm' },
+                { name: 'Series SE (1st Gen) (40MM)', link: '/shop?category=apple&device=Apple+Watch+SE' },
+                { name: 'Series 5 (44MM)', link: '/shop?category=apple&device=Apple+Watch+Series+5' },
+                { name: 'Series 5 (40MM)', link: '/shop?category=apple&device=Apple+Watch+Series+5' },
+                { name: 'Series 4 (44MM)', link: '/shop?category=apple&device=Apple+Watch+Series+4' },
+                { name: 'Series 4 (40MM)', link: '/shop?category=apple&device=Apple+Watch+Series+4' },
+                { name: 'Series 3 (42MM)', link: '/shop?category=apple&device=Apple+Watch+Series+3' },
+                { name: 'Series 3 (38MM)', link: '/shop?category=apple&device=Apple+Watch+Series+3' },
             ]
         },
         {
             title: '',
             items: [
-                { name: 'Series 8 (45MM)', link: '/apple/watch/series-8-45mm' },
-                { name: 'Series 8 (41MM)', link: '/apple/watch/series-8-41mm' },
-                { name: 'Series SE (2nd Gen) (44MM)', link: '/apple/watch/se-2-44mm' },
-                { name: 'Series 2 (42MM)', link: '/apple/watch/series-2-42mm' },
-                { name: 'Series 2 (38MM)', link: '/apple/watch/series-2-38mm' },
-                { name: 'Series 1 (42MM)', link: '/apple/watch/series-1-42mm' },
+                { name: 'Series 8 (45MM)', link: '/shop?category=apple&device=Apple+Watch+Series+8' },
+                { name: 'Series 8 (41MM)', link: '/shop?category=apple&device=Apple+Watch+Series+8' },
+                { name: 'Series SE (2nd Gen) (44MM)', link: '/shop?category=apple&device=Apple+Watch+SE+2' },
+                { name: 'Series 2 (42MM)', link: '/shop?category=apple&device=Apple+Watch+Series+2' },
+                { name: 'Series 2 (38MM)', link: '/shop?category=apple&device=Apple+Watch+Series+2' },
+                { name: 'Series 1 (42MM)', link: '/shop?category=apple&device=Apple+Watch+Series+1' },
             ]
         }
     ]
 }
 
-// Apple iPad data
+// Apple iPad data - UPDATED WITH SHOP LINKS
 const APPLE_IPAD_DATA = {
     columns: [
         {
             title: 'iPad',
             items: [
-                { name: 'iPad Pro 13" 8th Gen (2025)', link: '/apple/ipad/pro-13-8gen', new: true },
-                { name: 'iPad Pro 11" 8th Gen (2025)', link: '/apple/ipad/pro-11-8gen', new: true },
-                { name: 'iPad Pro 13" 7th Gen (2024)', link: '/apple/ipad/pro-13-7gen' },
-                { name: 'iPad Pro 12.9" 6th Gen (2022)', link: '/apple/ipad/pro-12-6gen' },
-                { name: 'iPad Pro 12.9" 5th Gen (2021)', link: '/apple/ipad/pro-12-5gen' },
-                { name: 'iPad Pro 12.9" 4th Gen (2020)', link: '/apple/ipad/pro-12-4gen' },
+                { name: 'iPad Pro 13" 8th Gen (2025)', link: '/shop?category=apple&device=iPad+Pro+13+8th+Gen', new: true },
+                { name: 'iPad Pro 11" 8th Gen (2025)', link: '/shop?category=apple&device=iPad+Pro+11+8th+Gen', new: true },
+                { name: 'iPad Pro 13" 7th Gen (2024)', link: '/shop?category=apple&device=iPad+Pro+13+7th+Gen' },
+                { name: 'iPad Pro 12.9" 6th Gen (2022)', link: '/shop?category=apple&device=iPad+Pro+12.9+6th+Gen' },
+                { name: 'iPad Pro 12.9" 5th Gen (2021)', link: '/shop?category=apple&device=iPad+Pro+12.9+5th+Gen' },
+                { name: 'iPad Pro 12.9" 4th Gen (2020)', link: '/shop?category=apple&device=iPad+Pro+12.9+4th+Gen' },
             ],
-            viewAll: '/apple/ipad/all'
+            viewAll: '/shop?category=apple&type=iPad'
         },
         {
             title: '',
             items: [
-                { name: 'iPad Pro 12.9" 3rd Gen (2018)', link: '/apple/ipad/pro-12-3gen' },
-                { name: 'iPad Pro 12.9" 2nd Gen (2017)', link: '/apple/ipad/pro-12-2gen' },
-                { name: 'iPad Pro 12.9" 1st Gen (2015)', link: '/apple/ipad/pro-12-1gen' },
-                { name: 'iPad Air 6th Gen (2024)', link: '/apple/ipad/air-6gen' },
-                { name: 'iPad Air 5th Gen (2022)', link: '/apple/ipad/air-5gen' },
-                { name: 'iPad Air 4th Gen (2020)', link: '/apple/ipad/air-4gen' },
+                { name: 'iPad Pro 12.9" 3rd Gen (2018)', link: '/shop?category=apple&device=iPad+Pro+12.9+3rd+Gen' },
+                { name: 'iPad Pro 12.9" 2nd Gen (2017)', link: '/shop?category=apple&device=iPad+Pro+12.9+2nd+Gen' },
+                { name: 'iPad Pro 12.9" 1st Gen (2015)', link: '/shop?category=apple&device=iPad+Pro+12.9+1st+Gen' },
+                { name: 'iPad Air 6th Gen (2024)', link: '/shop?category=apple&device=iPad+Air+6th+Gen' },
+                { name: 'iPad Air 5th Gen (2022)', link: '/shop?category=apple&device=iPad+Air+5th+Gen' },
+                { name: 'iPad Air 4th Gen (2020)', link: '/shop?category=apple&device=iPad+Air+4th+Gen' },
             ]
         },
         {
             title: '',
             items: [
-                { name: 'iPad 11th Gen (2025)', link: '/apple/ipad/ipad-11gen', new: true },
-                { name: 'iPad 10th Gen (2022)', link: '/apple/ipad/ipad-10gen' },
-                { name: 'iPad 9th Gen (2021)', link: '/apple/ipad/ipad-9gen' },
-                { name: 'iPad Mini 7th Gen (2024)', link: '/apple/ipad/mini-7gen' },
-                { name: 'iPad Mini 6th Gen (2021)', link: '/apple/ipad/mini-6gen' },
-                { name: 'iPad Mini 5th Gen (2019)', link: '/apple/ipad/mini-5gen' },
+                { name: 'iPad 11th Gen (2025)', link: '/shop?category=apple&device=iPad+11th+Gen', new: true },
+                { name: 'iPad 10th Gen (2022)', link: '/shop?category=apple&device=iPad+10th+Gen' },
+                { name: 'iPad 9th Gen (2021)', link: '/shop?category=apple&device=iPad+9th+Gen' },
+                { name: 'iPad Mini 7th Gen (2024)', link: '/shop?category=apple&device=iPad+Mini+7th+Gen' },
+                { name: 'iPad Mini 6th Gen (2021)', link: '/shop?category=apple&device=iPad+Mini+6th+Gen' },
+                { name: 'iPad Mini 5th Gen (2019)', link: '/shop?category=apple&device=iPad+Mini+5th+Gen' },
             ]
         }
     ]
 }
 
-// Apple iPhone data
+// Apple iPhone data - UPDATED WITH SHOP LINKS
 const APPLE_IPHONE_DATA = {
     columns: [
         {
             title: 'iPhone',
             items: [
-                { name: 'All iPhone LCDs', link: '/apple/iphone/all-lcds' },
-                { name: 'iPhone Air', link: '/apple/iphone/iphone-air', new: true },
-                { name: 'iPhone 17 Pro Max', link: '/apple/iphone/17-pro-max', new: true },
-                { name: 'iPhone 17 Pro', link: '/apple/iphone/17-pro', new: true },
-                { name: 'iPhone 17', link: '/apple/iphone/17', new: true },
-                { name: 'iPhone 16e', link: '/apple/iphone/16e' },
-                { name: 'iPhone 16 Pro Max', link: '/apple/iphone/16-pro-max' },
-                { name: 'iPhone 16 Pro', link: '/apple/iphone/16-pro' },
+                { name: 'All iPhone LCDs', link: '/shop?category=apple&type=Replacement+Parts&subCategory=LCD' },
+                { name: 'iPhone Air', link: '/shop?category=apple&device=iPhone+Air', new: true },
+                { name: 'iPhone 17 Pro Max', link: '/shop?category=apple&device=iPhone+17+Pro+Max', new: true },
+                { name: 'iPhone 17 Pro', link: '/shop?category=apple&device=iPhone+17+Pro', new: true },
+                { name: 'iPhone 17', link: '/shop?category=apple&device=iPhone+17', new: true },
+                { name: 'iPhone 16e', link: '/shop?category=apple&device=iPhone+16e' },
+                { name: 'iPhone 16 Pro Max', link: '/shop?category=apple&device=iPhone+16+Pro+Max' },
+                { name: 'iPhone 16 Pro', link: '/shop?category=apple&device=iPhone+16+Pro' },
             ],
-            viewAll: '/apple/iphone/all'
+            viewAll: '/shop?category=apple&type=iPhone'
         },
         {
             title: '',
             items: [
-                { name: 'iPhone 14 Plus', link: '/apple/iphone/14-plus' },
-                { name: 'iPhone 14', link: '/apple/iphone/14' },
-                { name: 'iPhone 13 Pro Max', link: '/apple/iphone/13-pro-max' },
-                { name: 'iPhone 13 Pro', link: '/apple/iphone/13-pro' },
-                { name: 'iPhone 13', link: '/apple/iphone/13' },
-                { name: 'iPhone 13 Mini', link: '/apple/iphone/13-mini' },
-                { name: 'iPhone SE (2022)', link: '/apple/iphone/se-2022' },
-                { name: 'iPhone 12 Pro Max', link: '/apple/iphone/12-pro-max' },
+                { name: 'iPhone 14 Plus', link: '/shop?category=apple&device=iPhone+14+Plus' },
+                { name: 'iPhone 14', link: '/shop?category=apple&device=iPhone+14' },
+                { name: 'iPhone 13 Pro Max', link: '/shop?category=apple&device=iPhone+13+Pro+Max' },
+                { name: 'iPhone 13 Pro', link: '/shop?category=apple&device=iPhone+13+Pro' },
+                { name: 'iPhone 13', link: '/shop?category=apple&device=iPhone+13' },
+                { name: 'iPhone 13 Mini', link: '/shop?category=apple&device=iPhone+13+Mini' },
+                { name: 'iPhone SE (2022)', link: '/shop?category=apple&device=iPhone+SE+2022' },
+                { name: 'iPhone 12 Pro Max', link: '/shop?category=apple&device=iPhone+12+Pro+Max' },
             ]
         },
         {
             title: '',
             items: [
-                { name: 'iPhone XR', link: '/apple/iphone/xr' },
-                { name: 'iPhone X', link: '/apple/iphone/x' },
-                { name: 'iPhone SE (2020)', link: '/apple/iphone/se-2020' },
-                { name: 'iPhone 8 Plus', link: '/apple/iphone/8-plus' },
-                { name: 'iPhone 8', link: '/apple/iphone/8' },
-                { name: 'iPhone 7 Plus', link: '/apple/iphone/7-plus' },
-                { name: 'iPhone 7', link: '/apple/iphone/7' },
-                { name: 'iPhone 6S Plus', link: '/apple/iphone/6s-plus' },
+                { name: 'iPhone XR', link: '/shop?category=apple&device=iPhone+XR' },
+                { name: 'iPhone X', link: '/shop?category=apple&device=iPhone+X' },
+                { name: 'iPhone SE (2020)', link: '/shop?category=apple&device=iPhone+SE+2020' },
+                { name: 'iPhone 8 Plus', link: '/shop?category=apple&device=iPhone+8+Plus' },
+                { name: 'iPhone 8', link: '/shop?category=apple&device=iPhone+8' },
+                { name: 'iPhone 7 Plus', link: '/shop?category=apple&device=iPhone+7+Plus' },
+                { name: 'iPhone 7', link: '/shop?category=apple&device=iPhone+7' },
+                { name: 'iPhone 6S Plus', link: '/shop?category=apple&device=iPhone+6S+Plus' },
             ]
         }
     ]
 }
 
-// Apple iPod data
+// Apple iPod data - UPDATED WITH SHOP LINKS
 const APPLE_IPOD_DATA = {
     columns: [
         {
             title: 'iPod',
             items: [
-                { name: 'iPod Touch 7', link: '/apple/ipod/touch-7' },
-                { name: 'iPod Touch 6', link: '/apple/ipod/touch-6' },
-                { name: 'iPod Touch 5', link: '/apple/ipod/touch-5' },
-                { name: 'iPod Touch 4', link: '/apple/ipod/touch-4' },
-                { name: 'iPod Nano 7', link: '/apple/ipod/nano-7' },
+                { name: 'iPod Touch 7', link: '/shop?category=apple&device=iPod+Touch+7' },
+                { name: 'iPod Touch 6', link: '/shop?category=apple&device=iPod+Touch+6' },
+                { name: 'iPod Touch 5', link: '/shop?category=apple&device=iPod+Touch+5' },
+                { name: 'iPod Touch 4', link: '/shop?category=apple&device=iPod+Touch+4' },
+                { name: 'iPod Nano 7', link: '/shop?category=apple&device=iPod+Nano+7' },
             ],
-            viewAll: '/apple/ipod/all'
+            viewAll: '/shop?category=apple&type=iPod'
         },
         {
             title: '',
             items: [
-                { name: 'iPod Classic', link: '/apple/ipod/classic' },
-                { name: 'iPod Shuffle', link: '/apple/ipod/shuffle' },
-                { name: 'iPod Mini', link: '/apple/ipod/mini' },
+                { name: 'iPod Classic', link: '/shop?category=apple&device=iPod+Classic' },
+                { name: 'iPod Shuffle', link: '/shop?category=apple&device=iPod+Shuffle' },
+                { name: 'iPod Mini', link: '/shop?category=apple&device=iPod+Mini' },
             ]
         },
         {
@@ -175,20 +175,20 @@ const APPLE_IPOD_DATA = {
     ]
 }
 
-// Apple AirPods data
+// Apple AirPods data - UPDATED WITH SHOP LINKS
 const APPLE_AIRPODS_DATA = {
     columns: [
         {
             title: 'AirPods',
             items: [
-                { name: 'AirPods Pro 1st Gen (2019)', link: '/apple/airpods/pro-1gen' },
-                { name: 'AirPods Pro 2nd Gen (2022)', link: '/apple/airpods/pro-2gen' },
-                { name: 'AirPods 3rd Gen (2021)', link: '/apple/airpods/3gen' },
-                { name: 'AirPods 2nd Gen (2019)', link: '/apple/airpods/2gen' },
-                { name: 'AirPods 1st Gen (2016)', link: '/apple/airpods/1gen' },
-                { name: 'AirPods Max 1st Gen (2020)', link: '/apple/airpods/max-1gen' },
+                { name: 'AirPods Pro 1st Gen (2019)', link: '/shop?category=apple&device=AirPods+Pro+1st+Gen' },
+                { name: 'AirPods Pro 2nd Gen (2022)', link: '/shop?category=apple&device=AirPods+Pro+2nd+Gen' },
+                { name: 'AirPods 3rd Gen (2021)', link: '/shop?category=apple&device=AirPods+3rd+Gen' },
+                { name: 'AirPods 2nd Gen (2019)', link: '/shop?category=apple&device=AirPods+2nd+Gen' },
+                { name: 'AirPods 1st Gen (2016)', link: '/shop?category=apple&device=AirPods+1st+Gen' },
+                { name: 'AirPods Max 1st Gen (2020)', link: '/shop?category=apple&device=AirPods+Max' },
             ],
-            viewAll: '/apple/airpods/all'
+            viewAll: '/shop?category=apple&type=AirPods'
         },
         {
             title: '',
@@ -208,18 +208,18 @@ const APPLE_SUBCATEGORY_DATA: {[key: string]: any} = {
     'Watch': APPLE_WATCH_DATA,
     'iPod': APPLE_IPOD_DATA,
     'AirPods': APPLE_AIRPODS_DATA,
-    // Default data for others
-    'iMac': { columns: [{ title: 'iMac', items: [{ name: 'iMac 24" M4 (2024)', link: '/apple/imac/24-m4', new: true }], viewAll: '/apple/imac/all' }, { title: '', items: [] }, { title: '', items: [] }] },
-    'Mac Mini': { columns: [{ title: 'Mac Mini', items: [{ name: 'Mac Mini M4 (2024)', link: '/apple/mac-mini/m4', new: true }], viewAll: '/apple/mac-mini/all' }, { title: '', items: [] }, { title: '', items: [] }] },
-    'Mac Pro': { columns: [{ title: 'Mac Pro', items: [{ name: 'Mac Pro M2 Ultra (2023)', link: '/apple/mac-pro/m2-ultra' }], viewAll: '/apple/mac-pro/all' }, { title: '', items: [] }, { title: '', items: [] }] },
-    'MacBook Pro': { columns: [{ title: 'MacBook Pro', items: [{ name: 'MacBook Pro 14" M4 (2024)', link: '/apple/macbook-pro/14-m4', new: true }], viewAll: '/apple/macbook-pro/all' }, { title: '', items: [] }, { title: '', items: [] }] },
-    'MacBook Air': { columns: [{ title: 'MacBook Air', items: [{ name: 'MacBook Air 15" M3 (2024)', link: '/apple/macbook-air/15-m3' }], viewAll: '/apple/macbook-air/all' }, { title: '', items: [] }, { title: '', items: [] }] },
-    'MacBook': { columns: [{ title: 'MacBook', items: [{ name: 'MacBook 12" (2017)', link: '/apple/macbook/12-2017' }], viewAll: '/apple/macbook/all' }, { title: '', items: [] }, { title: '', items: [] }] },
-    'Mac Studio': { columns: [{ title: 'Mac Studio', items: [{ name: 'Mac Studio M2 Max (2023)', link: '/apple/mac-studio/m2-max' }], viewAll: '/apple/mac-studio/all' }, { title: '', items: [] }, { title: '', items: [] }] },
-    'Studio Display': { columns: [{ title: 'Studio Display', items: [{ name: 'Studio Display 27" (2022)', link: '/apple/studio-display/27' }], viewAll: '/apple/studio-display/all' }, { title: '', items: [] }, { title: '', items: [] }] },
-    'Apollo SSDs': { columns: [{ title: 'Apollo SSDs', items: [{ name: 'Apollo SSD 1TB', link: '/apple/apollo-ssd/1tb' }], viewAll: '/apple/apollo-ssd/all' }, { title: '', items: [] }, { title: '', items: [] }] },
+    'iMac': { columns: [{ title: 'iMac', items: [{ name: 'iMac 24" M4 (2024)', link: '/shop?category=apple&device=iMac+24+M4', new: true }], viewAll: '/shop?category=apple&type=iMac' }, { title: '', items: [] }, { title: '', items: [] }] },
+    'Mac Mini': { columns: [{ title: 'Mac Mini', items: [{ name: 'Mac Mini M4 (2024)', link: '/shop?category=apple&device=Mac+Mini+M4', new: true }], viewAll: '/shop?category=apple&type=Mac+Mini' }, { title: '', items: [] }, { title: '', items: [] }] },
+    'Mac Pro': { columns: [{ title: 'Mac Pro', items: [{ name: 'Mac Pro M2 Ultra (2023)', link: '/shop?category=apple&device=Mac+Pro+M2+Ultra' }], viewAll: '/shop?category=apple&type=Mac+Pro' }, { title: '', items: [] }, { title: '', items: [] }] },
+    'MacBook Pro': { columns: [{ title: 'MacBook Pro', items: [{ name: 'MacBook Pro 14" M4 (2024)', link: '/shop?category=apple&device=MacBook+Pro+14+M4', new: true }], viewAll: '/shop?category=apple&type=MacBook+Pro' }, { title: '', items: [] }, { title: '', items: [] }] },
+    'MacBook Air': { columns: [{ title: 'MacBook Air', items: [{ name: 'MacBook Air 15" M3 (2024)', link: '/shop?category=apple&device=MacBook+Air+15+M3' }], viewAll: '/shop?category=apple&type=MacBook+Air' }, { title: '', items: [] }, { title: '', items: [] }] },
+    'MacBook': { columns: [{ title: 'MacBook', items: [{ name: 'MacBook 12" (2017)', link: '/shop?category=apple&device=MacBook+12' }], viewAll: '/shop?category=apple&type=MacBook' }, { title: '', items: [] }, { title: '', items: [] }] },
+    'Mac Studio': { columns: [{ title: 'Mac Studio', items: [{ name: 'Mac Studio M2 Max (2023)', link: '/shop?category=apple&device=Mac+Studio+M2+Max' }], viewAll: '/shop?category=apple&type=Mac+Studio' }, { title: '', items: [] }, { title: '', items: [] }] },
+    'Studio Display': { columns: [{ title: 'Studio Display', items: [{ name: 'Studio Display 27" (2022)', link: '/shop?category=apple&device=Studio+Display+27' }], viewAll: '/shop?category=apple&type=Studio+Display' }, { title: '', items: [] }, { title: '', items: [] }] },
+    'Apollo SSDs': { columns: [{ title: 'Apollo SSDs', items: [{ name: 'Apollo SSD 1TB', link: '/shop?category=apple&device=Apollo+SSD+1TB' }], viewAll: '/shop?category=apple&type=Apollo+SSDs' }, { title: '', items: [] }, { title: '', items: [] }] },
 }
 
+// Samsung data - UPDATED WITH SHOP LINKS
 const SAMSUNG_DATA = {
     subcategories: ['S Series', 'Note Series', 'A Series', 'Z Series'],
     'S Series': {
@@ -227,11 +227,141 @@ const SAMSUNG_DATA = {
             {
                 title: 'S Series',
                 items: [
-                    { name: 'Galaxy S25 Ultra', link: '/samsung/s-series/s25-ultra' },
-                    { name: 'Galaxy S25 Plus', link: '/samsung/s-series/s25-plus' },
-                    { name: 'Galaxy S25', link: '/samsung/s-series/s25' },
+                    { name: 'Galaxy S25 Ultra', link: '/shop?category=samsung&device=Galaxy+S25+Ultra', new: true },
+                    { name: 'Galaxy S25 Plus', link: '/shop?category=samsung&device=Galaxy+S25+Plus', new: true },
+                    { name: 'Galaxy S25', link: '/shop?category=samsung&device=Galaxy+S25', new: true },
+                    { name: 'Galaxy S24 Ultra', link: '/shop?category=samsung&device=Galaxy+S24+Ultra' },
+                    { name: 'Galaxy S24 Plus', link: '/shop?category=samsung&device=Galaxy+S24+Plus' },
+                    { name: 'Galaxy S24', link: '/shop?category=samsung&device=Galaxy+S24' },
                 ],
-                viewAll: '/samsung/s-series/all'
+                viewAll: '/shop?category=samsung&type=S+Series'
+            },
+            { title: '', items: [] },
+            { title: '', items: [] }
+        ]
+    },
+    'Note Series': {
+        columns: [
+            {
+                title: 'Note Series',
+                items: [
+                    { name: 'Galaxy Note 20 Ultra', link: '/shop?category=samsung&device=Galaxy+Note+20+Ultra' },
+                    { name: 'Galaxy Note 20', link: '/shop?category=samsung&device=Galaxy+Note+20' },
+                    { name: 'Galaxy Note 10 Plus', link: '/shop?category=samsung&device=Galaxy+Note+10+Plus' },
+                ],
+                viewAll: '/shop?category=samsung&type=Note+Series'
+            },
+            { title: '', items: [] },
+            { title: '', items: [] }
+        ]
+    },
+    'A Series': {
+        columns: [
+            {
+                title: 'A Series',
+                items: [
+                    { name: 'Galaxy A54', link: '/shop?category=samsung&device=Galaxy+A54' },
+                    { name: 'Galaxy A34', link: '/shop?category=samsung&device=Galaxy+A34' },
+                    { name: 'Galaxy A14', link: '/shop?category=samsung&device=Galaxy+A14' },
+                ],
+                viewAll: '/shop?category=samsung&type=A+Series'
+            },
+            { title: '', items: [] },
+            { title: '', items: [] }
+        ]
+    },
+    'Z Series': {
+        columns: [
+            {
+                title: 'Z Series',
+                items: [
+                    { name: 'Galaxy Z Fold 6', link: '/shop?category=samsung&device=Galaxy+Z+Fold+6', new: true },
+                    { name: 'Galaxy Z Flip 6', link: '/shop?category=samsung&device=Galaxy+Z+Flip+6', new: true },
+                    { name: 'Galaxy Z Fold 5', link: '/shop?category=samsung&device=Galaxy+Z+Fold+5' },
+                    { name: 'Galaxy Z Flip 5', link: '/shop?category=samsung&device=Galaxy+Z+Flip+5' },
+                ],
+                viewAll: '/shop?category=samsung&type=Z+Series'
+            },
+            { title: '', items: [] },
+            { title: '', items: [] }
+        ]
+    }
+}
+
+// Motorola & Google data - UPDATED WITH SHOP LINKS
+const MOTOROLA_DATA = {
+    subcategories: ['Moto G Series', 'Razr Series', 'Edge Series'],
+    'Moto G Series': {
+        columns: [
+            {
+                title: 'Moto G Series',
+                items: [
+                    { name: 'Moto G Power (2024)', link: '/shop?category=motorola&device=Moto+G+Power+2024' },
+                    { name: 'Moto G Stylus (2024)', link: '/shop?category=motorola&device=Moto+G+Stylus+2024' },
+                ],
+                viewAll: '/shop?category=motorola&type=Moto+G'
+            },
+            { title: '', items: [] },
+            { title: '', items: [] }
+        ]
+    },
+    'Razr Series': {
+        columns: [
+            {
+                title: 'Razr Series',
+                items: [
+                    { name: 'Razr+ (2024)', link: '/shop?category=motorola&device=Razr+Plus+2024', new: true },
+                    { name: 'Razr (2024)', link: '/shop?category=motorola&device=Razr+2024' },
+                ],
+                viewAll: '/shop?category=motorola&type=Razr'
+            },
+            { title: '', items: [] },
+            { title: '', items: [] }
+        ]
+    },
+    'Edge Series': {
+        columns: [
+            {
+                title: 'Edge Series',
+                items: [
+                    { name: 'Edge 50 Pro', link: '/shop?category=motorola&device=Moto+Edge+50+Pro' },
+                    { name: 'Edge 40', link: '/shop?category=motorola&device=Moto+Edge+40' },
+                ],
+                viewAll: '/shop?category=motorola&type=Edge'
+            },
+            { title: '', items: [] },
+            { title: '', items: [] }
+        ]
+    }
+}
+
+const GOOGLE_DATA = {
+    subcategories: ['Pixel', 'Pixelbook'],
+    'Pixel': {
+        columns: [
+            {
+                title: 'Pixel',
+                items: [
+                    { name: 'Pixel 9 Pro XL', link: '/shop?category=google&device=Pixel+9+Pro+XL', new: true },
+                    { name: 'Pixel 9 Pro', link: '/shop?category=google&device=Pixel+9+Pro', new: true },
+                    { name: 'Pixel 9', link: '/shop?category=google&device=Pixel+9', new: true },
+                    { name: 'Pixel 8 Pro', link: '/shop?category=google&device=Pixel+8+Pro' },
+                    { name: 'Pixel 8', link: '/shop?category=google&device=Pixel+8' },
+                ],
+                viewAll: '/shop?category=google&type=Pixel'
+            },
+            { title: '', items: [] },
+            { title: '', items: [] }
+        ]
+    },
+    'Pixelbook': {
+        columns: [
+            {
+                title: 'Pixelbook',
+                items: [
+                    { name: 'Pixelbook Go', link: '/shop?category=google&device=Pixelbook+Go' },
+                ],
+                viewAll: '/shop?category=google&type=Pixelbook'
             },
             { title: '', items: [] },
             { title: '', items: [] }
@@ -244,8 +374,8 @@ const BRANDS_DATA: any = {
         subcategories: ['iPhone', 'iPad', 'Watch', 'iPod', 'AirPods', 'iMac', 'Mac Mini', 'Mac Pro', 'MacBook Pro', 'MacBook Air', 'MacBook', 'Mac Studio', 'Studio Display', 'Apollo SSDs'],
     },
     Samsung: SAMSUNG_DATA,
-    Motorola: { subcategories: ['Moto G Series', 'Razr Series'] },
-    Google: { subcategories: ['Pixel', 'Pixelbook'] }
+    Motorola: MOTOROLA_DATA,
+    Google: GOOGLE_DATA
 }
 
 export function CategorySection() {
@@ -290,7 +420,15 @@ export function CategorySection() {
         }
 
         if (hoveredBrand === 'Samsung') {
-            return SAMSUNG_DATA['S Series']
+            return SAMSUNG_DATA[currentSubcat as keyof typeof SAMSUNG_DATA] || SAMSUNG_DATA['S Series']
+        }
+
+        if (hoveredBrand === 'Motorola') {
+            return MOTOROLA_DATA[currentSubcat as keyof typeof MOTOROLA_DATA] || MOTOROLA_DATA['Moto G Series']
+        }
+
+        if (hoveredBrand === 'Google') {
+            return GOOGLE_DATA[currentSubcat as keyof typeof GOOGLE_DATA] || GOOGLE_DATA['Pixel']
         }
 
         return null
@@ -320,16 +458,16 @@ export function CategorySection() {
                             </button>
                         ))}
                         <Link href="/shop">
-                            <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium">Shop</span>
+                            <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium hover:text-black dark:hover:text-white">Shop</span>
                         </Link>
                         <Link href="/wholesale/apply">
-                            <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium">Wholesale Apply</span>
+                            <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium hover:text-black dark:hover:text-white">Wholesale Apply</span>
                         </Link>
                         <Link href="/wholesale">
-                            <span className=" text-neutral-600 dark:text-neutral-400relative py-3 px-1 text-sm font-medium">Wholesale Portal</span>
+                            <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium hover:text-black dark:hover:text-white">Wholesale Portal</span>
                         </Link>
                         <Link href="/repairs">
-                            <span className=" text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium">Repair</span>
+                            <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium hover:text-black dark:hover:text-white">Repair</span>
                         </Link>
                     </div>
                 </div>
