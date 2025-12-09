@@ -1,147 +1,56 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, SlidersHorizontal, X, ChevronDown, Grid, List, ShoppingCart } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
-// Sample product data
-const PRODUCTS = [
-    {
-        id: 1,
-        name: 'iPhone 15 Pro Max OLED Display',
-        category: 'parts',
-        brand: 'Apple',
-        device: 'iPhone 15 Pro Max',
-        price: 89.99,
-        wholesalePrice: 59.99,
-        image: '/images/products/iphone-15-display.jpg',
-        inventory: 'In Stock',
-        inventoryCount: 50,
-        rating: 4.8,
-        reviews: 124,
-        sku: 'IP15PM-OLED-01',
-        isNew: true
-    },
-    {
-        id: 2,
-        name: 'Samsung S24 Ultra Screen Assembly',
-        category: 'parts',
-        brand: 'Samsung',
-        device: 'Galaxy S24 Ultra',
-        price: 129.99,
-        wholesalePrice: 89.99,
-        image: '/images/products/s24-display.jpg',
-        inventory: 'In Stock',
-        inventoryCount: 35,
-        rating: 4.9,
-        reviews: 98,
-        sku: 'S24U-SCR-01'
-    },
-    {
-        id: 3,
-        name: 'Premium Phone Repair Tool Kit',
-        category: 'tools',
-        brand: 'iFixit',
-        device: 'Universal',
-        price: 49.99,
-        wholesalePrice: 34.99,
-        image: '/images/products/tool-kit.jpg',
-        inventory: 'In Stock',
-        inventoryCount: 100,
-        rating: 4.7,
-        reviews: 256,
-        sku: 'TK-PREM-01',
-        isBestSeller: true
-    },
-    {
-        id: 4,
-        name: 'iPhone Lightning Cable 6ft',
-        category: 'accessories',
-        brand: 'Apple',
-        device: 'iPhone',
-        price: 19.99,
-        wholesalePrice: 12.99,
-        image: '/images/products/lightning-cable.jpg',
-        inventory: 'In Stock',
-        inventoryCount: 200,
-        rating: 4.5,
-        reviews: 432,
-        sku: 'ACC-LTN-6FT'
-    },
-    {
-        id: 5,
-        name: 'Google Pixel 9 Battery',
-        category: 'parts',
-        brand: 'Google',
-        device: 'Pixel 9',
-        price: 39.99,
-        wholesalePrice: 24.99,
-        image: '/images/products/pixel-9-battery.jpg',
-        inventory: 'Low Stock',
-        inventoryCount: 8,
-        rating: 4.6,
-        reviews: 67,
-        sku: 'P9-BAT-01'
-    },
-    {
-        id: 6,
-        name: 'Motorola Edge 60 LCD Screen',
-        category: 'parts',
-        brand: 'Motorola',
-        device: 'Moto Edge 60',
-        price: 74.99,
-        wholesalePrice: 49.99,
-        image: '/images/products/moto-edge-lcd.jpg',
-        inventory: 'In Stock',
-        inventoryCount: 25,
-        rating: 4.4,
-        reviews: 34,
-        sku: 'ME60-LCD-01'
-    },
-    {
-        id: 7,
-        name: 'iPhone 14 Pro Camera Replacement',
-        category: 'parts',
-        brand: 'Apple',
-        device: 'iPhone 14 Pro',
-        price: 69.99,
-        wholesalePrice: 44.99,
-        image: '/images/products/iphone-14-camera.jpg',
-        inventory: 'In Stock',
-        inventoryCount: 42,
-        rating: 4.8,
-        reviews: 156,
-        sku: 'IP14P-CAM-01'
-    },
-    {
-        id: 8,
-        name: 'USB-C Fast Charging Cable',
-        category: 'accessories',
-        brand: 'Universal',
-        device: 'Universal',
-        price: 14.99,
-        wholesalePrice: 8.99,
-        image: '/images/products/usbc-cable.jpg',
-        inventory: 'In Stock',
-        inventoryCount: 300,
-        rating: 4.6,
-        reviews: 892,
-        sku: 'ACC-USBC-3FT',
-        isBestSeller: true
-    }
+// COMPREHENSIVE PRODUCT DATABASE
+const ALL_PRODUCTS = [
+    // iPhone 17 Pro Max Products
+    { id: 1, name: 'OLED Assembly For iPhone 17 Pro Max (Genuine OEM)', category: 'apple', device: 'iPhone 17 Pro Max', type: 'Replacement Parts', subCategory: 'Screen', brand: 'Apple', price: 378.00, wholesalePrice: 248.00, image: '/products/iphone-17-pro-max-screen.jpg', sku: 'IP17PM-OLED-GEN', inventory: 'In Stock', inventoryCount: 45, rating: 4.9, reviews: 234, isNew: true, isBestSeller: true },
+    { id: 2, name: 'OLED Assembly Compatible For iPhone 17 Pro Max (Aftermarket Pro)', category: 'apple', device: 'iPhone 17 Pro Max', type: 'Replacement Parts', subCategory: 'Screen', brand: 'XO7', price: 327.09, wholesalePrice: 215.00, image: '/products/iphone-17-pro-max-xo7.jpg', sku: 'IP17PM-OLED-XO7', inventory: 'In Stock', inventoryCount: 89, rating: 4.7, reviews: 156 },
+    { id: 3, name: 'Replacement Battery For iPhone 17 Pro Max (Genuine OEM)', category: 'apple', device: 'iPhone 17 Pro Max', type: 'Replacement Parts', subCategory: 'Battery', brand: 'Apple', price: 74.85, wholesalePrice: 49.00, image: '/products/iphone-17-pro-max-battery.jpg', sku: 'IP17PM-BAT', inventory: 'In Stock', inventoryCount: 234, rating: 4.9, reviews: 445, isBestSeller: true },
+    { id: 4, name: 'Back Glass Housing For iPhone 17 Pro Max (Genuine OEM)', category: 'apple', device: 'iPhone 17 Pro Max', type: 'Replacement Parts', subCategory: 'Housing', brand: 'Apple', price: 145.00, wholesalePrice: 95.00, image: '/products/iphone-17-pro-max-housing.jpg', sku: 'IP17PM-HOUS', inventory: 'In Stock', inventoryCount: 23, rating: 4.8, reviews: 89 },
+    { id: 5, name: 'Rear Camera Assembly For iPhone 17 Pro Max (Genuine OEM)', category: 'apple', device: 'iPhone 17 Pro Max', type: 'Replacement Parts', subCategory: 'Camera', brand: 'Apple', price: 189.99, wholesalePrice: 125.00, image: '/products/iphone-17-pro-max-camera.jpg', sku: 'IP17PM-CAM', inventory: 'In Stock', inventoryCount: 67, rating: 4.9, reviews: 178 },
+    { id: 6, name: 'Charging Port Flex Cable For iPhone 17 Pro Max', category: 'apple', device: 'iPhone 17 Pro Max', type: 'Replacement Parts', subCategory: 'Charging Port', brand: 'Apple', price: 45.99, wholesalePrice: 30.00, image: '/products/iphone-17-pro-max-port.jpg', sku: 'IP17PM-PORT', inventory: 'In Stock', inventoryCount: 145, rating: 4.7, reviews: 267 },
+    { id: 7, name: 'Silicone Case For iPhone 17 Pro Max - MagSafe', category: 'apple', device: 'iPhone 17 Pro Max', type: 'Accessories', subCategory: 'Cases', brand: 'Apple', price: 49.99, wholesalePrice: 32.00, image: '/products/case-silicone-ip17pm.jpg', sku: 'ACC-CASE-IP17PM', inventory: 'In Stock', inventoryCount: 234, rating: 4.7, reviews: 456 },
+    { id: 8, name: 'Tempered Glass Screen Protector For iPhone 17 Pro Max (2-Pack)', category: 'apple', device: 'iPhone 17 Pro Max', type: 'Accessories', subCategory: 'Screen Protectors', brand: 'Spigen', price: 14.99, wholesalePrice: 9.99, image: '/products/screen-protector-ip17pm.jpg', sku: 'ACC-SP-IP17PM', inventory: 'In Stock', inventoryCount: 567, rating: 4.6, reviews: 1234, isBestSeller: true },
+
+    // iPhone 17 Pro Products
+    { id: 9, name: 'OLED Display For iPhone 17 Pro (Genuine OEM)', category: 'apple', device: 'iPhone 17 Pro', type: 'Replacement Parts', subCategory: 'Screen', brand: 'Apple', price: 348.00, wholesalePrice: 228.00, image: '/products/iphone-17-pro-screen.jpg', sku: 'IP17P-OLED', inventory: 'In Stock', inventoryCount: 56, rating: 4.9, reviews: 189, isNew: true },
+    { id: 10, name: 'Battery For iPhone 17 Pro (Genuine OEM)', category: 'apple', device: 'iPhone 17 Pro', type: 'Replacement Parts', subCategory: 'Battery', brand: 'Apple', price: 69.99, wholesalePrice: 45.99, image: '/products/iphone-17-pro-battery.jpg', sku: 'IP17P-BAT', inventory: 'In Stock', inventoryCount: 198, rating: 4.8, reviews: 356, isNew: true },
+
+    // iPhone 16 Pro Max Products
+    { id: 11, name: 'OLED Assembly For iPhone 16 Pro Max (Genuine OEM)', category: 'apple', device: 'iPhone 16 Pro Max', type: 'Replacement Parts', subCategory: 'Screen', brand: 'Apple', price: 328.00, wholesalePrice: 215.00, image: '/products/iphone-16-pro-max-screen.jpg', sku: 'IP16PM-OLED', inventory: 'In Stock', inventoryCount: 78, rating: 4.9, reviews: 445, isBestSeller: true },
+    { id: 12, name: 'Battery For iPhone 16 Pro Max (Genuine OEM)', category: 'apple', device: 'iPhone 16 Pro Max', type: 'Replacement Parts', subCategory: 'Battery', brand: 'Apple', price: 69.99, wholesalePrice: 45.99, image: '/products/iphone-16-pro-max-battery.jpg', sku: 'IP16PM-BAT', inventory: 'In Stock', inventoryCount: 267, rating: 4.8, reviews: 678 },
+
+    // Samsung Galaxy S25 Ultra Products
+    { id: 13, name: 'AMOLED Display For Samsung Galaxy S25 Ultra (Genuine OEM)', category: 'samsung', device: 'Galaxy S25 Ultra', type: 'Replacement Parts', subCategory: 'Screen', brand: 'Samsung', price: 398.00, wholesalePrice: 261.00, image: '/products/s25-ultra-screen.jpg', sku: 'S25U-OLED', inventory: 'In Stock', inventoryCount: 34, rating: 4.9, reviews: 112, isNew: true, isBestSeller: true },
+    { id: 14, name: 'Battery For Samsung Galaxy S25 Ultra (Genuine OEM)', category: 'samsung', device: 'Galaxy S25 Ultra', type: 'Replacement Parts', subCategory: 'Battery', brand: 'Samsung', price: 84.99, wholesalePrice: 55.99, image: '/products/s25-ultra-battery.jpg', sku: 'S25U-BAT', inventory: 'In Stock', inventoryCount: 123, rating: 4.8, reviews: 234, isNew: true },
+    { id: 15, name: 'Back Glass Housing For Samsung Galaxy S25 Ultra', category: 'samsung', device: 'Galaxy S25 Ultra', type: 'Replacement Parts', subCategory: 'Housing', brand: 'Samsung', price: 145.00, wholesalePrice: 95.00, image: '/products/s25-ultra-housing.jpg', sku: 'S25U-HOUS', inventory: 'In Stock', inventoryCount: 45, rating: 4.7, reviews: 89, isNew: true },
+
+    // Samsung Galaxy S24 Ultra Products
+    { id: 16, name: 'AMOLED Display For Samsung Galaxy S24 Ultra (Genuine OEM)', category: 'samsung', device: 'Galaxy S24 Ultra', type: 'Replacement Parts', subCategory: 'Screen', brand: 'Samsung', price: 348.00, wholesalePrice: 228.00, image: '/products/s24-ultra-screen.jpg', sku: 'S24U-OLED', inventory: 'In Stock', inventoryCount: 56, rating: 4.9, reviews: 234, isBestSeller: true },
+    { id: 17, name: 'Battery For Samsung Galaxy S24 Ultra (Genuine OEM)', category: 'samsung', device: 'Galaxy S24 Ultra', type: 'Replacement Parts', subCategory: 'Battery', brand: 'Samsung', price: 78.99, wholesalePrice: 51.99, image: '/products/s24-ultra-battery.jpg', sku: 'S24U-BAT', inventory: 'In Stock', inventoryCount: 189, rating: 4.8, reviews: 445 },
+
+    // Google Pixel Products
+    { id: 18, name: 'OLED Display For Google Pixel 9 Pro (Genuine OEM)', category: 'google', device: 'Pixel 9 Pro', type: 'Replacement Parts', subCategory: 'Screen', brand: 'Google', price: 278.00, wholesalePrice: 182.00, image: '/products/pixel-9-pro-screen.jpg', sku: 'P9P-OLED', inventory: 'In Stock', inventoryCount: 67, rating: 4.8, reviews: 178, isNew: true },
+    { id: 19, name: 'Battery For Google Pixel 9 Pro (Genuine OEM)', category: 'google', device: 'Pixel 9 Pro', type: 'Replacement Parts', subCategory: 'Battery', brand: 'Google', price: 65.99, wholesalePrice: 43.99, image: '/products/pixel-9-pro-battery.jpg', sku: 'P9P-BAT', inventory: 'In Stock', inventoryCount: 123, rating: 4.7, reviews: 234, isNew: true },
+
+    // Motorola Products
+    { id: 20, name: 'LCD Display For Moto G Power (2024)', category: 'motorola', device: 'Moto G Power 2024', type: 'Replacement Parts', subCategory: 'Screen', brand: 'Motorola', price: 89.99, wholesalePrice: 59.99, image: '/products/moto-g-power-screen.jpg', sku: 'MGP24-LCD', inventory: 'In Stock', inventoryCount: 45, rating: 4.6, reviews: 89 },
+    { id: 21, name: 'Battery For Moto G Power (2024)', category: 'motorola', device: 'Moto G Power 2024', type: 'Replacement Parts', subCategory: 'Battery', brand: 'Motorola', price: 39.99, wholesalePrice: 26.99, image: '/products/moto-g-power-battery.jpg', sku: 'MGP24-BAT', inventory: 'In Stock', inventoryCount: 123, rating: 4.7, reviews: 156 },
+
+    // Tools & Accessories (Universal)
+    { id: 22, name: 'Professional Phone Repair Tool Kit (86-Piece)', category: 'tools', device: 'Universal', type: 'Tools & Supplies', subCategory: 'Tool Kits', brand: 'iFixit', price: 89.99, wholesalePrice: 59.99, image: '/products/tool-kit-premium.jpg', sku: 'TK-PREM-86', inventory: 'In Stock', inventoryCount: 234, rating: 4.9, reviews: 1234, isBestSeller: true },
+    { id: 23, name: 'LCD Opening Pliers - Anti-Static', category: 'tools', device: 'Universal', type: 'Tools & Supplies', subCategory: 'Hand Tools', brand: 'iFixit', price: 24.99, wholesalePrice: 16.99, image: '/products/opening-pliers.jpg', sku: 'TL-PLIERS', inventory: 'In Stock', inventoryCount: 456, rating: 4.8, reviews: 678 },
+    { id: 24, name: 'Precision Screwdriver Set (32-Piece)', category: 'tools', device: 'Universal', type: 'Tools & Supplies', subCategory: 'Screwdrivers', brand: 'iFixit', price: 34.99, wholesalePrice: 23.99, image: '/products/screwdriver-set.jpg', sku: 'TL-SCREW-32', inventory: 'In Stock', inventoryCount: 345, rating: 4.9, reviews: 890, isBestSeller: true },
+    { id: 25, name: 'USB-C to Lightning Cable (6ft) - MFi Certified', category: 'accessories', device: 'Universal', type: 'Accessories', subCategory: 'Cables', brand: 'Apple', price: 24.99, wholesalePrice: 16.99, image: '/products/usbc-lightning.jpg', sku: 'ACC-CABLE-MFI', inventory: 'In Stock', inventoryCount: 567, rating: 4.8, reviews: 1234, isBestSeller: true },
+    { id: 26, name: 'USB-C to USB-C Cable (10ft) - Braided', category: 'accessories', device: 'Universal', type: 'Accessories', subCategory: 'Cables', brand: 'Anker', price: 19.99, wholesalePrice: 13.99, image: '/products/usbc-usbc.jpg', sku: 'ACC-CABLE-USBC', inventory: 'In Stock', inventoryCount: 678, rating: 4.7, reviews: 890 },
+    { id: 27, name: '65W GaN USB-C Fast Charger - Dual Port', category: 'accessories', device: 'Universal', type: 'Accessories', subCategory: 'Chargers', brand: 'Anker', price: 45.99, wholesalePrice: 30.99, image: '/products/charger-65w.jpg', sku: 'ACC-CHRG-65W', inventory: 'In Stock', inventoryCount: 234, rating: 4.9, reviews: 678, isBestSeller: true },
 ]
-
-const CATEGORIES = [
-    { value: 'all', label: 'All Products' },
-    { value: 'parts', label: 'Replacement Parts' },
-    { value: 'accessories', label: 'Accessories' },
-    { value: 'tools', label: 'Repair Tools' }
-]
-
-const BRANDS = ['All Brands', 'Apple', 'Samsung', 'Google', 'Motorola', 'iFixit', 'Universal']
-
-const DEVICES = ['All Devices', 'iPhone 15 Pro Max', 'iPhone 14 Pro', 'Galaxy S24 Ultra', 'Pixel 9', 'Moto Edge 60', 'Universal']
 
 const SORT_OPTIONS = [
     { value: 'popularity', label: 'Most Popular' },
@@ -152,64 +61,149 @@ const SORT_OPTIONS = [
 ]
 
 export default function ShopPage() {
-    const [selectedCategory, setSelectedCategory] = useState('all')
-    const [selectedBrand, setSelectedBrand] = useState('All Brands')
-    const [selectedDevice, setSelectedDevice] = useState('All Devices')
-    const [priceRange, setPriceRange] = useState([0, 200])
+    const searchParams = useSearchParams()
+
+    // Get URL parameters
+    const categoryParam = searchParams?.get('category') || 'all'
+    const deviceParam = searchParams?.get('device') || 'all'
+    const typeParam = searchParams?.get('type') || 'all'
+    const subCategoryParam = searchParams?.get('subCategory') || 'all'
+
+    const [priceRange, setPriceRange] = useState([0, 500])
     const [sortBy, setSortBy] = useState('popularity')
     const [searchQuery, setSearchQuery] = useState('')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [showFilters, setShowFilters] = useState(true)
-    const [userRole, setUserRole] = useState<'retail' | 'wholesale'>('retail') // Demo: toggle for testing
+    const [userRole, setUserRole] = useState<'retail' | 'wholesale'>('retail')
 
-    // Filter products
-    const filteredProducts = PRODUCTS.filter(product => {
-        const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
-        const matchesBrand = selectedBrand === 'All Brands' || product.brand === selectedBrand
-        const matchesDevice = selectedDevice === 'All Devices' || product.device === selectedDevice
-        const matchesPrice = userRole === 'retail'
-            ? product.price >= priceRange[0] && product.price <= priceRange[1]
-            : product.wholesalePrice >= priceRange[0] && product.wholesalePrice <= priceRange[1]
-        const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.sku.toLowerCase().includes(searchQuery.toLowerCase())
+    // Filter products based on URL params and local state
+    const filteredProducts = useMemo(() => {
+        let products = ALL_PRODUCTS
 
-        return matchesCategory && matchesBrand && matchesDevice && matchesPrice && matchesSearch
-    })
+        // Category filter from URL
+        if (categoryParam !== 'all') {
+            products = products.filter(p => p.category === categoryParam)
+        }
+
+        // Device filter from URL
+        if (deviceParam !== 'all') {
+            products = products.filter(p => p.device === deviceParam)
+        }
+
+        // Type filter from URL
+        if (typeParam !== 'all') {
+            products = products.filter(p => p.type === typeParam)
+        }
+
+        // SubCategory filter from URL
+        if (subCategoryParam !== 'all') {
+            products = products.filter(p => p.subCategory === subCategoryParam)
+        }
+
+        // Search filter
+        if (searchQuery) {
+            products = products.filter(p =>
+                p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.device.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        }
+
+        // Price range filter
+        products = products.filter(p => {
+            const price = userRole === 'retail' ? p.price : p.wholesalePrice
+            return price >= priceRange[0] && price <= priceRange[1]
+        })
+
+        return products
+    }, [categoryParam, deviceParam, typeParam, subCategoryParam, searchQuery, priceRange, userRole])
 
     // Sort products
-    const sortedProducts = [...filteredProducts].sort((a, b) => {
-        const priceA = userRole === 'retail' ? a.price : a.wholesalePrice
-        const priceB = userRole === 'retail' ? b.price : b.wholesalePrice
+    const sortedProducts = useMemo(() => {
+        const products = [...filteredProducts]
 
         switch (sortBy) {
             case 'price-low':
-                return priceA - priceB
+                return products.sort((a, b) => {
+                    const priceA = userRole === 'retail' ? a.price : a.wholesalePrice
+                    const priceB = userRole === 'retail' ? b.price : b.wholesalePrice
+                    return priceA - priceB
+                })
             case 'price-high':
-                return priceB - priceA
+                return products.sort((a, b) => {
+                    const priceA = userRole === 'retail' ? a.price : a.wholesalePrice
+                    const priceB = userRole === 'retail' ? b.price : b.wholesalePrice
+                    return priceB - priceA
+                })
             case 'newest':
-                return a.isNew ? -1 : 1
+                return products.sort((a, b) => (a.isNew ? -1 : 1))
             case 'rating':
-                return b.rating - a.rating
+                return products.sort((a, b) => b.rating - a.rating)
             default: // popularity
-                return b.reviews - a.reviews
+                return products.sort((a, b) => b.reviews - a.reviews)
         }
-    })
+    }, [filteredProducts, sortBy, userRole])
+
+    // Get dynamic filter options
+    const availableDevices = useMemo(() => {
+        const devices = [...new Set(filteredProducts.map(p => p.device))]
+        return ['all', ...devices.sort()]
+    }, [filteredProducts])
+
+    const availableTypes = useMemo(() => {
+        const types = [...new Set(filteredProducts.map(p => p.type))]
+        return ['all', ...types.sort()]
+    }, [filteredProducts])
+
+    const availableBrands = useMemo(() => {
+        const brands = [...new Set(filteredProducts.map(p => p.brand))]
+        return ['all', ...brands.sort()]
+    }, [filteredProducts])
 
     const clearFilters = () => {
-        setSelectedCategory('all')
-        setSelectedBrand('All Brands')
-        setSelectedDevice('All Devices')
-        setPriceRange([0, 200])
-        setSearchQuery('')
+        window.location.href = '/shop'
     }
+
+    // Get page title based on filters
+    const getPageTitle = () => {
+        if (deviceParam !== 'all') return `${deviceParam} Products`
+        if (typeParam !== 'all') return `${typeParam}`
+        if (categoryParam !== 'all') return `${categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1)} Products`
+        return 'Shop All Products'
+    }
+
+    const hasActiveFilters = categoryParam !== 'all' || deviceParam !== 'all' || typeParam !== 'all' || subCategoryParam !== 'all'
 
     return (
         <div className="min-h-screen bg-white dark:bg-neutral-900">
 
+            {/* Breadcrumbs */}
+            <div className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+                <div className="container mx-auto px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+                        <Link href="/" className="hover:text-neutral-900 dark:hover:text-white">Home</Link>
+                        <span>/</span>
+                        <Link href="/shop" className="hover:text-neutral-900 dark:hover:text-white">Shop</Link>
+                        {categoryParam !== 'all' && (
+                            <>
+                                <span>/</span>
+                                <span className="text-neutral-900 dark:text-white capitalize">{categoryParam}</span>
+                            </>
+                        )}
+                        {deviceParam !== 'all' && (
+                            <>
+                                <span>/</span>
+                                <span className="text-neutral-900 dark:text-white">{deviceParam}</span>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* Header */}
             <div className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                 <div className="container mx-auto px-4 py-8">
-                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">Shop All Products</h1>
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">{getPageTitle()}</h1>
                     <p className="text-neutral-600 dark:text-neutral-400">
                         Professional phone repair parts, accessories, and tools
                     </p>
@@ -230,13 +224,39 @@ export default function ShopPage() {
                                     <SlidersHorizontal className="h-5 w-5" />
                                     Filters
                                 </h2>
-                                <button
-                                    onClick={clearFilters}
-                                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                                >
-                                    Clear All
-                                </button>
+                                {hasActiveFilters && (
+                                    <button
+                                        onClick={clearFilters}
+                                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                    >
+                                        Clear All
+                                    </button>
+                                )}
                             </div>
+
+                            {/* Active Filters Display */}
+                            {hasActiveFilters && (
+                                <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                    <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">Active Filters:</p>
+                                    <div className="space-y-1">
+                                        {categoryParam !== 'all' && (
+                                            <div className="text-xs text-blue-700 dark:text-blue-300">
+                                                Category: <span className="font-semibold capitalize">{categoryParam}</span>
+                                            </div>
+                                        )}
+                                        {deviceParam !== 'all' && (
+                                            <div className="text-xs text-blue-700 dark:text-blue-300">
+                                                Device: <span className="font-semibold">{deviceParam}</span>
+                                            </div>
+                                        )}
+                                        {typeParam !== 'all' && (
+                                            <div className="text-xs text-blue-700 dark:text-blue-300">
+                                                Type: <span className="font-semibold">{typeParam}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Search */}
                             <div className="mb-6">
@@ -255,62 +275,6 @@ export default function ShopPage() {
                                 </div>
                             </div>
 
-                            {/* Category Filter */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                                    Category
-                                </label>
-                                <div className="space-y-2">
-                                    {CATEGORIES.map(category => (
-                                        <button
-                                            key={category.value}
-                                            onClick={() => setSelectedCategory(category.value)}
-                                            className={`
-                        w-full text-left px-3 py-2 rounded-lg transition-colors
-                        ${selectedCategory === category.value
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600'
-                                            }
-                      `}
-                                        >
-                                            {category.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Brand Filter */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                                    Brand
-                                </label>
-                                <select
-                                    value={selectedBrand}
-                                    onChange={(e) => setSelectedBrand(e.target.value)}
-                                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white"
-                                >
-                                    {BRANDS.map(brand => (
-                                        <option key={brand} value={brand}>{brand}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Device Filter */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                                    Device Model
-                                </label>
-                                <select
-                                    value={selectedDevice}
-                                    onChange={(e) => setSelectedDevice(e.target.value)}
-                                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white"
-                                >
-                                    {DEVICES.map(device => (
-                                        <option key={device} value={device}>{device}</option>
-                                    ))}
-                                </select>
-                            </div>
-
                             {/* Price Range */}
                             <div className="mb-6">
                                 <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
@@ -320,7 +284,7 @@ export default function ShopPage() {
                                     <input
                                         type="range"
                                         min="0"
-                                        max="200"
+                                        max="500"
                                         value={priceRange[1]}
                                         onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
                                         className="w-full"
@@ -332,7 +296,7 @@ export default function ShopPage() {
                                 </div>
                             </div>
 
-                            {/* User Role Toggle (Demo) */}
+                            {/* User Role Toggle */}
                             <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700">
                                 <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
                                     Pricing View
@@ -441,9 +405,11 @@ export default function ShopPage() {
 
                         {/* No Results */}
                         {sortedProducts.length === 0 && (
-                            <div className="text-center py-16">
-                                <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-                                    No products found matching your filters.
+                            <div className="text-center py-16 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                                <Search className="h-16 w-16 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">No products found</h3>
+                                <p className="text-neutral-600 dark:text-neutral-400 mb-6">
+                                    No products match your current filters.
                                 </p>
                                 <button
                                     onClick={clearFilters}
@@ -464,7 +430,7 @@ export default function ShopPage() {
 // Product Card Component
 function ProductCard({ product, viewMode, userRole }: any) {
     const price = userRole === 'retail' ? product.price : product.wholesalePrice
-    const priceLabel = userRole === 'retail' ? '' : ' (Wholesale)'
+    const priceLabel = userRole === 'wholesale' ? ' (Wholesale)' : ''
 
     if (viewMode === 'list') {
         return (
@@ -556,7 +522,7 @@ function ProductCard({ product, viewMode, userRole }: any) {
             {/* Info */}
             <div className="p-4">
                 <Link href={`/products/${product.id}`}>
-                    <h3 className="font-semibold text-neutral-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 mb-1 line-clamp-2">
+                    <h3 className="font-semibold text-neutral-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 mb-1 line-clamp-2 min-h-[48px]">
                         {product.name}
                     </h3>
                 </Link>
