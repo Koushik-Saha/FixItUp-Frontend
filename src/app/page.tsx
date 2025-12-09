@@ -124,7 +124,7 @@ export default function HomePage() {
                         <Card className="group hover:shadow-xl transition-all cursor-pointer hover:-translate-y-1 md:hover:-translate-y-2">
                           <CardContent className="p-3 md:p-4 text-center">
                             <div className={`${category.color} w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-2 md:mb-3 group-hover:scale-110 transition-transform`}>
-                              <Icon className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-white" />
+                              <span className="text-2xl">{category.icon}</span>
                             </div>
                             <h3 className="font-semibold text-xs md:text-sm mb-1 dark:text-white line-clamp-2">
                               {category.name}
