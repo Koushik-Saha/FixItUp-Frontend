@@ -1,0 +1,141 @@
+// app/api/repairs/[id]/route.ts
+// Repair Tickets API - Get and Update single ticket
+
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from '@/utils/errors'
+
+// GET /api/repairs/[id] - Get repair ticket details
+export async function GET(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const supabase = createClient()
+
+        // Get authenticated user
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user) {
+            throw new UnauthorizedError()
+        }
+
+        // Get ticket with store info
+        const { data: ticket, error: ticketError } = await supabase
+            .from('repair_tickets')
+            .select('*, stores(id, name, address, city, state, phone)')
+            .eq('id', params.id)
+            .single()
+
+        if (ticketError || !ticket) {
+            throw new NotFoundError('Repair ticket')
+        }
+
+        // Check if user is admin
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        const isAdmin = profile?.role === 'admin'
+
+        // Check ownership (unless admin)
+        if (!isAdmin && ticket.customer_id !== user.id) {
+            throw new ForbiddenError('You do not have access to this repair ticket')
+        }
+
+        return NextResponse.json({
+            data: ticket,
+        })
+
+    } catch (error) {
+        return errorResponse(error)
+    }
+}
+
+// PUT /api/repairs/[id] - Update repair ticket (Admin only)
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const supabase = createClient()
+
+        // Get authenticated user
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user) {
+            throw new UnauthorizedError()
+        }
+
+        // Check if user is admin
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (!profile || profile.role !== 'admin') {
+            throw new ForbiddenError('Only admins can update repair tickets')
+        }
+
+        // Parse request body
+        const body = await request.json()
+        const allowedUpdates = [
+            'status',
+            'priority',
+            'assigned_store_id',
+            'assigned_technician',
+            'appointment_date',
+            'estimated_cost',
+            'actual_cost',
+            'parts_cost',
+            'labor_cost',
+            'technician_notes',
+            'internal_notes',
+        ]
+
+        // Filter to only allowed fields
+        const updates: any = {}
+        for (const key of allowedUpdates) {
+            if (body[key] !== undefined) {
+                updates[key] = body[key]
+            }
+        }
+
+        // Set timestamps based on status
+        if (body.status === 'confirmed' && !updates.confirmed_at) {
+            updates.confirmed_at = new Date().toISOString()
+        }
+        if (body.status === 'in_progress' && !updates.started_at) {
+            updates.started_at = new Date().toISOString()
+        }
+        if (body.status === 'completed' && !updates.completed_at) {
+            updates.completed_at = new Date().toISOString()
+        }
+        if (body.status === 'cancelled' && !updates.cancelled_at) {
+            updates.cancelled_at = new Date().toISOString()
+        }
+
+        // Update ticket
+        const { data: updatedTicket, error: updateError } = await supabase
+            .from('repair_tickets')
+            .update(updates)
+            .eq('id', params.id)
+            .select()
+            .single()
+
+        if (updateError || !updatedTicket) {
+            throw new NotFoundError('Repair ticket')
+        }
+
+        // TODO: Send email notification to customer about status update
+
+        return NextResponse.json({
+            message: 'Repair ticket updated successfully',
+            data: updatedTicket,
+        })
+
+    } catch (error) {
+        return errorResponse(error)
+    }
+}
