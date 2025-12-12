@@ -3,22 +3,34 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, NotFoundError, UnauthorizedError, ForbiddenError } from '@/utils/errors'
-import { productSchema, validateData, formatValidationErrors } from '@/utils/validation'
+import {
+    errorResponse,
+    NotFoundError,
+    UnauthorizedError,
+    ForbiddenError,
+} from '@/utils/errors'
+import {
+    productSchema,
+    validateData,
+    formatValidationErrors,
+} from '@/utils/validation'
 
 // GET /api/products/[id] - Get single product
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
+
+        // ✅ Next 15: resolve params
+        const { id } = await params
 
         // Fetch product with category
-        const { data: product, error } = await supabase
-            .from('products')
+        const { data: product, error } = await (supabase
+            .from('products') as any)
             .select('*, category:categories(id, name, slug)')
-            .eq('id', params.id)
+            .eq('id', id)
             .single()
 
         if (error || !product) {
@@ -26,12 +38,14 @@ export async function GET(
         }
 
         // Check if product is active (unless user is admin)
-        const { data: { user } } = await supabase.auth.getUser()
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
         let isAdmin = false
 
         if (user) {
-            const { data: profile } = await supabase
-                .from('profiles')
+            const { data: profile } = await (supabase
+                .from('profiles') as any)
                 .select('role')
                 .eq('id', user.id)
                 .single()
@@ -44,10 +58,12 @@ export async function GET(
         }
 
         // Get user profile for pricing
-        let userProfile = null
+        let userProfile: { role: string; wholesale_tier: string | null } | null =
+            null
+
         if (user) {
-            const { data: profile } = await supabase
-                .from('profiles')
+            const { data: profile } = await (supabase
+                .from('profiles') as any)
                 .select('role, wholesale_tier')
                 .eq('id', user.id)
                 .single()
@@ -56,7 +72,7 @@ export async function GET(
         }
 
         // Calculate pricing
-        let displayPrice = product.base_price
+        let displayPrice: number = product.base_price
         let discountPercentage = 0
 
         if (userProfile?.role === 'wholesale') {
@@ -75,10 +91,10 @@ export async function GET(
         }
 
         // Get inventory across all stores
-        const { data: inventory } = await supabase
-            .from('inventory')
+        const { data: inventory } = await (supabase
+            .from('inventory') as any)
             .select('store_id, quantity, stores(name, city, state)')
-            .eq('product_id', params.id)
+            .eq('product_id', id)
 
         return NextResponse.json({
             data: {
@@ -90,7 +106,6 @@ export async function GET(
                 inventory: inventory || [],
             },
         })
-
     } catch (error) {
         return errorResponse(error)
     }
@@ -99,19 +114,25 @@ export async function GET(
 // PUT /api/products/[id] - Update product (Admin only)
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
+
+        // ✅ resolve params
+        const { id } = await params
 
         // Check authentication and admin role
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
         if (authError || !user) {
             throw new UnauthorizedError()
         }
 
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -135,10 +156,10 @@ export async function PUT(
         }
 
         // Update product
-        const { data: product, error: updateError } = await supabase
-            .from('products')
+        const { data: product, error: updateError } = await (supabase
+            .from('products') as any)
             .update(validation.data)
-            .eq('id', params.id)
+            .eq('id', id)
             .select()
             .single()
 
@@ -147,7 +168,6 @@ export async function PUT(
         }
 
         return NextResponse.json({ data: product })
-
     } catch (error) {
         return errorResponse(error)
     }
@@ -156,19 +176,25 @@ export async function PUT(
 // DELETE /api/products/[id] - Delete product (Admin only)
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
+
+        // ✅ resolve params
+        const { id } = await params
 
         // Check authentication and admin role
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
         if (authError || !user) {
             throw new UnauthorizedError()
         }
 
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -178,17 +204,16 @@ export async function DELETE(
         }
 
         // Soft delete (set is_active to false)
-        const { error: deleteError } = await supabase
-            .from('products')
+        const { error: deleteError } = await (supabase
+            .from('products') as any)
             .update({ is_active: false })
-            .eq('id', params.id)
+            .eq('id', id)
 
         if (deleteError) {
             throw new NotFoundError('Product')
         }
 
         return NextResponse.json({ message: 'Product deleted successfully' })
-
     } catch (error) {
         return errorResponse(error)
     }

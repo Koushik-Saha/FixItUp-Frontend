@@ -8,20 +8,26 @@ import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from 
 // GET /api/orders/[id] - Get order details
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
+
+        // ✅ await params in Next 15
+        const { id } = await params
 
         // Get authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
         if (authError || !user) {
             throw new UnauthorizedError()
         }
 
         // Get order with items
-        const { data: order, error: orderError } = await supabase
-            .from('orders')
+        const { data: order, error: orderError } = await (supabase
+            .from('orders') as any)
             .select(`
         *,
         order_items (
@@ -36,7 +42,7 @@ export async function GET(
           subtotal
         )
       `)
-            .eq('id', params.id)
+            .eq('id', id) // 👈 use resolved id
             .single()
 
         if (orderError || !order) {
@@ -44,8 +50,8 @@ export async function GET(
         }
 
         // Check if user is admin
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -60,7 +66,6 @@ export async function GET(
         return NextResponse.json({
             data: order,
         })
-
     } catch (error) {
         return errorResponse(error)
     }
@@ -69,20 +74,26 @@ export async function GET(
 // PUT /api/orders/[id] - Update order status (Admin only)
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
+
+        // ✅ await params
+        const { id } = await params
 
         // Get authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
         if (authError || !user) {
             throw new UnauthorizedError()
         }
 
         // Check if user is admin
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -93,7 +104,13 @@ export async function PUT(
 
         // Parse request body
         const body = await request.json()
-        const allowedUpdates = ['status', 'payment_status', 'tracking_number', 'carrier', 'admin_notes']
+        const allowedUpdates = [
+            'status',
+            'payment_status',
+            'tracking_number',
+            'carrier',
+            'admin_notes',
+        ]
 
         // Filter to only allowed fields
         const updates: any = {}
@@ -115,10 +132,10 @@ export async function PUT(
         }
 
         // Update order
-        const { data: updatedOrder, error: updateError } = await supabase
-            .from('orders')
+        const { data: updatedOrder, error: updateError } = await (supabase
+            .from('orders') as any)
             .update(updates)
-            .eq('id', params.id)
+            .eq('id', id) // 👈 use resolved id
             .select()
             .single()
 
@@ -132,7 +149,6 @@ export async function PUT(
             message: 'Order updated successfully',
             data: updatedOrder,
         })
-
     } catch (error) {
         return errorResponse(error)
     }

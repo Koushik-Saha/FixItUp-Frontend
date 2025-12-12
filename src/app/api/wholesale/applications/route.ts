@@ -8,7 +8,7 @@ import { errorResponse, UnauthorizedError, ForbiddenError } from '@/utils/errors
 // GET /api/wholesale/applications - List all applications (Admin only)
 export async function GET(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
         const { searchParams } = new URL(request.url)
 
         // Get authenticated user
@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Check if user is admin
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
         const to = from + limit - 1
 
         // Build query
-        let query = supabase
-            .from('wholesale_applications')
+        let query = (supabase
+            .from('wholesale_applications') as any)
             .select(`
         *,
         applicant:profiles!wholesale_applications_user_id_fkey(id, full_name, phone)

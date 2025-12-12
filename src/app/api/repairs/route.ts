@@ -9,7 +9,7 @@ import { createRepairTicketSchema, validateData, formatValidationErrors } from '
 // GET /api/repairs - List repair tickets
 export async function GET(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
         const { searchParams } = new URL(request.url)
 
         // Get authenticated user
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
         const to = from + limit - 1
 
         // Check if user is admin
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
         const isAdmin = profile?.role === 'admin'
 
         // Build query
-        let query = supabase
-            .from('repair_tickets')
+        let query = (supabase
+            .from('repair_tickets') as any)
             .select('*, stores(id, name, city, state)', { count: 'exact' })
 
         // Admins see all tickets, users see only their own
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 // POST /api/repairs - Create repair ticket
 export async function POST(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
 
         // Get authenticated user (optional for repair tickets)
         const { data: { user } } = await supabase.auth.getUser()
@@ -103,12 +103,12 @@ export async function POST(request: NextRequest) {
         const ticketData = validation.data
 
         // Generate ticket number
-        const { data: ticketNumberData } = await supabase.rpc('generate_ticket_number')
+        const { data: ticketNumberData } = await (supabase as any).rpc('generate_ticket_number')
         const ticketNumber = ticketNumberData || `TKT-${Date.now()}`
 
         // Create repair ticket
-        const { data: ticket, error: createError } = await supabase
-            .from('repair_tickets')
+        const { data: ticket, error: createError } = await (supabase
+            .from('repair_tickets') as any)
             .insert({
                 ticket_number: ticketNumber,
                 customer_id: user?.id || null,

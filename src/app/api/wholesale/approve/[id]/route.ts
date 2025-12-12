@@ -8,10 +8,13 @@ import { errorResponse, UnauthorizedError, ForbiddenError, NotFoundError } from 
 // POST /api/wholesale/approve/[id] - Approve or reject application
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
+
+        // ✅ Next 15: resolve params
+        const { id } = await params
 
         // Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -20,8 +23,8 @@ export async function POST(
         }
 
         // Check if user is admin
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -42,10 +45,10 @@ export async function POST(
         }
 
         // Get application
-        const { data: application, error: appError } = await supabase
-            .from('wholesale_applications')
+        const { data: application, error: appError } = await (supabase
+            .from('wholesale_applications') as any)
             .select('*, profiles!wholesale_applications_user_id_fkey(id)')
-            .eq('id', params.id)
+            .eq('id', id)
             .single()
 
         if (appError || !application) {
@@ -71,8 +74,8 @@ export async function POST(
             }
 
             // Update application
-            const { error: updateAppError } = await supabase
-                .from('wholesale_applications')
+            const { error: updateAppError } = await (supabase
+                .from('wholesale_applications') as any)
                 .update({
                     status: 'approved',
                     approved_tier: tier,
@@ -80,15 +83,15 @@ export async function POST(
                     reviewed_at: new Date().toISOString(),
                     admin_notes,
                 })
-                .eq('id', params.id)
+                .eq('id', id)
 
             if (updateAppError) {
                 throw new Error('Failed to update application')
             }
 
             // Update user profile
-            const { error: updateProfileError } = await supabase
-                .from('profiles')
+            const { error: updateProfileError } = await (supabase
+                .from('profiles') as any)
                 .update({
                     role: 'wholesale',
                     wholesale_status: 'approved',
@@ -105,7 +108,7 @@ export async function POST(
             return NextResponse.json({
                 message: 'Application approved successfully',
                 data: {
-                    application_id: params.id,
+                    application_id: id,
                     status: 'approved',
                     tier,
                 },
@@ -121,8 +124,8 @@ export async function POST(
             }
 
             // Update application
-            const { error: updateAppError } = await supabase
-                .from('wholesale_applications')
+            const { error: updateAppError } = await (supabase
+                .from('wholesale_applications') as any)
                 .update({
                     status: 'rejected',
                     rejection_reason,
@@ -130,15 +133,15 @@ export async function POST(
                     reviewed_at: new Date().toISOString(),
                     admin_notes,
                 })
-                .eq('id', params.id)
+                .eq('id', id)
 
             if (updateAppError) {
                 throw new Error('Failed to update application')
             }
 
             // Update user profile
-            const { error: updateProfileError } = await supabase
-                .from('profiles')
+            const { error: updateProfileError } = await (supabase
+                .from('profiles') as any)
                 .update({
                     wholesale_status: 'rejected',
                 })
@@ -153,7 +156,7 @@ export async function POST(
             return NextResponse.json({
                 message: 'Application rejected',
                 data: {
-                    application_id: params.id,
+                    application_id: id,
                     status: 'rejected',
                 },
             })

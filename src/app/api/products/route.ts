@@ -9,7 +9,7 @@ import { productSchema, validateData, formatValidationErrors } from '@/utils/val
 // GET /api/products - List products with filtering
 export async function GET(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
         const { searchParams } = new URL(request.url)
 
         // Get query parameters
@@ -29,16 +29,16 @@ export async function GET(request: NextRequest) {
         const to = from + limit - 1
 
         // Build query
-        let query = supabase
-            .from('products')
+        let query = (supabase
+            .from('products') as any)
             .select('*, category:categories(id, name, slug)', { count: 'exact' })
             .eq('is_active', true)
 
         // Apply filters
         if (category) {
             // If category is a slug, look up the ID first
-            const { data: categoryData } = await supabase
-                .from('categories')
+            const { data: categoryData } = await (supabase
+                .from('categories') as any)
                 .select('id')
                 .eq('slug', category)
                 .single()
@@ -87,8 +87,8 @@ export async function GET(request: NextRequest) {
         let userProfile = null
 
         if (user) {
-            const { data: profile } = await supabase
-                .from('profiles')
+            const { data: profile } = await (supabase
+                .from('profiles') as any)
                 .select('role, wholesale_tier')
                 .eq('id', user.id)
                 .single()
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Add calculated prices to products
-        const productsWithPricing = products?.map(product => {
+        const productsWithPricing = products?.map((product: any) => {
             let displayPrice = product.base_price
             let discountPercentage = 0
 
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
 // POST /api/products - Create new product (Admin only)
 export async function POST(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
 
         // Check if user is authenticated
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -153,8 +153,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if user is admin
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -178,8 +178,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Create product
-        const { data: product, error: createError } = await supabase
-            .from('products')
+        const { data: product, error: createError } = await (supabase
+            .from('products') as any)
             .insert(validation.data)
             .select()
             .single()

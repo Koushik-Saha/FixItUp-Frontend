@@ -9,7 +9,7 @@ import { wholesaleApplicationSchema, validateData, formatValidationErrors } from
 // POST /api/wholesale/apply - Submit wholesale application
 export async function POST(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
 
         // Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if user already has pending or approved application
-        const { data: existingApp } = await supabase
-            .from('wholesale_applications')
+        const { data: existingApp } = await (supabase
+            .from('wholesale_applications') as any)
             .select('id, status')
             .eq('user_id', user.id)
             .in('status', ['pending', 'approved'])
@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
         const applicationData = validation.data!
 
         // Create application
-        const { data: application, error: createError } = await supabase
-            .from('wholesale_applications')
+        const { data: application, error: createError } = await (supabase
+            .from('wholesale_applications') as any)
             .insert({
                 user_id: user.id,
                 business_name: applicationData.business_name,

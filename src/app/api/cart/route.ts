@@ -15,7 +15,7 @@ const addToCartSchema = z.object({
 // GET /api/cart - Get user's cart
 export async function GET(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
 
         // Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -57,14 +57,14 @@ export async function GET(request: NextRequest) {
         }
 
         // Get user profile for pricing
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role, wholesale_tier')
             .eq('id', user.id)
             .single()
 
         // Calculate prices for each item
-        const cartWithPricing = cartItems.map(item => {
+        const cartWithPricing = (cartItems as any[]).map((item: any) => {
             const product = item.products as any
 
             if (!product) {
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
 // POST /api/cart - Add item to cart
 export async function POST(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
 
         // Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -170,8 +170,8 @@ export async function POST(request: NextRequest) {
         const { product_id, quantity } = validation.data
 
         // Check if product exists and is active
-        const { data: product, error: productError } = await supabase
-            .from('products')
+        const { data: product, error: productError } = await (supabase
+            .from('products') as any)
             .select('id, name, total_stock, is_active')
             .eq('id', product_id)
             .single()
@@ -202,8 +202,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if item already in cart
-        const { data: existingItem } = await supabase
-            .from('cart_items')
+        const { data: existingItem } = await (supabase
+            .from('cart_items') as any)
             .select('id, quantity')
             .eq('user_id', user.id)
             .eq('product_id', product_id)
@@ -224,8 +224,8 @@ export async function POST(request: NextRequest) {
                 )
             }
 
-            const { data: updated, error: updateError } = await supabase
-                .from('cart_items')
+            const { data: updated, error: updateError } = await (supabase
+                .from('cart_items') as any)
                 .update({ quantity: newQuantity, updated_at: new Date().toISOString() })
                 .eq('id', existingItem.id)
                 .select()
@@ -243,8 +243,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Add new item to cart
-        const { data: newItem, error: insertError } = await supabase
-            .from('cart_items')
+        const { data: newItem, error: insertError } = await (supabase
+            .from('cart_items') as any)
             .insert({
                 user_id: user.id,
                 product_id,

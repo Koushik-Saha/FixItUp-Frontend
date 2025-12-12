@@ -8,10 +8,12 @@ import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from 
 // GET /api/repairs/[id] - Get repair ticket details
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
+
+        const { id } = await params
 
         // Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -20,10 +22,10 @@ export async function GET(
         }
 
         // Get ticket with store info
-        const { data: ticket, error: ticketError } = await supabase
-            .from('repair_tickets')
+        const { data: ticket, error: ticketError } = await (supabase
+            .from('repair_tickets') as any)
             .select('*, stores(id, name, address, city, state, phone)')
-            .eq('id', params.id)
+            .eq('id', id)
             .single()
 
         if (ticketError || !ticket) {
@@ -31,8 +33,8 @@ export async function GET(
         }
 
         // Check if user is admin
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -56,10 +58,12 @@ export async function GET(
 // PUT /api/repairs/[id] - Update repair ticket (Admin only)
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
+
+        const { id } = await params
 
         // Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -68,8 +72,8 @@ export async function PUT(
         }
 
         // Check if user is admin
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -117,10 +121,10 @@ export async function PUT(
         }
 
         // Update ticket
-        const { data: updatedTicket, error: updateError } = await supabase
-            .from('repair_tickets')
+        const { data: updatedTicket, error: updateError } = await (supabase
+            .from('repair_tickets') as any)
             .update(updates)
-            .eq('id', params.id)
+            .eq('id', id)
             .select()
             .single()
 

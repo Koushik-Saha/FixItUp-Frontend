@@ -9,7 +9,7 @@ import { createOrderSchema, validateData, formatValidationErrors } from '@/utils
 // GET /api/orders - List user's orders
 export async function GET(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
         const { searchParams } = new URL(request.url)
 
         // Get authenticated user
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
         const to = from + limit - 1
 
         // Check if user is admin
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role')
             .eq('id', user.id)
             .single()
@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
         const isAdmin = profile?.role === 'admin'
 
         // Build query
-        let query = supabase
-            .from('orders')
+        let query = (supabase
+            .from('orders') as any)
             .select('*', { count: 'exact' })
 
         // Admins see all orders, users see only their own
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 // POST /api/orders - Create new order
 export async function POST(request: NextRequest) {
     try {
-        const supabase = createClient()
+        const supabase = await createClient()
 
         // Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Get user profile
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('role, wholesale_tier, full_name, phone')
             .eq('id', user.id)
             .single()
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
 
         // Fetch all products in order
         const productIds = items.map(item => item.product_id)
-        const { data: products, error: productsError } = await supabase
-            .from('products')
+        const { data: products, error: productsError } = await (supabase
+            .from('products') as any)
             .select('id, sku, name, slug, base_price, wholesale_tier1_discount, wholesale_tier2_discount, wholesale_tier3_discount, images, thumbnail, total_stock, is_active')
             .in('id', productIds)
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         let subtotal = 0
 
         for (const item of items) {
-            const product = products.find(p => p.id === item.product_id)
+            const product = products.find((p: any) => p.id === item.product_id)
 
             if (!product) {
                 return NextResponse.json(
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
 
         // Calculate totals
         const discountAmount = orderItems.reduce((sum, item) => {
-            const originalPrice = products.find(p => p.id === item.product_id)?.base_price || 0
+            const originalPrice = products.find((p: any) => p.id === item.product_id)?.base_price || 0
             return sum + ((originalPrice - item.unit_price) * item.quantity)
         }, 0)
 
@@ -205,12 +205,12 @@ export async function POST(request: NextRequest) {
         const totalAmount = subtotal + taxAmount + shippingCost
 
         // Generate order number
-        const { data: orderNumberData } = await supabase.rpc('generate_order_number')
+        const { data: orderNumberData } = await (supabase as any).rpc('generate_order_number')
         const orderNumber = orderNumberData || `ORD-${Date.now()}`
 
         // Create order
-        const { data: order, error: orderError } = await supabase
-            .from('orders')
+        const { data: order, error: orderError } = await (supabase
+            .from('orders') as any)
             .insert({
                 order_number: orderNumber,
                 user_id: user.id,
@@ -244,20 +244,20 @@ export async function POST(request: NextRequest) {
             order_id: order.id,
         }))
 
-        const { error: itemsError } = await supabase
-            .from('order_items')
+        const { error: itemsError } = await (supabase
+            .from('order_items') as any)
             .insert(orderItemsWithOrderId)
 
         if (itemsError) {
             console.error('Failed to create order items:', itemsError)
             // Rollback order
-            await supabase.from('orders').delete().eq('id', order.id)
+            await (supabase.from('orders') as any).delete().eq('id', order.id)
             throw new Error('Failed to create order items')
         }
 
         // Clear cart items for this order
-        await supabase
-            .from('cart_items')
+        await (supabase
+            .from('cart_items') as any)
             .delete()
             .eq('user_id', user.id)
             .in('product_id', productIds)
