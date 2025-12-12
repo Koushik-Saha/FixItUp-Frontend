@@ -4,3 +4,6 @@ dist/
 out/
 .env
 .env.local
+.claude/settings.local.json
+.claude/
+tsconfig.tsbuildinfo
