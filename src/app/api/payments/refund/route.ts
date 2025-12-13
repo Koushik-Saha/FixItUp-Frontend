@@ -6,9 +6,11 @@ import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError, ForbiddenError } from '@/lib/utils/errors'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-11-17.clover',
-})
+function getStripe() {
+    return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+        apiVersion: '2024-11-20.acacia' as any,
+    })
+}
 
 // POST /api/payments/refund - Process refund
 export async function POST(request: NextRequest) {
@@ -70,6 +72,8 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             )
         }
+
+        const stripe = getStripe()
 
         // Process refund
         const refundAmount = amount ? Math.round(amount * 100) : undefined

@@ -3,9 +3,11 @@ import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-11-17.clover' as any,
-})
+function getStripe() {
+    return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+        apiVersion: '2024-11-20.acacia' as any,
+    })
+}
 
 // POST /api/payments/create-intent - Create payment intent for order
 export async function POST(request: NextRequest) {
@@ -43,6 +45,9 @@ export async function POST(request: NextRequest) {
                 { status: 404 }
             )
         }
+
+        const stripe = getStripe()
+
 
         // Check if order already has payment intent
         if ((order as any).payment_intent_id) {
