@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from '@/utils/errors'
+import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
 
 // GET /api/repairs/[id] - Get repair ticket details
 export async function GET(
@@ -78,7 +78,7 @@ export async function PUT(
             .eq('id', user.id)
             .single()
 
-        if (!profile || profile.role !== 'admin') {
+        if (!profile || (profile as any).role !== 'admin') {
             throw new ForbiddenError('Only admins can update repair tickets')
         }
 

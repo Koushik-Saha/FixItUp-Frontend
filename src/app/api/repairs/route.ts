@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError } from '@/utils/errors'
+import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
 import { createRepairTicketSchema, validateData, formatValidationErrors } from '@/utils/validation'
 
 // GET /api/repairs - List repair tickets

@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, NotFoundError, UnauthorizedError, ForbiddenError } from '@/utils/errors'
+import { errorResponse, NotFoundError, UnauthorizedError, ForbiddenError } from '@/lib/utils/errors'
 import { productSchema, validateData, formatValidationErrors } from '@/utils/validation'
 
 // GET /api/products - List products with filtering
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        if (!profile || profile.role !== 'admin') {
+        if (!profile || (profile as any).role !== 'admin') {
             throw new ForbiddenError('Only admins can create products')
         }
 

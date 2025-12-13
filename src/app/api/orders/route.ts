@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError, ValidationError } from '@/utils/errors'
+import { errorResponse, UnauthorizedError, ValidationError } from '@/lib/utils/errors'
 import { createOrderSchema, validateData, formatValidationErrors } from '@/utils/validation'
 
 // GET /api/orders - List user's orders
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        const isAdmin = profile?.role === 'admin'
+        const isAdmin = ((profile as any))?.role === 'admin'
 
         // Build query
         let query = (supabase
@@ -102,8 +102,7 @@ export async function POST(request: NextRequest) {
 
         if (!validation.success || !validation.data) {
             throw new ValidationError(
-                'Validation failed',
-                formatValidationErrors(validation.errors!)
+                'Validation failed'
             )
         }
 
@@ -159,7 +158,7 @@ export async function POST(request: NextRequest) {
             let unitPrice = product.base_price
             let discountPercentage = 0
 
-            if (profile?.role === 'wholesale') {
+            if (((profile as any))?.role === 'wholesale') {
                 switch (profile.wholesale_tier) {
                     case 'tier1':
                         discountPercentage = product.wholesale_tier1_discount
@@ -216,14 +215,14 @@ export async function POST(request: NextRequest) {
                 user_id: user.id,
                 customer_name: shipping_address.full_name,
                 customer_email: user.email!,
-                customer_phone: shipping_address.phone || profile?.phone,
+                customer_phone: shipping_address.phone || ((profile as any))?.phone,
                 subtotal: Number(subtotal.toFixed(2)),
                 discount_amount: Number(discountAmount.toFixed(2)),
                 tax_amount: Number(taxAmount.toFixed(2)),
                 shipping_cost: shippingCost,
                 total_amount: Number(totalAmount.toFixed(2)),
-                is_wholesale: profile?.role === 'wholesale',
-                wholesale_tier: profile?.wholesale_tier,
+                is_wholesale: ((profile as any))?.role === 'wholesale',
+                wholesale_tier: ((profile as any))?.wholesale_tier,
                 shipping_address,
                 billing_address: billing_address || shipping_address,
                 customer_notes,
@@ -251,7 +250,7 @@ export async function POST(request: NextRequest) {
         if (itemsError) {
             console.error('Failed to create order items:', itemsError)
             // Rollback order
-            await (supabase.from('orders') as any).delete().eq('id', order.id)
+            await ((supabase as any).from('orders') as any).delete().eq('id', order.id)
             throw new Error('Failed to create order items')
         }
 

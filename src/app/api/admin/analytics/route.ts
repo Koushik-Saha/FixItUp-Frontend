@@ -4,7 +4,7 @@ import {
     errorResponse,
     UnauthorizedError,
     ForbiddenError,
-} from "@/utils/errors";
+} from "@/lib/utils/errors";
 import type { Database } from "@/types/database";
 
 type ProfileRoleRow = { role: string };
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
             .eq("id", user.id)
             .single<ProfileRoleRow>();
 
-        if (!profile || profile.role !== "admin") {
+        if (!profile || (profile as any).role !== "admin") {
             throw new ForbiddenError("Only admins can access analytics");
         }
 
@@ -198,7 +198,7 @@ function groupDataByTime(
     const grouped: Record<string, { orders: number; revenue: number }> = {};
 
     orders.forEach((order) => {
-        const date = new Date(order.created_at);
+        const date = new Date(((order as any)).created_at);
         let key: string;
 
         if (groupBy === "hour") {
@@ -216,8 +216,8 @@ function groupDataByTime(
         }
 
         grouped[key].orders += 1;
-        if (order.status !== "cancelled") {
-            grouped[key].revenue += Number(order.total_amount);
+        if (((order as any)).status !== "cancelled") {
+            grouped[key].revenue += Number(((order as any)).total_amount);
         }
     });
 
