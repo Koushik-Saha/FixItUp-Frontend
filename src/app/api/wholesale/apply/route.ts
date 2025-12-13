@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError, ConflictError } from '@/utils/errors'
+import { errorResponse, UnauthorizedError, ConflictError } from '@/lib/utils/errors'
 import { wholesaleApplicationSchema, validateData, formatValidationErrors } from '@/utils/validation'
 
 // POST /api/wholesale/apply - Submit wholesale application

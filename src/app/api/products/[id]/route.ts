@@ -8,7 +8,7 @@ import {
     NotFoundError,
     UnauthorizedError,
     ForbiddenError,
-} from '@/utils/errors'
+} from '@/lib/utils/errors'
 import {
     productSchema,
     validateData,
@@ -137,7 +137,7 @@ export async function PUT(
             .eq('id', user.id)
             .single()
 
-        if (!profile || profile.role !== 'admin') {
+        if (!profile || (profile as any).role !== 'admin') {
             throw new ForbiddenError('Only admins can update products')
         }
 
@@ -199,7 +199,7 @@ export async function DELETE(
             .eq('id', user.id)
             .single()
 
-        if (!profile || profile.role !== 'admin') {
+        if (!profile || (profile as any).role !== 'admin') {
             throw new ForbiddenError('Only admins can delete products')
         }
 

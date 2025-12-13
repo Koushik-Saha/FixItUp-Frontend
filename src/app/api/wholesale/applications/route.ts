@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError, ForbiddenError } from '@/utils/errors'
+import { errorResponse, UnauthorizedError, ForbiddenError } from '@/lib/utils/errors'
 
 // GET /api/wholesale/applications - List all applications (Admin only)
 export async function GET(request: NextRequest) {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        if (!profile || profile.role !== 'admin') {
+        if (!profile || (profile as any).role !== 'admin') {
             throw new ForbiddenError('Only admins can view applications')
         }
 

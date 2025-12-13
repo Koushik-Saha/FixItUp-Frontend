@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError, ForbiddenError, NotFoundError } from '@/utils/errors'
+import { errorResponse, UnauthorizedError, ForbiddenError, NotFoundError } from '@/lib/utils/errors'
 
 // POST /api/wholesale/approve/[id] - Approve or reject application
 export async function POST(
@@ -29,7 +29,7 @@ export async function POST(
             .eq('id', user.id)
             .single()
 
-        if (!profile || profile.role !== 'admin') {
+        if (!profile || (profile as any).role !== 'admin') {
             throw new ForbiddenError('Only admins can approve applications')
         }
 

@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError } from '@/utils/errors'
+import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
 import { z } from 'zod'
 
 // Validation schema
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
             let discountPercentage = 0
 
             // Apply wholesale discount
-            if (profile?.role === 'wholesale') {
+            if (((profile as any))?.role === 'wholesale') {
                 switch (profile.wholesale_tier) {
                     case 'tier1':
                         discountPercentage = product.wholesale_tier1_discount
@@ -131,8 +131,8 @@ export async function GET(request: NextRequest) {
                     subtotal: Number(subtotal.toFixed(2)),
                     total_items: totalItems,
                     total_savings: Number(totalSavings.toFixed(2)),
-                    is_wholesale: profile?.role === 'wholesale',
-                    wholesale_tier: profile?.wholesale_tier,
+                    is_wholesale: ((profile as any))?.role === 'wholesale',
+                    wholesale_tier: ((profile as any))?.wholesale_tier,
                 },
             },
         })

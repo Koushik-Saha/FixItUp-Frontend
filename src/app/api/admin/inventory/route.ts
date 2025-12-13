@@ -7,7 +7,7 @@ import {
     errorResponse,
     UnauthorizedError,
     ForbiddenError,
-} from "@/utils/errors";
+} from "@/lib/utils/errors";
 import type { Database } from "@/types/database";
 
 // --- DB helper types ---
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
             .eq("id", user.id)
             .single<Pick<ProfileRow, "role">>();
 
-        if (!profile || profile.role !== "admin") {
+        if (!profile || (profile as any).role !== "admin") {
             throw new ForbiddenError("Only admins can access inventory");
         }
 
@@ -162,7 +162,7 @@ export async function PUT(request: NextRequest) {
             .eq("id", user.id)
             .single<Pick<ProfileRow, "role">>();
 
-        if (!profile || profile.role !== "admin") {
+        if (!profile || (profile as any).role !== "admin") {
             throw new ForbiddenError("Only admins can update inventory");
         }
 

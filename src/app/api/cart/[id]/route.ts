@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { errorResponse, UnauthorizedError, NotFoundError } from "@/utils/errors";
+import { errorResponse, UnauthorizedError, NotFoundError } from "@/lib/utils/errors";
 import { z } from "zod";
 import type { Database } from "@/types/database";
 
