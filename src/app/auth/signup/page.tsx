@@ -11,8 +11,7 @@ export default function SignupPage() {
     const { user, register, isLoading, error, init } = useAuth();
 
     const [form, setForm] = useState({
-        firstName: "",
-        lastName: "",
+        full_name: "",
         email: "",
         phone: "",
         password: "",
@@ -50,14 +49,15 @@ export default function SignupPage() {
 
         try {
             await register({
-                firstName: form.firstName,
-                lastName: form.lastName,
+                full_name: form.full_name,
                 email: form.email,
-                phone: form.phone,
+                phone: form.phone || undefined,
                 password: form.password,
                 wantsWholesale: form.wantsWholesale,
             });
-            router.push("/dashboard");
+            // Registration successful - user will need to verify email
+            alert("Registration successful! Please check your email to verify your account.");
+            router.push("/auth/login");
         } catch {
             // error already in store
         }
@@ -81,27 +81,15 @@ export default function SignupPage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-                    <div className="col-span-1">
+                    <div className="col-span-2">
                         <label className="block text-sm font-medium text-slate-700 mb-1">
-                            First Name
+                            Full Name
                         </label>
                         <input
-                            name="firstName"
+                            name="full_name"
                             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.firstName}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Last Name
-                        </label>
-                        <input
-                            name="lastName"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.lastName}
+                            placeholder="John Doe"
+                            value={form.full_name}
                             onChange={handleChange}
                             required
                         />

@@ -1,18 +1,25 @@
 // src/types/auth.ts
-export type UserRole = "regular" | "wholesale" | "pending_wholesale";
+export type UserRole = "customer" | "admin" | "wholesale";
+export type WholesaleStatus = "pending" | "approved" | "rejected";
+export type WholesaleTier = "tier1" | "tier2" | "tier3";
 
 export interface User {
     id: string;
-    firstName: string;
-    lastName: string;
     email: string;
+    full_name: string;
     phone?: string;
     role: UserRole;
+    wholesale_status?: WholesaleStatus;
+    wholesale_tier?: WholesaleTier;
 }
 
 export interface AuthResponse {
     user: User;
-    token: string;
+    session: {
+        access_token: string;
+        refresh_token: string;
+        expires_at: number;
+    };
 }
 
 export interface LoginPayload {
@@ -21,10 +28,9 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
-    firstName: string;
-    lastName: string;
     email: string;
-    phone?: string;
     password: string;
-    wantsWholesale: boolean;
+    full_name: string;
+    phone?: string;
+    wantsWholesale?: boolean;
 }

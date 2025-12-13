@@ -1,6 +1,7 @@
 // src/lib/auth-client.ts
 "use client";
 
+import { createClient } from "@/lib/supabase/client";
 import {
     AuthResponse,
     LoginPayload,
@@ -8,106 +9,128 @@ import {
     User,
 } from "@/types/auth";
 
-const STORAGE_KEY = "fixitup_auth_user";
-
-function delay(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const API_BASE = "/api/auth";
 
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
-    await delay(500);
+    const response = await fetch(`${API_BASE}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
 
-    const stored = typeof window !== "undefined"
-        ? window.localStorage.getItem(STORAGE_KEY)
-        : null;
-
-    if (!stored) {
-        throw new Error("No user found. Please sign up first.");
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Login failed");
     }
 
-    const user: User = JSON.parse(stored);
-
-    // Fake password check – ignore in mock
-    if (payload.email !== user.email) {
-        throw new Error("Invalid email or password");
-    }
-
-    return {
-        user,
-        token: "mock-token",
-    };
+    const { data } = await response.json();
+    return data;
 }
 
-export async function register(
-    payload: RegisterPayload
-): Promise<AuthResponse> {
-    await delay(500);
+export async function register(payload: RegisterPayload): Promise<AuthResponse> {
+    const response = await fetch(`${API_BASE}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
 
-    const user: User = {
-        id: crypto.randomUUID(),
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        email: payload.email,
-        phone: payload.phone,
-        role: payload.wantsWholesale ? "pending_wholesale" : "regular",
-    };
-
-    if (typeof window !== "undefined") {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    if (!response.ok) {
+        const error = await response.json();
+        if (error.errors) {
+            const errorMessages = Object.values(error.errors).flat().join(", ");
+            throw new Error(errorMessages);
+        }
+        throw new Error(error.error || "Registration failed");
     }
 
-    return {
-        user,
-        token: "mock-token",
-    };
+    const { data } = await response.json();
+    return data;
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-    const stored =
-        typeof window !== "undefined"
-            ? window.localStorage.getItem(STORAGE_KEY)
-            : null;
+    try {
+        const supabase = createClient();
+        const { data: { user }, error } = await supabase.auth.getUser();
 
-    if (!stored) return null;
-    return JSON.parse(stored) as User;
+        if (error || !user) return null;
+
+        // Get full profile
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile) return null;
+
+        const profileData = profile as any;
+
+        return {
+            id: user.id,
+            email: user.email!,
+            full_name: profileData.full_name || '',
+            phone: profileData.phone || undefined,
+            role: profileData.role || 'customer',
+            wholesale_status: profileData.wholesale_status || undefined,
+            wholesale_tier: profileData.wholesale_tier || undefined,
+        };
+    } catch (error) {
+        console.error('Error getting current user:', error);
+        return null;
+    }
 }
 
-export async function updateProfile(
-    updates: Partial<User>
-): Promise<User> {
-    const current = await getCurrentUser();
-    if (!current) throw new Error("Not authenticated");
+export async function updateProfile(updates: Partial<User>): Promise<User> {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    const updated = { ...current, ...updates };
+    if (!user) throw new Error("Not authenticated");
 
-    if (typeof window !== "undefined") {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    }
+    // Update profile in database
+    const { data, error } = await (supabase
+        .from('profiles') as any)
+        .update({
+            full_name: updates.full_name,
+            phone: updates.phone,
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
 
-    return updated;
+    if (error) throw new Error(error.message);
+
+    return {
+        id: user.id,
+        email: user.email!,
+        full_name: data.full_name || '',
+        phone: data.phone || undefined,
+        role: data.role || 'customer',
+        wholesale_status: data.wholesale_status || undefined,
+        wholesale_tier: data.wholesale_tier || undefined,
+    };
 }
 
 export async function applyForWholesale(): Promise<User> {
-    const current = await getCurrentUser();
-    if (!current) throw new Error("Not authenticated");
+    const response = await fetch("/api/wholesale/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+    });
 
-    const updated: User = {
-        ...current,
-        role:
-            current.role === "wholesale"
-                ? "wholesale"
-                : "pending_wholesale",
-    };
-
-    if (typeof window !== "undefined") {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Wholesale application failed");
     }
 
-    return updated;
+    const { data } = await response.json();
+    return data.user;
 }
 
 export async function logoutApi(): Promise<void> {
-    if (typeof window !== "undefined") {
-        window.localStorage.removeItem(STORAGE_KEY);
-    }
+    await fetch(`${API_BASE}/logout`, {
+        method: "POST",
+    });
+    
+    // Also clear Supabase session
+    const supabase = createClient();
+    await supabase.auth.signOut();
 }

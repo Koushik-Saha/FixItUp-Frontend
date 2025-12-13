@@ -35,10 +35,7 @@ export default function CustomerDashboard() {
         );
     }
 
-    const fullName = `${user.firstName} ${user.lastName}`;
-
     const [activeTab, setActiveTab] = useState('profile')
-    const [profile, setProfile] = useState({ firstName: 'John', lastName: 'Smith', email: 'john@example.com', phone: '(555) 123-4567' })
     const [addresses, setAddresses] = useState([
         { id: 1, label: 'Home', address: '123 Main St', city: 'Santa Barbara', state: 'CA', zip: '93105', isDefault: true },
         { id: 2, label: 'Work', address: '456 Office Blvd', city: 'Los Angeles', state: 'CA', zip: '90001', isDefault: false }
@@ -52,14 +49,13 @@ export default function CustomerDashboard() {
         { id: 'RT-123456', date: '2024-12-01', device: 'iPhone 15 Pro Max', issue: 'Screen Repair', status: 'Completed', store: 'Santa Barbara' },
         { id: 'RT-789012', date: '2024-11-20', device: 'Samsung S24 Ultra', issue: 'Battery Replacement', status: 'In Progress', store: 'Campbell' }
     ]
-    const wholesale = { status: 'Approved', accountNumber: 'WS-12345', tier: 'Gold', discount: '25%', since: 'January 2024' }
 
     return (
         <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
             <div className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                 <div className="container mx-auto px-4 py-6">
                     <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">My Account</h1>
-                    <p className="text-neutral-600 dark:text-neutral-400">Welcome back, {profile.firstName}!</p>
+                    <p className="text-neutral-600 dark:text-neutral-400">Welcome back, {user.full_name}!</p>
                 </div>
             </div>
 
@@ -85,12 +81,26 @@ export default function CustomerDashboard() {
                                     <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"><Edit className="h-4 w-4" />Edit</button>
                                 </div>
                                 <div className="space-y-4">
-                                    <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">First Name</label><p className="text-neutral-900 dark:text-white">{profile.firstName}</p></div>
-                                    <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Last Name</label><p className="text-neutral-900 dark:text-white">{profile.lastName}</p></div>
-                                    <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Email</label><p className="text-neutral-900 dark:text-white">{profile.email}</p></div>
-                                    <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Phone</label><p className="text-neutral-900 dark:text-white">{profile.phone}</p></div>
+                                    <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Full Name</label><p className="text-neutral-900 dark:text-white">{user.full_name}</p></div>
+                                    <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Email</label><p className="text-neutral-900 dark:text-white">{user.email}</p></div>
+                                    <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Phone</label><p className="text-neutral-900 dark:text-white">{user.phone || 'Not provided'}</p></div>
+                                    <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Role</label><p className="text-neutral-900 dark:text-white capitalize">{user.role}</p></div>
+                                    {user.role === 'wholesale' && (
+                                        <>
+                                            <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Wholesale Status</label><p className="text-neutral-900 dark:text-white capitalize">{user.wholesale_status}</p></div>
+                                            <div><label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Wholesale Tier</label><p className="text-neutral-900 dark:text-white capitalize">{user.wholesale_tier}</p></div>
+                                        </>
+                                    )}
                                 </div>
-                                <button className="mt-6 px-6 py-3 border border-neutral-300 dark:border-neutral-600 text-neutral-700 dark:text-neutral-300 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors flex items-center gap-2"><Key className="h-4 w-4" />Reset Password</button>
+                                <div className="mt-6 flex gap-3">
+                                    <button className="px-6 py-3 border border-neutral-300 dark:border-neutral-600 text-neutral-700 dark:text-neutral-300 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors flex items-center gap-2"><Key className="h-4 w-4" />Reset Password</button>
+                                    <button 
+                                        onClick={() => logout().then(() => router.push('/auth/login'))}
+                                        className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                    >
+                                        Logout
+                                    </button>
+                                </div>
                             </div>
                         )}
 
@@ -154,14 +164,44 @@ export default function CustomerDashboard() {
                         {activeTab === 'wholesale' && (
                             <div className="bg-white dark:bg-neutral-800 rounded-lg p-8 border border-neutral-200 dark:border-neutral-700">
                                 <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Wholesale Status</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="p-6 bg-green-50 dark:bg-green-900/20 rounded-lg"><h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-2">Status</h3><p className="text-2xl font-bold text-green-600 dark:text-green-400">{wholesale.status}</p></div>
-                                    <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg"><h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-2">Account Number</h3><p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{wholesale.accountNumber}</p></div>
-                                    <div className="p-6 bg-purple-50 dark:bg-purple-900/20 rounded-lg"><h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-2">Tier</h3><p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{wholesale.tier}</p></div>
-                                    <div className="p-6 bg-orange-50 dark:bg-orange-900/20 rounded-lg"><h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-2">Discount</h3><p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{wholesale.discount}</p></div>
-                                </div>
-                                <p className="mt-6 text-sm text-neutral-600 dark:text-neutral-400">Member since: {wholesale.since}</p>
-                                <a href="/wholesale" className="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Go to Wholesale Portal</a>
+                                
+                                {user.role === 'wholesale' && user.wholesale_status === 'approved' ? (
+                                    <>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="p-6 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-2">Status</h3>
+                                                <p className="text-2xl font-bold text-green-600 dark:text-green-400 capitalize">{user.wholesale_status}</p>
+                                            </div>
+                                            <div className="p-6 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                                                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-2">Tier</h3>
+                                                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 capitalize">{user.wholesale_tier}</p>
+                                            </div>
+                                        </div>
+                                        <a href="/wholesale" className="mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Go to Wholesale Portal</a>
+                                    </>
+                                ) : user.wholesale_status === 'pending' ? (
+                                    <div className="text-center py-8">
+                                        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Shield className="w-8 h-8 text-orange-600" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">Application Pending</h3>
+                                        <p className="text-neutral-600 dark:text-neutral-400 mb-4">Your wholesale application is being reviewed. We'll notify you once it's processed.</p>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Shield className="w-8 h-8 text-blue-600" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">Apply for Wholesale</h3>
+                                        <p className="text-neutral-600 dark:text-neutral-400 mb-4">Get access to wholesale pricing and exclusive products for your business.</p>
+                                        <button 
+                                            onClick={() => applyWholesale()}
+                                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                            Apply Now
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

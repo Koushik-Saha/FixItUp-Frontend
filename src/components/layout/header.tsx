@@ -18,7 +18,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { useAuthStore, useCartStore, useWishlistStore } from '@/store'
+import { useCartStore, useWishlistStore } from '@/store'
+import { useAuth } from '@/hooks/useAuth'
 import {CategorySection} from "@/components/category-section"
 import {MobileMenu} from "@/components/mobile-menu"
 
@@ -83,7 +84,8 @@ const PRODUCT_CATEGORIES = [
 ]
 
 export function Header() {
-  const { user, isAuthenticated } = useAuthStore()
+  const { user } = useAuth()
+  const isAuthenticated = !!user
   const { getItemCount } = useCartStore()
   const { items: wishlistItems } = useWishlistStore()
 
@@ -222,10 +224,11 @@ export function Header() {
               </Link>
 
               {/* User Account - Desktop Only */}
-              {isAuthenticated ? (
-                  <Link href="/dashboard" className="hidden lg:block">
-                    <Button variant="ghost" size="icon">
+              {isAuthenticated && user ? (
+                  <Link href="/dashboard" className="hidden lg:flex items-center gap-2">
+                    <Button variant="ghost" className="flex items-center gap-2">
                       <User className="h-5 w-5" />
+                      <span className="text-sm">{user.full_name}</span>
                     </Button>
                   </Link>
               ) : (
