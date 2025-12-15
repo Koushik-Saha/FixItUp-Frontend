@@ -17,6 +17,21 @@ export default function CustomerDashboard() {
     const router = useRouter();
     const { user, isLoading, init, applyWholesale, logout } = useAuth();
 
+    const [activeTab, setActiveTab] = useState('profile')
+    const [addresses, setAddresses] = useState([
+        { id: 1, label: 'Home', address: '123 Main St', city: 'Santa Barbara', state: 'CA', zip: '93105', isDefault: true },
+        { id: 2, label: 'Work', address: '456 Office Blvd', city: 'Los Angeles', state: 'CA', zip: '90001', isDefault: false }
+    ])
+    const orders = [
+        { id: 'ORD-123456', date: '2024-12-05', items: 2, total: 139.98, status: 'Delivered' },
+        { id: 'ORD-789012', date: '2024-11-28', items: 1, total: 89.99, status: 'Shipped' },
+        { id: 'ORD-345678', date: '2024-11-15', items: 3, total: 249.97, status: 'Delivered' }
+    ]
+    const repairs = [
+        { id: 'RT-123456', date: '2024-12-01', device: 'iPhone 15 Pro Max', issue: 'Screen Repair', status: 'Completed', store: 'Santa Barbara' },
+        { id: 'RT-789012', date: '2024-11-20', device: 'Samsung S24 Ultra', issue: 'Battery Replacement', status: 'In Progress', store: 'Campbell' }
+    ]
+
     useEffect(() => {
         init();
     }, [init]);
@@ -35,20 +50,7 @@ export default function CustomerDashboard() {
         );
     }
 
-    const [activeTab, setActiveTab] = useState('profile')
-    const [addresses, setAddresses] = useState([
-        { id: 1, label: 'Home', address: '123 Main St', city: 'Santa Barbara', state: 'CA', zip: '93105', isDefault: true },
-        { id: 2, label: 'Work', address: '456 Office Blvd', city: 'Los Angeles', state: 'CA', zip: '90001', isDefault: false }
-    ])
-    const orders = [
-        { id: 'ORD-123456', date: '2024-12-05', items: 2, total: 139.98, status: 'Delivered' },
-        { id: 'ORD-789012', date: '2024-11-28', items: 1, total: 89.99, status: 'Shipped' },
-        { id: 'ORD-345678', date: '2024-11-15', items: 3, total: 249.97, status: 'Delivered' }
-    ]
-    const repairs = [
-        { id: 'RT-123456', date: '2024-12-01', device: 'iPhone 15 Pro Max', issue: 'Screen Repair', status: 'Completed', store: 'Santa Barbara' },
-        { id: 'RT-789012', date: '2024-11-20', device: 'Samsung S24 Ultra', issue: 'Battery Replacement', status: 'In Progress', store: 'Campbell' }
-    ]
+    const fullName = `${user.firstName} ${user.lastName}`;
 
     return (
         <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">

@@ -14,7 +14,7 @@ export default function LoginPage() {
 
     useEffect(() => {
         init();
-    }, [init]);
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -26,7 +26,6 @@ export default function LoginPage() {
         e.preventDefault();
         try {
             await login({ email, password });
-            router.push("/dashboard");
         } catch {
             // error already in store
         }
@@ -68,7 +67,12 @@ export default function LoginPage() {
                             <label className="block text-sm font-medium text-slate-700">
                                 Password
                             </label>
-                            {/* optional: Forgot password link */}
+                            <Link 
+                                href="/auth/forgot-password"
+                                className="text-sm text-blue-600 hover:text-blue-500"
+                            >
+                                Forgot password?
+                            </Link>
                         </div>
                         <input
                             type="password"
