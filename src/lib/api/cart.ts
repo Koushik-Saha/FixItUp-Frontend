@@ -69,6 +69,8 @@ export async function addToCart(productId: string, quantity: number = 1): Promis
         }),
     })
 
+    debugger
+
     if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to add item to cart')
