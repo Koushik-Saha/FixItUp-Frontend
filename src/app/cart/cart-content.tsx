@@ -122,7 +122,7 @@ export default function CartContent() {
     const finalTotal = subtotal - discount + shipping
 
     // Loading state
-    if (loading) {
+    if (loading && !error && cartItems.length <= 0 ) {
         return (
             <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
                 <div className="text-center">
