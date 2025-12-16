@@ -57,15 +57,30 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // Refresh session if expired
-    await supabase.auth.getUser()
+    // Get current user session
+    const { data: { user }, error } = await supabase.auth.getUser()
 
-    // Protect admin routes
-    if (request.nextUrl.pathname.startsWith('/admin')) {
-        const { data: { user } } = await supabase.auth.getUser()
+    // Protected routes - require authentication
+    const protectedPaths = ['/dashboard', '/checkout', '/cart', '/order-tracking', '/repairs']
+    const adminPaths = ['/admin']
+    const authPaths = ['/auth/login', '/auth/signup']
+    const pathname = request.nextUrl.pathname
 
+    // Redirect to login if accessing protected routes without authentication
+    if (protectedPaths.some(path => pathname.startsWith(path))) {
         if (!user) {
-            return NextResponse.redirect(new URL('/auth/login', request.url))
+            const redirectUrl = new URL('/auth/login', request.url)
+            redirectUrl.searchParams.set('from', pathname)
+            return NextResponse.redirect(redirectUrl)
+        }
+    }
+
+    // Admin routes - require admin role
+    if (adminPaths.some(path => pathname.startsWith(path))) {
+        if (!user) {
+            const redirectUrl = new URL('/auth/login', request.url)
+            redirectUrl.searchParams.set('from', pathname)
+            return NextResponse.redirect(redirectUrl)
         }
 
         // Check if user is admin
@@ -75,18 +90,17 @@ export async function middleware(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        if (profile?.role !== 'admin') {
-            return NextResponse.redirect(new URL('/', request.url))
+        if (!profile || (profile as any).role !== 'admin') {
+            return NextResponse.redirect(new URL('/unauthorized', request.url))
         }
     }
 
-    // Protect wholesale routes
-    if (request.nextUrl.pathname.startsWith('/wholesale') &&
-        !request.nextUrl.pathname.includes('/apply')) {
-        const { data: { user } } = await supabase.auth.getUser()
-
+    // Wholesale routes
+    if (pathname.startsWith('/wholesale') && !pathname.includes('/apply')) {
         if (!user) {
-            return NextResponse.redirect(new URL('/auth/login', request.url))
+            const redirectUrl = new URL('/auth/login', request.url)
+            redirectUrl.searchParams.set('from', pathname)
+            return NextResponse.redirect(redirectUrl)
         }
 
         // Check if user is approved wholesale
@@ -96,9 +110,21 @@ export async function middleware(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        if (profile?.role !== 'wholesale' || profile?.wholesale_status !== 'approved') {
-            return NextResponse.redirect(new URL('/', request.url))
+        if ((profile as any)?.role !== 'wholesale' || (profile as any)?.wholesale_status !== 'approved') {
+            return NextResponse.redirect(new URL('/wholesale/apply', request.url))
         }
+    }
+
+    // Redirect authenticated users away from auth pages
+    if (authPaths.some(path => pathname.startsWith(path)) && user) {
+        const from = request.nextUrl.searchParams.get('from')
+        return NextResponse.redirect(new URL(from || '/dashboard', request.url))
+    }
+
+    // API routes - add user info to headers for server components
+    if (pathname.startsWith('/api/') && user) {
+        response.headers.set('x-user-id', user.id)
+        response.headers.set('x-user-email', user.email || '')
     }
 
     return response

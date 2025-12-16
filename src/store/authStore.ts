@@ -19,7 +19,7 @@ import type {
 
 interface AuthState {
     user: User | null;
-    token: string | null;
+    session: any | null;
     isLoading: boolean;
     error: string | null;
 
@@ -35,7 +35,7 @@ export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
             user: null,
-            token: null,
+            session: null,
             isLoading: false,
             error: null,
 
@@ -52,8 +52,8 @@ export const useAuthStore = create<AuthState>()(
             login: async (payload) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const { user, token } = await login(payload);
-                    set({ user, token, isLoading: false });
+                    const { user, session } = await login(payload);
+                    set({ user, session, isLoading: false });
                 } catch (err: any) {
                     set({ error: err.message, isLoading: false });
                     throw err;
@@ -63,8 +63,8 @@ export const useAuthStore = create<AuthState>()(
             register: async (payload) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const { user, token } = await register(payload);
-                    set({ user, token, isLoading: false });
+                    const { user, session } = await register(payload);
+                    set({ user, session, isLoading: false });
                 } catch (err: any) {
                     set({ error: err.message, isLoading: false });
                     throw err;
@@ -73,7 +73,7 @@ export const useAuthStore = create<AuthState>()(
 
             logout: async () => {
                 await logoutApi();
-                set({ user: null, token: null });
+                set({ user: null, session: null });
             },
 
             updateProfile: async (updates) => {
@@ -102,7 +102,7 @@ export const useAuthStore = create<AuthState>()(
             name: "fixitup-auth-store",
             partialize: (state) => ({
                 user: state.user,
-                token: state.token,
+                session: state.session,
             }),
         }
     )

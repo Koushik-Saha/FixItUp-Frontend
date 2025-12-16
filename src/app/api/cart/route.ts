@@ -1,10 +1,56 @@
 // app/api/cart/route.ts
 // Cart API - Get and Add to cart
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
-import { z } from 'zod'
+import {NextRequest, NextResponse} from 'next/server'
+import {createClient} from '@/lib/supabase/server'
+import {errorResponse, UnauthorizedError} from '@/lib/utils/errors'
+import {z} from 'zod'
+
+// Helper to format error messages for frontend
+function formatError(error: any) {
+    // Foreign key violation (missing profile)
+    if (error.code === '23503' && error.message.includes('profiles')) {
+        return {
+            error: 'Profile not found. Please complete your registration.',
+            code: 'PROFILE_NOT_FOUND',
+            statusCode: 400
+        }
+    }
+
+    // Foreign key violation (missing product)
+    if (error.code === '23503' && error.message.includes('products')) {
+        return {
+            error: 'Product not found.',
+            code: 'PRODUCT_NOT_FOUND',
+            statusCode: 404
+        }
+    }
+
+    // Unique constraint violation (already in cart)
+    if (error.code === '23505') {
+        return {
+            error: 'Item already in cart.',
+            code: 'DUPLICATE_ITEM',
+            statusCode: 400
+        }
+    }
+
+    // RLS policy violation
+    if (error.code === '42501' || error.message?.includes('policy')) {
+        return {
+            error: 'Unauthorized. Please login again.',
+            code: 'UNAUTHORIZED',
+            statusCode: 401
+        }
+    }
+
+    // Default error
+    return {
+        error: error.message || 'Failed to add to cart',
+        code: 'UNKNOWN_ERROR',
+        statusCode: 500
+    }
+}
 
 // Validation schema
 const addToCartSchema = z.object({
@@ -18,13 +64,13 @@ export async function GET(request: NextRequest) {
         const supabase = await createClient()
 
         // Get authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const {data: {user}, error: authError} = await supabase.auth.getUser()
         if (authError || !user) {
             throw new UnauthorizedError('Please login to view cart')
         }
 
         // Get user's cart items with product details
-        const { data: cartItems, error } = await supabase
+        const {data: cartItems, error} = await supabase
             .from('cart_items')
             .select(`
         id,
@@ -49,7 +95,7 @@ export async function GET(request: NextRequest) {
         )
       `)
             .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
+            .order('created_at', {ascending: false})
 
         if (error) {
             console.error('Failed to fetch cart:', error)
@@ -57,7 +103,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Get user profile for pricing
-        const { data: profile } = await (supabase
+        const {data: profile} = await (supabase
             .from('profiles') as any)
             .select('role, wholesale_tier')
             .eq('id', user.id)
@@ -138,7 +184,9 @@ export async function GET(request: NextRequest) {
         })
 
     } catch (error) {
-        return errorResponse(error)
+        console.error('Cart GET error:', error)
+        const formattedError = formatError(error)
+        return NextResponse.json(formattedError, { status: formattedError.statusCode })
     }
 }
 
@@ -148,7 +196,7 @@ export async function POST(request: NextRequest) {
         const supabase = await createClient()
 
         // Get authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const {data: {user}, error: authError} = await supabase.auth.getUser()
         if (authError || !user) {
             throw new UnauthorizedError('Please login to add items to cart')
         }
@@ -163,14 +211,14 @@ export async function POST(request: NextRequest) {
                     error: 'Invalid request',
                     details: validation.error.flatten().fieldErrors,
                 },
-                { status: 400 }
+                {status: 400}
             )
         }
 
-        const { product_id, quantity } = validation.data
+        const {product_id, quantity} = validation.data
 
         // Check if product exists and is active
-        const { data: product, error: productError } = await (supabase
+        const {data: product, error: productError} = await (supabase
             .from('products') as any)
             .select('id, name, total_stock, is_active')
             .eq('id', product_id)
@@ -178,15 +226,15 @@ export async function POST(request: NextRequest) {
 
         if (productError || !product) {
             return NextResponse.json(
-                { error: 'Product not found' },
-                { status: 404 }
+                {error: 'Product not found'},
+                {status: 404}
             )
         }
 
         if (!product.is_active) {
             return NextResponse.json(
-                { error: 'Product is not available' },
-                { status: 400 }
+                {error: 'Product is not available'},
+                {status: 400}
             )
         }
 
@@ -197,12 +245,12 @@ export async function POST(request: NextRequest) {
                     error: 'Insufficient stock',
                     available: product.total_stock,
                 },
-                { status: 400 }
+                {status: 400}
             )
         }
 
         // Check if item already in cart
-        const { data: existingItem } = await (supabase
+        const {data: existingItem} = await (supabase
             .from('cart_items') as any)
             .select('id, quantity')
             .eq('user_id', user.id)
@@ -220,13 +268,13 @@ export async function POST(request: NextRequest) {
                         available: product.total_stock,
                         current_in_cart: existingItem.quantity,
                     },
-                    { status: 400 }
+                    {status: 400}
                 )
             }
 
-            const { data: updated, error: updateError } = await (supabase
+            const {data: updated, error: updateError} = await (supabase
                 .from('cart_items') as any)
-                .update({ quantity: newQuantity, updated_at: new Date().toISOString() })
+                .update({quantity: newQuantity, updated_at: new Date().toISOString()})
                 .eq('id', existingItem.id)
                 .select()
                 .single()
@@ -243,7 +291,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Add new item to cart
-        const { data: newItem, error: insertError } = await (supabase
+        const {data: newItem, error: insertError} = await (supabase
             .from('cart_items') as any)
             .insert({
                 user_id: user.id,
@@ -263,10 +311,12 @@ export async function POST(request: NextRequest) {
                 message: 'Item added to cart successfully',
                 data: newItem,
             },
-            { status: 201 }
+            {status: 201}
         )
 
     } catch (error) {
-        return errorResponse(error)
+        console.error('Cart POST error:', error)
+        const formattedError = formatError(error)
+        return NextResponse.json(formattedError, { status: formattedError.statusCode })
     }
 }

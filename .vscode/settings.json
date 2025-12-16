@@ -1,0 +1,13 @@
+{
+  "cSpell.words": [
+    "GSSPSession",
+    "GSSPSessionContext",
+    "HVAC",
+    "McAnsh",
+    "Themeable",
+    "dtei",
+    "snid"
+  ],
+  "cSpell.ignoreRegExpList": ["/@mcansh/next-svgr/"],
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

@@ -11,8 +11,7 @@ export default function SignupPage() {
     const { user, register, isLoading, error, init } = useAuth();
 
     const [form, setForm] = useState({
-        firstName: "",
-        lastName: "",
+        full_name: "",
         email: "",
         phone: "",
         password: "",
@@ -50,71 +49,60 @@ export default function SignupPage() {
 
         try {
             await register({
-                firstName: form.firstName,
-                lastName: form.lastName,
+                full_name: form.full_name,
                 email: form.email,
-                phone: form.phone,
+                phone: form.phone || undefined,
                 password: form.password,
                 wantsWholesale: form.wantsWholesale,
             });
-            router.push("/dashboard");
+            // Registration successful - user will need to verify email
+            alert("Registration successful! Please check your email to verify your account.");
+            router.push("/auth/login");
         } catch {
             // error already in store
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-            <div className="w-full max-w-xl bg-white shadow-lg rounded-2xl p-8">
-                <h1 className="text-2xl font-semibold mb-2 text-slate-900">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-neutral-900">
+            <div className="w-full max-w-xl bg-white dark:bg-neutral-800 shadow-lg rounded-2xl p-8">
+                <h1 className="text-2xl font-semibold mb-2 text-slate-900 dark:text-white">
                     Create your account
                 </h1>
-                <p className="text-sm text-slate-500 mb-6">
+                <p className="text-sm text-slate-500 dark:text-neutral-400 mb-6">
                     Sign up as a regular customer or apply for a wholesale
                     account.
                 </p>
 
                 {error && (
-                    <div className="mb-4 rounded-lg bg-red-50 text-red-700 px-3 py-2 text-sm">
+                    <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-3 py-2 text-sm">
                         {error}
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-                    <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                            First Name
+                    <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
+                            Full Name
                         </label>
                         <input
-                            name="firstName"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.firstName}
+                            name="full_name"
+                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="John Doe"
+                            value={form.full_name}
                             onChange={handleChange}
                             required
                         />
                     </div>
 
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Last Name
-                        </label>
-                        <input
-                            name="lastName"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={form.lastName}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Email
                         </label>
                         <input
                             type="email"
                             name="email"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             value={form.email}
                             onChange={handleChange}
                             required
@@ -122,25 +110,25 @@ export default function SignupPage() {
                     </div>
 
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Phone
                         </label>
                         <input
                             name="phone"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             value={form.phone}
                             onChange={handleChange}
                         />
                     </div>
 
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Password
                         </label>
                         <input
                             type="password"
                             name="password"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             value={form.password}
                             onChange={handleChange}
                             required
@@ -148,20 +136,20 @@ export default function SignupPage() {
                     </div>
 
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Confirm Password
                         </label>
                         <input
                             type="password"
                             name="confirmPassword"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             value={form.confirmPassword}
                             onChange={handleChange}
                             required
                         />
                     </div>
 
-                    <div className="col-span-2 mt-2 flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+                    <div className="col-span-2 mt-2 flex items-start gap-2 rounded-lg border border-slate-200 dark:border-neutral-600 bg-slate-50 dark:bg-neutral-700 px-3 py-3">
                         <input
                             id="wantsWholesale"
                             type="checkbox"
@@ -172,7 +160,7 @@ export default function SignupPage() {
                         />
                         <label
                             htmlFor="wantsWholesale"
-                            className="text-sm text-slate-700"
+                            className="text-sm text-slate-700 dark:text-neutral-300"
                         >
                             I want to apply for a{" "}
                             <span className="font-semibold">wholesale</span> account.
@@ -192,11 +180,11 @@ export default function SignupPage() {
                     </div>
                 </form>
 
-                <p className="mt-6 text-sm text-center text-slate-500">
+                <p className="mt-6 text-sm text-center text-slate-500 dark:text-neutral-400">
                     Already have an account?{" "}
                     <Link
                         href="/auth/login"
-                        className="text-blue-600 hover:underline font-medium"
+                        className="text-blue-600 dark:text-blue-400 hover:underline dark:hover:text-blue-300 font-medium"
                     >
                         Sign in
                     </Link>

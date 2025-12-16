@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
             .from('profiles')
             .select('id, full_name, phone, role, wholesale_tier, wholesale_status')
             .eq('id', data.user.id)
-            .single()
+            .maybeSingle()
 
         return NextResponse.json({
             message: 'Login successful',

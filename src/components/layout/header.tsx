@@ -18,9 +18,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { useAuthStore, useCartStore, useWishlistStore } from '@/store'
+import { useCartStore, useWishlistStore } from '@/store'
+import { useAuth } from '@/hooks/useAuth'
 import {CategorySection} from "@/components/category-section"
 import {MobileMenu} from "@/components/mobile-menu"
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 // All US Phone Brands
 const PHONE_BRANDS = [
@@ -83,7 +85,8 @@ const PRODUCT_CATEGORIES = [
 ]
 
 export function Header() {
-  const { user, isAuthenticated } = useAuthStore()
+  const { user } = useAuth()
+  const isAuthenticated = !!user
   const { getItemCount } = useCartStore()
   const { items: wishlistItems } = useWishlistStore()
 
@@ -192,14 +195,14 @@ export function Header() {
 
               {/* Find In-Store - Desktop Only */}
               <Link href="/stores" className="hidden lg:block">
-                <Button variant="ghost" className="text-sm">
+                <Button variant="ghost" className="text-sm text-black dark:text-white">
                   Find In-Store
                 </Button>
               </Link>
 
               {/* Wishlist - Desktop Only */}
               <Link href="/wishlist" className="hidden lg:block">
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="ghost" size="icon" className="relative text-black dark:text-white">
                   <Heart className="h-5 w-5" />
                   {wishlistCount > 0 && (
                       <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 hover:bg-red-500">
@@ -209,9 +212,12 @@ export function Header() {
                 </Button>
               </Link>
 
+              {/* Theme Toggle */}
+              <ThemeToggle />
+
               {/* Cart */}
               <Link href="/cart">
-                <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10">
+                <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 text-black dark:text-white">
                   <ShoppingCart className="h-5 w-5" />
                   {cartCount > 0 && (
                       <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-blue-600 hover:bg-blue-600 text-xs">
@@ -222,15 +228,16 @@ export function Header() {
               </Link>
 
               {/* User Account - Desktop Only */}
-              {isAuthenticated ? (
-                  <Link href="/dashboard" className="hidden lg:block">
-                    <Button variant="ghost" size="icon">
+              {isAuthenticated && user ? (
+                  <Link href="/dashboard" className="hidden lg:flex items-center gap-2">
+                    <Button variant="ghost" className="flex items-center gap-2 text-black dark:text-white">
                       <User className="h-5 w-5" />
+                      <span className="text-sm">{user.full_name}</span>
                     </Button>
                   </Link>
               ) : (
                   <Link href="/auth/login" className="hidden lg:block">
-                    <Button size="sm">
+                    <Button size="sm" className="text-black dark:text-white">
                       Sign In
                     </Button>
                   </Link>
