@@ -1,297 +1,330 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle, Package, Truck, Calendar, MapPin, CreditCard, Download, ArrowRight } from 'lucide-react'
+import {
+    CheckCircle,
+    Package,
+    Truck,
+    Calendar,
+    MapPin,
+    CreditCard,
+    Download,
+    ArrowRight,
+} from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
+
+type OrderItem = {
+    id: string
+    product_id: string
+    product_name: string
+    product_sku?: string
+    product_image?: string | null
+    unit_price: number
+    discount_percentage: number
+    quantity: number
+    subtotal: number
+}
+
+type Order = {
+    id: string
+    order_number: string
+    created_at: string
+    subtotal: number
+    discount_amount: number
+    tax_amount: number
+    shipping_cost: number
+    total_amount: number
+    shipping_address: {
+        full_name: string
+        address_line1: string
+        address_line2?: string | null
+        city: string
+        state: string
+        zip_code: string
+        phone?: string | null
+    }
+    status: string
+    payment_status: string
+    order_items: OrderItem[]
+}
 
 export default function OrderConfirmationPage() {
-    const [orderNumber, setOrderNumber] = useState('')
+    const searchParams = useSearchParams()
+    const [order, setOrder] = useState<Order | null>(null)
+    const [loading, setLoading] = useState(true)
+
+    const orderId = searchParams.get('orderId')
+    const orderNumberParam = searchParams.get('orderNumber') || ''
 
     useEffect(() => {
-        // Get order number from URL
-        const params = new URLSearchParams(window.location.search)
-        const order = params.get('order') || 'ORD-' + Date.now().toString().slice(-6)
-        setOrderNumber(order)
-    }, [])
-
-    // Sample order data
-    const order = {
-        number: orderNumber,
-        date: new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        }),
-        items: [
-            {
-                id: 1,
-                name: 'iPhone 15 Pro Max OLED Display',
-                sku: 'IP15PM-OLED-01',
-                price: 89.99,
-                quantity: 1,
-                image: '/images/products/iphone-15-display.jpg'
-            },
-            {
-                id: 2,
-                name: 'Premium Phone Repair Tool Kit',
-                sku: 'TK-PREM-01',
-                price: 49.99,
-                quantity: 1,
-                image: '/images/products/tool-kit.jpg'
+        const loadOrder = async () => {
+            if (!orderId) {
+                setLoading(false)
+                return
             }
-        ],
-        shipping: {
-            firstName: 'John',
-            lastName: 'Smith',
-            address: '123 Main Street',
-            city: 'Santa Barbara',
-            state: 'CA',
-            zipCode: '93105',
-            country: 'United States'
-        },
-        shippingMethod: 'Standard Shipping (5-7 business days)',
-        payment: {
-            method: 'Visa ending in 4242',
-            amount: 139.98
-        },
-        subtotal: 139.98,
-        shippingCount: 0,
-        tax: 12.25,
-        total: 152.23,
-        estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        })
+            try {
+                setLoading(true)
+                const res = await fetch(`/api/orders/${orderId}`, { credentials: 'include' })
+                const json = await res.json().catch(() => ({}))
+                if (!res.ok) {
+                    const msg = json.message || json.error || 'Failed to load order'
+                    toast.error(msg)
+                    setLoading(false)
+                    return
+                }
+                setOrder(json.data as Order)
+            } catch (err: any) {
+                console.error(err)
+                toast.error(err.message || 'Failed to load order')
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadOrder()
+    }, [orderId])
+
+    const displayOrderNumber =
+        order?.order_number || orderNumberParam || 'ORD-' + Date.now().toString().slice(-6)
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-neutral-50">
+                <p className="text-lg">Loading your order...</p>
+            </div>
+        )
     }
 
-    return (
-        <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
-
-            {/* Success Banner */}
-            <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white py-12">
-                <div className="container mx-auto px-4 text-center">
-                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6">
-                        <CheckCircle className="h-12 w-12 text-green-600" />
-                    </div>
-                    <h1 className="text-4xl font-bold mb-4">
-                        Order Confirmed!
-                    </h1>
-                    <p className="text-xl text-green-100 mb-6">
-                        Thank you for your purchase. Your order has been received.
-                    </p>
-                    <p className="text-lg">
-                        Order Number: <span className="font-bold text-2xl">{orderNumber}</span>
-                    </p>
-                </div>
+    if (!order) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-950 text-neutral-50 px-4">
+                <CheckCircle className="w-12 h-12 text-green-400 mb-4" />
+                <h1 className="text-2xl font-semibold mb-2">Order Confirmed!</h1>
+                <p className="text-sm text-neutral-400 mb-4">
+                    Your order number is <span className="font-mono">{displayOrderNumber}</span>.
+                </p>
+                <p className="text-sm text-neutral-400 mb-6">
+                    We couldn&apos;t load full order details, but you&apos;ll receive an email confirmation
+                    shortly.
+                </p>
+                <Link
+                    href="/"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium"
+                >
+                    Continue Shopping
+                    <ArrowRight className="w-4 h-4" />
+                </Link>
             </div>
+        )
+    }
 
-            <div className="container mx-auto px-4 py-12">
-                <div className="max-w-4xl mx-auto">
+    const createdDate = new Date(order.created_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    })
 
-                    {/* Important Info */}
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 mb-8">
-                        <div className="flex items-start gap-4">
-                            <CheckCircle className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+    const estimatedDelivery = new Date(
+        new Date(order.created_at).getTime() + 7 * 24 * 60 * 60 * 1000,
+    ).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    })
+
+    return (
+        <div className="min-h-screen bg-neutral-950 text-neutral-50">
+            <div className="max-w-4xl mx-auto px-4 py-10 md:py-16">
+                {/* Success banner */}
+                <div className="bg-gradient-to-r from-green-500/20 via-blue-500/10 to-purple-500/20 border border-green-500/40 rounded-2xl p-6 md:p-8 mb-8">
+                    <div className="flex items-start gap-4">
+                        <div className="mt-1">
+                            <CheckCircle className="w-8 h-8 text-green-400" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-semibold mb-1">Order Confirmed!</h1>
+                            <p className="text-sm text-neutral-200 mb-2">
+                                Thank you for your purchase. Your order has been received.
+                            </p>
+                            <p className="text-sm text-neutral-300">
+                                Order Number:{' '}
+                                <span className="font-mono font-semibold">{order.order_number}</span>
+                            </p>
+                            <p className="mt-1 text-xs text-neutral-400">
+                                You will receive an email confirmation with your order details shortly.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Info row */}
+                    <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 text-sm">
+                        <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-neutral-200" />
                             <div>
-                                <h3 className="font-bold text-neutral-900 dark:text-white mb-2">
-                                    What happens next?
-                                </h3>
-                                <ul className="space-y-2 text-neutral-700 dark:text-neutral-300">
-                                    <li>• You'll receive an email confirmation at the address provided</li>
-                                    <li>• We'll send you tracking information once your order ships</li>
-                                    <li>• Estimated delivery: <strong>{order.estimatedDelivery}</strong></li>
-                                </ul>
+                                <p className="text-xs text-neutral-400">Order Date</p>
+                                <p className="font-medium">{createdDate}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Truck className="w-4 h-4 text-neutral-200" />
+                            <div>
+                                <p className="text-xs text-neutral-400">Estimated Delivery</p>
+                                <p className="font-medium">{estimatedDelivery}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-neutral-200" />
+                            <div>
+                                <p className="text-xs text-neutral-400">Payment Status</p>
+                                <p className="font-medium capitalize">{order.payment_status}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    {/* Quick actions */}
+                    <div className="mt-6 flex flex-wrap gap-3">
                         <Link
-                            href={`/order-tracking?order=${orderNumber}`}
-                            className="bg-white dark:bg-neutral-800 rounded-lg p-6 border border-neutral-200 dark:border-neutral-700 hover:shadow-lg transition-shadow text-center group"
+                            href={`/`}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-neutral-900 text-sm font-medium hover:bg-neutral-100"
                         >
-                            <Truck className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                            <h3 className="font-bold text-neutral-900 dark:text-white mb-1">Track Order</h3>
-                            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
-                                Monitor your shipment
-                            </p>
-                            <span className="text-blue-600 dark:text-blue-400 text-sm flex items-center justify-center gap-1 group-hover:gap-2 transition-all">
-                Track Now <ArrowRight className="h-4 w-4" />
-              </span>
+                            Continue Shopping
+                            <ArrowRight className="w-4 h-4" />
                         </Link>
-
                         <button
+                            type="button"
                             onClick={() => window.print()}
-                            className="bg-white dark:bg-neutral-800 rounded-lg p-6 border border-neutral-200 dark:border-neutral-700 hover:shadow-lg transition-shadow text-center group"
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-700 text-sm font-medium hover:bg-neutral-900"
                         >
-                            <Download className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                            <h3 className="font-bold text-neutral-900 dark:text-white mb-1">Download Invoice</h3>
-                            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
-                                Save for your records
-                            </p>
-                            <span className="text-blue-600 dark:text-blue-400 text-sm flex items-center justify-center gap-1 group-hover:gap-2 transition-all">
-                Download <ArrowRight className="h-4 w-4" />
-              </span>
+                            <Download className="w-4 h-4" />
+                            Download Invoice
                         </button>
-
-                        <Link
-                            href="/shop"
-                            className="bg-white dark:bg-neutral-800 rounded-lg p-6 border border-neutral-200 dark:border-neutral-700 hover:shadow-lg transition-shadow text-center group"
-                        >
-                            <Package className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                            <h3 className="font-bold text-neutral-900 dark:text-white mb-1">Continue Shopping</h3>
-                            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
-                                Browse more products
-                            </p>
-                            <span className="text-blue-600 dark:text-blue-400 text-sm flex items-center justify-center gap-1 group-hover:gap-2 transition-all">
-                Shop Now <ArrowRight className="h-4 w-4" />
-              </span>
-                        </Link>
                     </div>
+                </div>
 
-                    {/* Order Details */}
-                    <div className="bg-white dark:bg-neutral-800 rounded-lg p-8 border border-neutral-200 dark:border-neutral-700 mb-8">
-                        <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">
-                            Order Details
+                {/* Order details */}
+                <div className="space-y-6">
+                    <section className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6">
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <Package className="w-4 h-4 text-blue-400" />
+                            Items Purchased
                         </h2>
-
-                        {/* Order Info Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Calendar className="h-5 w-5 text-neutral-400" />
-                                    <h3 className="font-semibold text-neutral-900 dark:text-white">Order Date</h3>
-                                </div>
-                                <p className="text-neutral-700 dark:text-neutral-300">{order.date}</p>
-                            </div>
-
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Truck className="h-5 w-5 text-neutral-400" />
-                                    <h3 className="font-semibold text-neutral-900 dark:text-white">Estimated Delivery</h3>
-                                </div>
-                                <p className="text-neutral-700 dark:text-neutral-300">{order.estimatedDelivery}</p>
-                            </div>
-
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <CreditCard className="h-5 w-5 text-neutral-400" />
-                                    <h3 className="font-semibold text-neutral-900 dark:text-white">Payment Method</h3>
-                                </div>
-                                <p className="text-neutral-700 dark:text-neutral-300">{order.payment.method}</p>
-                            </div>
-
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Package className="h-5 w-5 text-neutral-400" />
-                                    <h3 className="font-semibold text-neutral-900 dark:text-white">Shipping Method</h3>
-                                </div>
-                                <p className="text-neutral-700 dark:text-neutral-300">{order.shippingMethod}</p>
-                            </div>
-                        </div>
-
-                        {/* Items Purchased */}
-                        <div className="border-t border-neutral-200 dark:border-neutral-700 pt-6 mb-6">
-                            <h3 className="font-bold text-neutral-900 dark:text-white mb-4">
-                                Items Purchased
-                            </h3>
-                            <div className="space-y-4">
-                                {order.items.map(item => (
-                                    <div key={item.id} className="flex gap-4 py-4 border-b border-neutral-200 dark:border-neutral-700 last:border-0">
-                                        <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-700 rounded flex items-center justify-center flex-shrink-0">
-                                            <span className="text-3xl">📦</span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="font-semibold text-neutral-900 dark:text-white mb-1">
-                                                {item.name}
-                                            </h4>
-                                            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">
-                                                SKU: {item.sku}
-                                            </p>
-                                            <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                                                Quantity: {item.quantity}
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-neutral-900 dark:text-white">
-                                                ${(item.price * item.quantity).toFixed(2)}
-                                            </p>
-                                        </div>
+                        <div className="space-y-4">
+                            {order.order_items.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex items-center gap-3 border border-neutral-800 rounded-lg px-3 py-2"
+                                >
+                                    <div className="h-12 w-12 rounded-md bg-neutral-800 flex items-center justify-center text-xs text-neutral-300">
+                                        {item.product_image ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={item.product_image}
+                                                alt={item.product_name}
+                                                className="h-12 w-12 object-cover rounded-md"
+                                            />
+                                        ) : (
+                                            <span>{item.product_name.charAt(0)}</span>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{item.product_name}</p>
+                                        <p className="text-xs text-neutral-400">
+                                            SKU: {item.product_sku ?? 'N/A'} · Qty {item.quantity}
+                                        </p>
+                                    </div>
+                                    <div className="text-right text-sm font-semibold">
+                                        ${(item.subtotal || 0).toFixed(2)}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
+                    </section>
 
-                        {/* Order Totals */}
-                        <div className="border-t border-neutral-200 dark:border-neutral-700 pt-6">
-                            <div className="space-y-3 max-w-sm ml-auto">
-                                <div className="flex justify-between text-neutral-700 dark:text-neutral-300">
-                                    <span>Subtotal</span>
+                    <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Totals */}
+                        <div className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6">
+                            <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-neutral-400">Subtotal</span>
                                     <span>${order.subtotal.toFixed(2)}</span>
                                 </div>
-                                <div className="flex justify-between text-neutral-700 dark:text-neutral-300">
-                                    <span>Shipping</span>
-                                    <span>{order.shippingCount === 0 ? 'FREE' : `$${order.shippingCount.toFixed(2)}`}</span>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-neutral-400">Discounts</span>
+                                    <span>- ${order.discount_amount.toFixed(2)}</span>
                                 </div>
-                                <div className="flex justify-between text-neutral-700 dark:text-neutral-300">
-                                    <span>Tax</span>
-                                    <span>${order.tax.toFixed(2)}</span>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-neutral-400">Shipping</span>
+                                    <span>
+                    {order.shipping_cost === 0
+                        ? 'FREE'
+                        : `$${order.shipping_cost.toFixed(2)}`}
+                  </span>
                                 </div>
-                                <div className="flex justify-between text-xl font-bold text-neutral-900 dark:text-white border-t border-neutral-200 dark:border-neutral-700 pt-3">
-                                    <span>Total Paid</span>
-                                    <span>${order.total.toFixed(2)}</span>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-neutral-400">Tax</span>
+                                    <span>${order.tax_amount.toFixed(2)}</span>
+                                </div>
+                                <div className="border-t border-neutral-800 pt-3 flex items-center justify-between">
+                                    <span className="font-medium">Total Paid</span>
+                                    <span className="text-lg font-semibold">
+                    ${order.total_amount.toFixed(2)}
+                  </span>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Shipping Address */}
-                    <div className="bg-white dark:bg-neutral-800 rounded-lg p-8 border border-neutral-200 dark:border-neutral-700 mb-8">
-                        <div className="flex items-center gap-2 mb-4">
-                            <MapPin className="h-6 w-6 text-blue-600" />
-                            <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">
+                        {/* Shipping address */}
+                        <div className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6">
+                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-blue-400" />
                                 Shipping Address
                             </h2>
+                            <div className="space-y-1 text-sm">
+                                <p className="font-medium">{order.shipping_address.full_name}</p>
+                                <p>{order.shipping_address.address_line1}</p>
+                                {order.shipping_address.address_line2 && (
+                                    <p>{order.shipping_address.address_line2}</p>
+                                )}
+                                <p>
+                                    {order.shipping_address.city}, {order.shipping_address.state}{' '}
+                                    {order.shipping_address.zip_code}
+                                </p>
+                                {order.shipping_address.phone && (
+                                    <p className="text-neutral-400">{order.shipping_address.phone}</p>
+                                )}
+                            </div>
                         </div>
-                        <div className="text-neutral-700 dark:text-neutral-300">
-                            <p className="font-semibold">
-                                {order.shipping.firstName} {order.shipping.lastName}
-                            </p>
-                            <p>{order.shipping.address}</p>
-                            <p>
-                                {order.shipping.city}, {order.shipping.state} {order.shipping.zipCode}
-                            </p>
-                            <p>{order.shipping.country}</p>
-                        </div>
-                    </div>
+                    </section>
 
-                    {/* Customer Support */}
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
-                        <h3 className="font-bold text-neutral-900 dark:text-white mb-3">
-                            Need Help?
-                        </h3>
-                        <p className="text-neutral-700 dark:text-neutral-300 mb-4">
-                            If you have any questions about your order, our customer support team is here to help.
-                        </p>
-                        <div className="flex flex-wrap gap-4">
+                    {/* Support */}
+                    <section className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <h2 className="text-lg font-semibold mb-1">Need Help?</h2>
+                            <p className="text-sm text-neutral-400">
+                                If you have any questions about your order, our customer support team is here to
+                                help.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
                             <Link
-                                href="/contact"
-                                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                href="/support"
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-700 text-sm hover:bg-neutral-900"
                             >
                                 Contact Support
                             </Link>
                             <Link
-                                href="/account"
-                                className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors font-medium"
+                                href="/dashboard"
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium"
                             >
                                 View Account
+                                <ArrowRight className="w-4 h-4" />
                             </Link>
                         </div>
-                    </div>
-
+                    </section>
                 </div>
             </div>
         </div>
