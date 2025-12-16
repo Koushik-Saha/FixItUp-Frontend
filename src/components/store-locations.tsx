@@ -16,11 +16,12 @@ const STORE_LOCATIONS = [
         hours: {
             weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
             saturday: 'Saturday: 10:00 AM - 6:00 PM',
-            sunday: 'Sunday: 11:00 AM - 5:00 PM'
+            sunday: 'Sunday: 11:00 AM - 5:00 PM',
         },
-        mapUrl: 'https://www.google.com/maps/search/?api=1&query=110+S+Hope+Ave+Suite+H+123+Santa+Barbara+CA+93105',
+        mapUrl:
+            'https://www.google.com/maps/search/?api=1&query=110+S+Hope+Ave+Suite+H+123+Santa+Barbara+CA+93105',
         image: '/images/stores/santa-barbara.jpg',
-        featured: true
+        featured: true,
     },
     {
         id: 2,
@@ -34,10 +35,11 @@ const STORE_LOCATIONS = [
         hours: {
             weekday: 'Mon-Fri: 9:00 AM - 8:00 PM',
             saturday: 'Saturday: 10:00 AM - 7:00 PM',
-            sunday: 'Sunday: 11:00 AM - 6:00 PM'
+            sunday: 'Sunday: 11:00 AM - 6:00 PM',
         },
-        mapUrl: 'https://www.google.com/maps/search/?api=1&query=725+S+Broadway+Los+Angeles+CA+90014',
-        image: '/images/stores/los-angeles.jpg'
+        mapUrl:
+            'https://www.google.com/maps/search/?api=1&query=725+S+Broadway+Los+Angeles+CA+90014',
+        image: '/images/stores/los-angeles.jpg',
     },
     {
         id: 3,
@@ -51,10 +53,11 @@ const STORE_LOCATIONS = [
         hours: {
             weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
             saturday: 'Saturday: 10:00 AM - 6:00 PM',
-            sunday: 'Sunday: 11:00 AM - 5:00 PM'
+            sunday: 'Sunday: 11:00 AM - 5:00 PM',
         },
-        mapUrl: 'https://www.google.com/maps/search/?api=1&query=1455+Market+Street+San+Francisco+CA+94103',
-        image: '/images/stores/san-francisco.jpg'
+        mapUrl:
+            'https://www.google.com/maps/search/?api=1&query=1455+Market+Street+San+Francisco+CA+94103',
+        image: '/images/stores/san-francisco.jpg',
     },
     {
         id: 4,
@@ -68,10 +71,11 @@ const STORE_LOCATIONS = [
         hours: {
             weekday: 'Mon-Fri: 10:00 AM - 9:00 PM',
             saturday: 'Saturday: 10:00 AM - 9:00 PM',
-            sunday: 'Sunday: 11:00 AM - 7:00 PM'
+            sunday: 'Sunday: 11:00 AM - 7:00 PM',
         },
-        mapUrl: 'https://www.google.com/maps/search/?api=1&query=3200+Las+Vegas+Blvd+S+Las+Vegas+NV+89109',
-        image: '/images/stores/las-vegas.jpg'
+        mapUrl:
+            'https://www.google.com/maps/search/?api=1&query=3200+Las+Vegas+Blvd+S+Las+Vegas+NV+89109',
+        image: '/images/stores/las-vegas.jpg',
     },
     {
         id: 5,
@@ -85,10 +89,11 @@ const STORE_LOCATIONS = [
         hours: {
             weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
             saturday: 'Saturday: 10:00 AM - 6:00 PM',
-            sunday: 'Sunday: 11:00 AM - 5:00 PM'
+            sunday: 'Sunday: 11:00 AM - 5:00 PM',
         },
-        mapUrl: 'https://www.google.com/maps/search/?api=1&query=940+Broadway+San+Diego+CA+92101',
-        image: '/images/stores/san-diego.jpg'
+        mapUrl:
+            'https://www.google.com/maps/search/?api=1&query=940+Broadway+San+Diego+CA+92101',
+        image: '/images/stores/san-diego.jpg',
     },
     {
         id: 6,
@@ -102,25 +107,27 @@ const STORE_LOCATIONS = [
         hours: {
             weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
             saturday: 'Saturday: 10:00 AM - 6:00 PM',
-            sunday: 'Sunday: 11:00 AM - 5:00 PM'
+            sunday: 'Sunday: 11:00 AM - 5:00 PM',
         },
-        mapUrl: 'https://www.google.com/maps/search/?api=1&query=1689+Arden+Way+Sacramento+CA+95815',
-        image: '/images/stores/sacramento.jpg'
-    }
+        mapUrl:
+            'https://www.google.com/maps/search/?api=1&query=1689+Arden+Way+Sacramento+CA+95815',
+        image: '/images/stores/sacramento.jpg',
+    },
 ]
 
 export function StoreLocations() {
     return (
-        <section className="py-20 bg-gradient-to-b from-white to-neutral-50 dark:from-neutral-900 dark:to-neutral-950">
+        <section className="py-20 bg-neutral-50 dark:bg-neutral-950">
             <div className="container mx-auto px-4">
-
                 {/* Section Header */}
                 <div className="text-center max-w-3xl mx-auto mb-16">
                     <h2 className="text-4xl lg:text-5xl font-bold text-neutral-900 dark:text-white mb-4">
                         Visit Our Stores
                     </h2>
                     <p className="text-lg text-neutral-600 dark:text-neutral-400">
-                        We have 6 locations across California and Nevada to serve you. Visit us for professional phone repair, accessories, and wholesale services.
+                        We have 6 locations across California and Nevada to serve you. Visit
+                        us for professional phone repair, accessories, and wholesale
+                        services.
                     </p>
                 </div>
 
@@ -129,19 +136,17 @@ export function StoreLocations() {
                     {STORE_LOCATIONS.map((store) => (
                         <div
                             key={store.id}
-                            className={`
-                bg-white dark:bg-neutral-800 rounded-xl shadow-lg overflow-hidden 
-                hover:shadow-2xl transition-all duration-300 hover:-translate-y-1
-                ${store.featured ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''}
-              `}
+                            className={`bg-white/95 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 ${
+                                store.featured ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
+                            }`}
                         >
                             {/* Store Image Placeholder */}
-                            <div className="h-48 bg-gradient-to-br from-blue-500 to-purple-600 relative">
+                            <div className="h-48 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 relative">
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <MapPin className="h-16 w-16 text-white opacity-50" />
+                                    <MapPin className="h-16 w-16 text-white/80" />
                                 </div>
                                 {store.featured && (
-                                    <div className="absolute top-4 right-4 bg-yellow-400 text-black px-3 py-1 rounded-full text-sm font-bold">
+                                    <div className="absolute top-4 right-4 bg-yellow-400 text-black px-3 py-1 rounded-full text-sm font-bold shadow">
                                         Flagship Store
                                     </div>
                                 )}
@@ -158,7 +163,9 @@ export function StoreLocations() {
                                     <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                                     <div className="text-neutral-700 dark:text-neutral-300 text-sm">
                                         <p>{store.address}</p>
-                                        <p>{store.city}, {store.state} {store.zip}</p>
+                                        <p>
+                                            {store.city}, {store.state} {store.zip}
+                                        </p>
                                     </div>
                                 </div>
 
@@ -178,7 +185,7 @@ export function StoreLocations() {
                                     <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                                     <a
                                         href={`mailto:${store.email}`}
-                                        className="text-neutral-700 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors"
+                                        className="text-neutral-700 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors break-all"
                                     >
                                         {store.email}
                                     </a>
@@ -202,7 +209,7 @@ export function StoreLocations() {
                                     href={store.mapUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white py-3 rounded-lg font-medium transition-colors"
                                 >
                                     <Navigation className="h-4 w-4" />
                                     Get Directions
@@ -213,12 +220,13 @@ export function StoreLocations() {
                 </div>
 
                 {/* Bottom CTA */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 lg:p-12 text-center text-white">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 lg:p-12 text-center text-white shadow-lg">
                     <h3 className="text-2xl lg:text-3xl font-bold mb-4">
                         Can't Visit a Store? We Ship Nationwide!
                     </h3>
                     <p className="text-lg mb-6 text-blue-100">
-                        Order online and get your phone parts and accessories delivered anywhere in the US.
+                        Order online and get your phone parts and accessories delivered
+                        anywhere in the US.
                     </p>
                     <div className="flex flex-wrap gap-4 justify-center">
                         <Link
@@ -235,7 +243,6 @@ export function StoreLocations() {
                         </Link>
                     </div>
                 </div>
-
             </div>
         </section>
     )

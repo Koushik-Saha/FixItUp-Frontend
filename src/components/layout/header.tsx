@@ -22,6 +22,7 @@ import { useCartStore, useWishlistStore } from '@/store'
 import { useAuth } from '@/hooks/useAuth'
 import {CategorySection} from "@/components/category-section"
 import {MobileMenu} from "@/components/mobile-menu"
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 // All US Phone Brands
 const PHONE_BRANDS = [
@@ -210,6 +211,9 @@ export function Header() {
                   )}
                 </Button>
               </Link>
+
+              {/* Theme Toggle */}
+              <ThemeToggle />
 
               {/* Cart */}
               <Link href="/cart">

@@ -45,24 +45,24 @@ export default function ForgotPasswordPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
+        <div className="min-h-screen bg-slate-50 dark:bg-neutral-900 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 <div className="mb-6">
                     <Link 
                         href="/auth/login"
-                        className="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
+                        className="inline-flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-300 transition-colors"
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Back to Login
                     </Link>
                 </div>
 
-                <Card className="shadow-lg border-0">
+                <Card className="shadow-lg border-0 dark:bg-neutral-800">
                     <CardHeader className="text-center">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Mail className="w-6 h-6 text-blue-600" />
+                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <CardTitle className="text-2xl font-bold text-neutral-900">
+                        <CardTitle className="text-2xl font-bold text-neutral-900 dark:text-white">
                             Forgot Password?
                         </CardTitle>
                         <CardDescription>
@@ -72,16 +72,16 @@ export default function ForgotPasswordPage() {
                     
                     <CardContent className="space-y-6">
                         {message && (
-                            <Alert className="border-green-200 bg-green-50">
-                                <AlertDescription className="text-green-800">
+                            <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
+                                <AlertDescription className="text-green-800 dark:text-green-400">
                                     {message}
                                 </AlertDescription>
                             </Alert>
                         )}
                         
                         {error && (
-                            <Alert className="border-red-200 bg-red-50">
-                                <AlertDescription className="text-red-800">
+                            <Alert className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+                                <AlertDescription className="text-red-800 dark:text-red-400">
                                     {error}
                                 </AlertDescription>
                             </Alert>
@@ -89,7 +89,7 @@ export default function ForgotPasswordPage() {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
-                                <label htmlFor="email" className="text-sm font-medium text-neutral-700">
+                                <label htmlFor="email" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                                     Email Address
                                 </label>
                                 <Input
@@ -121,11 +121,11 @@ export default function ForgotPasswordPage() {
                         </form>
 
                         <div className="text-center">
-                            <p className="text-sm text-neutral-600">
+                            <p className="text-sm text-neutral-600 dark:text-neutral-400">
                                 Remember your password?{' '}
                                 <Link 
                                     href="/auth/login" 
-                                    className="font-medium text-blue-600 hover:text-blue-500"
+                                    className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
                                 >
                                     Sign in
                                 </Link>
