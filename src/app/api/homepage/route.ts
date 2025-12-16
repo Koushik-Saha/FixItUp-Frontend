@@ -1,5 +1,5 @@
-// app/api/homepage/route.ts
-// Get complete homepage data
+// src/app/api/homepage/route.ts
+// UPDATED - Get complete homepage data matching database schema
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -27,177 +27,187 @@ export async function GET(request: NextRequest) {
         }
 
         // 1. Get Hero/Carousel Banners
-        const { data: banners } = await supabase
+        const { data: banners } = await (supabase as any)
             .from('homepage_banners')
             .select('*')
             .eq('is_active', true)
             .order('sort_order', { ascending: true })
 
-        // 2. Get Categories with product counts
-        const { data: categories } = await supabase
-            .from('categories')
-            .select(`
-        id,
-        name,
-        slug,
-        description,
-        image_url,
-        icon,
-        products(count)
-      `)
-            .eq('is_active', true)
-            .order('name', { ascending: true })
-
-        const categoriesWithCount = categories?.map(cat => ({
-            ...(cat as any),
-            product_count: (cat as any).products?.[0]?.count || 0,
+        // Format banners for frontend
+        const formattedBanners = (banners || []).map((banner: any) => ({
+            id: banner.id,
+            title: banner.title,
+            subtitle: banner.subtitle || '',
+            imageUrl: banner.image_url,
+            linkUrl: banner.link_url || '#',
+            buttonText: banner.button_text || 'Shop Now',
         }))
 
-        // 3. Get Flash Deals (featured products)
-        const { data: flashDeals } = await (supabase as any)
+        // 2. Get Categories with product counts and image
+        const { data: rawCategories } = await (supabase as any)
+            .from('categories')
+            .select(`
+                id,
+                name,
+                slug,
+                description,
+                image_url,
+                icon
+            `)
+            .eq('is_active', true)
+            .is('parent_id', null)
+            .order('sort_order', { ascending: true })
+            .limit(8)
+
+        // Get product counts for each category
+        const categoriesWithCount = await Promise.all(
+            (rawCategories || []).map(async (cat:any) => {
+                const { count } = await supabase
+                    .from('products')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('category_id', cat.id)
+                    .eq('is_active', true)
+
+                return {
+                    id: cat.id,
+                    name: cat.name,
+                    slug: cat.slug,
+                    imageUrl: cat.image_url || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500',
+                    productCount: count || 0,
+                }
+            })
+        )
+
+        // 3. Get Flash Deals (featured products with discounts)
+        const { data: flashDealsRaw } = await (supabase as any)
             .from('products')
             .select(`
-        id,
-        name,
-        slug,
-        sku,
-        description,
-        base_price,
-        wholesale_tier1_discount,
-        wholesale_tier2_discount,
-        wholesale_tier3_discount,
-        image_url,
-        is_featured,
-        categories(id, name, slug)
-      `)
+                id,
+                name,
+                slug,
+                sku,
+                base_price,
+                wholesale_tier1_discount,
+                wholesale_tier2_discount,
+                wholesale_tier3_discount,
+                thumbnail,
+                images,
+                is_featured,
+                created_at
+            `)
             .eq('is_active', true)
             .eq('is_featured', true)
             .order('created_at', { ascending: false })
             .limit(8)
 
-        // Calculate pricing for flash deals
-        const flashDealsWithPricing = flashDeals?.map((product: any) => {
+        // Calculate pricing and format for flash deals
+        const flashDeals = (flashDealsRaw || []).map((product : any) => {
             let displayPrice = product.base_price
             let discountPercentage = 0
 
             if (userRole === 'wholesale') {
                 switch (wholesaleTier) {
                     case 'tier1':
-                        discountPercentage = product.wholesale_tier1_discount
+                        discountPercentage = product.wholesale_tier1_discount || 8
                         break
                     case 'tier2':
-                        discountPercentage = product.wholesale_tier2_discount
+                        discountPercentage = product.wholesale_tier2_discount || 17
                         break
                     case 'tier3':
-                        discountPercentage = product.wholesale_tier3_discount
+                        discountPercentage = product.wholesale_tier3_discount || 25
                         break
                 }
                 displayPrice = product.base_price * (1 - discountPercentage / 100)
+            } else {
+                // For non-wholesale, show tier1 discount as flash deal
+                discountPercentage = product.wholesale_tier1_discount || 10
+                displayPrice = product.base_price * (1 - discountPercentage / 100)
             }
 
+            // Use thumbnail or first image
+            const imageUrl = product.thumbnail || (product.images && product.images[0]) || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500'
+
             return {
-                ...product,
-                displayPrice: Number(displayPrice.toFixed(2)),
-                originalPrice: product.base_price,
-                discountPercentage,
-                isWholesale: userRole === 'wholesale',
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                imageUrl: imageUrl,
+                basePrice: Number(product.base_price),
+                discountPercentage: Number(discountPercentage),
+                endsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
             }
         })
 
-        // 4. Get New Arrivals
-        const { data: newArrivals } = await supabase
+        // 4. Get New Arrivals (most recent products with is_new flag)
+        const { data: newArrivalsRaw } = await (supabase as any)
             .from('products')
             .select(`
-        id,
-        name,
-        slug,
-        sku,
-        base_price,
-        wholesale_tier1_discount,
-        wholesale_tier2_discount,
-        wholesale_tier3_discount,
-        image_url,
-        categories(id, name, slug)
-      `)
+                id,
+                name,
+                slug,
+                sku,
+                base_price,
+                wholesale_tier1_discount,
+                wholesale_tier2_discount,
+                wholesale_tier3_discount,
+                thumbnail,
+                images,
+                is_new,
+                created_at
+            `)
             .eq('is_active', true)
+            .or('is_new.eq.true')
             .order('created_at', { ascending: false })
-            .limit(4)
+            .limit(10)
 
         // Calculate pricing for new arrivals
-        const newArrivalsWithPricing = newArrivals?.map((product: any) => {
+        const newArrivals = (newArrivalsRaw || []).map((product: any) => {
             let displayPrice = product.base_price
             let discountPercentage = 0
 
             if (userRole === 'wholesale') {
                 switch (wholesaleTier) {
                     case 'tier1':
-                        discountPercentage = product.wholesale_tier1_discount
+                        discountPercentage = product.wholesale_tier1_discount || 8
                         break
                     case 'tier2':
-                        discountPercentage = product.wholesale_tier2_discount
+                        discountPercentage = product.wholesale_tier2_discount || 17
                         break
                     case 'tier3':
-                        discountPercentage = product.wholesale_tier3_discount
+                        discountPercentage = product.wholesale_tier3_discount || 25
                         break
                 }
                 displayPrice = product.base_price * (1 - discountPercentage / 100)
             }
 
+            const imageUrl = product.thumbnail || (product.images && product.images[0]) || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500'
+
             return {
-                ...product,
-                displayPrice: Number(displayPrice.toFixed(2)),
-                originalPrice: product.base_price,
-                discountPercentage,
-                isWholesale: userRole === 'wholesale',
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                imageUrl: imageUrl,
+                basePrice: Number(product.base_price),
+                isNew: product.is_new || true,
             }
         })
 
-        // 5. Get Homepage Settings
+        // 5. Get Homepage Settings (with defaults if not exists)
         const { data: settings } = await supabase
             .from('homepage_settings')
             .select('*')
+            .limit(1)
             .single()
 
+        // Return formatted data matching frontend expectations
         return NextResponse.json({
             data: {
                 hero: {
-                    banners: banners || [],
-                    autoplay: (settings as any)?.hero_autoplay ?? true,
-                    interval: (settings as any)?.hero_interval ?? 5000,
+                    banners: formattedBanners,
                 },
-                categories: categoriesWithCount || [],
-                flashDeals: {
-                    title: (settings as any)?.flash_deals_title || 'Flash Deals',
-                    subtitle: (settings as any)?.flash_deals_subtitle || 'Limited time offers',
-                    products: flashDealsWithPricing || [],
-                },
-                newArrivals: {
-                    title: (settings as any)?.new_arrivals_title || 'New Arrivals',
-                    subtitle: (settings as any)?.new_arrivals_subtitle || 'Just landed',
-                    products: newArrivalsWithPricing || [],
-                },
-                features: [
-                    {
-                        icon: 'Truck',
-                        title: 'Free Shipping',
-                        description: 'On orders over $50',
-                    },
-                    {
-                        icon: 'Shield',
-                        title: '90-Day Warranty',
-                        description: 'Quality guaranteed',
-                    },
-                    {
-                        icon: 'Clock',
-                        title: 'Fast Turnaround',
-                        description: 'Same-day repairs available',
-                    },
-                    {
-                        icon: 'Award',
-                        title: 'Expert Service',
-                        description: 'Certified technicians',
-                    },
-                ],
+                categories: categoriesWithCount,
+                flashDeals: flashDeals,
+                newArrivals: newArrivals,
             },
         })
 

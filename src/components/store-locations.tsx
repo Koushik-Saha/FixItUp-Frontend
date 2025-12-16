@@ -2,6 +2,7 @@
 
 import { MapPin, Phone, Clock, Mail, Navigation } from 'lucide-react'
 import Link from 'next/link'
+import {useEffect, useState} from "react";
 
 const STORE_LOCATIONS = [
     {
@@ -115,7 +116,47 @@ const STORE_LOCATIONS = [
     },
 ]
 
+type Store = {
+    id: number,
+    name: string,
+    address: string,
+    city: string,
+    state: string,
+    zip: string,
+    phone: string,
+    email: string,
+    hours: {
+        weekday: string,
+        saturday: string,
+        sunday: string,
+    },
+    mapUrl: string,
+    image: string,
+    featured: boolean,
+}
+
 export function StoreLocations() {
+
+    const [stores, setStores] = useState<Store[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const loadStores = async () => {
+            try {
+                setLoading(true)
+                const res = await fetch('/api/stores')
+                const json = await res.json()
+                if (!res.ok) throw new Error(json.error || 'Failed to load stores')
+                setStores(json.data || [])
+            } catch (err) {
+                console.error(err)
+            } finally {
+                setLoading(false)
+            }
+        }
+        loadStores()
+    }, [])
+
     return (
         <section className="py-20 bg-neutral-50 dark:bg-neutral-950">
             <div className="container mx-auto px-4">

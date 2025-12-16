@@ -72,18 +72,6 @@ export default function RootLayout({
     children: React.ReactNode
 }) {
     return (
-        // <html lang="en">
-        // <body className={inter.className}>
-        // <Providers>
-        //   <div className="flex min-h-screen flex-col">
-        //     <Header />
-        //     <main className="flex-1">{children}</main>
-        //     <Footer />
-        //   </div>
-        // </Providers>
-        // </body>
-        // </html>
-
         <html lang="en" suppressHydrationWarning>
         <body
             className={`${inter.variable} ${jetbrainsMono.variable} font-sans bg-white text-gray-900 dark:bg-neutral-950 dark:text-neutral-50`}
@@ -98,7 +86,7 @@ export default function RootLayout({
             shadow="0 0 10px #3b82f6, 0 0 5px #3b82f6"
         />
         <Providers>
-            <Header/>
+            <Header cartItemCount={0}/>
             {children}
             <Payment/>
             <Footer/>
