@@ -47,7 +47,7 @@ interface HomepageData {
 async function getHomepageData(): Promise<HomepageData | null> {
   try {
     const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/homepage`,
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/homepage`,
         {
           next: { revalidate: 300 }, // Revalidate every 5 minutes
         }
