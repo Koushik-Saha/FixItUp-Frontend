@@ -1,33 +1,132 @@
 // src/app/api/homepage/route.ts
 // FIXED: TypeScript errors resolved
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import {NextRequest, NextResponse} from 'next/server'
+import {createClient} from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient()
 
         // Hero section
-        const hero = {
-            badge: 'NEW ARRIVAL',
-            title: 'iPhone 15 Series Now Available',
-            subtitle: 'Get the latest iPhone 15 with advanced AI, exceptional display and unbeatable performance.',
-            image: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=800',
-            buttons: [
-                { text: 'Shop Now', link: '/shop/apple/iphone', variant: 'primary' as const },
-                { text: 'View Accessories', link: '/shop/accessories', variant: 'secondary' as const }
-            ],
-            features: ['180-Day Warranty', 'Same Day Repair', 'Free Shipping On $50+']
+        const hero = [
+            {
+                id: 1,
+                badge: 'New Arrivals',
+                badgeColor: 'bg-yellow-500',
+                title: 'Latest Tech at Unbeatable Prices',
+                description: 'Shop the newest smartphones, laptops, and accessories from top brands. Free shipping on orders over $50!',
+                ctaPrimary: {text: 'Shop Now', link: '/shop'},
+                ctaSecondary: {text: 'View All Deals', link: '/deals'},
+                image: '/images/phone_repair.jpg',
+                gradient: 'from-blue-600 via-purple-600 to-pink-600',
+                trustBadges: [
+                    {icon: '🚚', text: 'Free Shipping'},
+                    {icon: '🛡️', text: '2-Year Warranty'},
+                    {icon: '💳', text: 'Secure Payment'}
+                ],
+                discount: '-20% OFF'
+            },
+            {
+                id: 2,
+                badge: 'Smartphones',
+                badgeColor: 'bg-blue-500',
+                title: 'iPhone 15 Series Now Available',
+                description: 'Get the latest iPhone 15 Pro Max with all accessories. Complete protection with cases, screen protectors, and chargers.',
+                ctaPrimary: {text: 'Shop iPhones', link: '/phones/apple'},
+                ctaSecondary: {text: 'View Accessories', link: '/phones/apple/iphone-15-pro-max'},
+                image: '/images/phone_repair.jpg',
+                gradient: 'from-cyan-600 via-blue-600 to-indigo-600',
+                trustBadges: [
+                    {icon: '✅', text: 'Authentic Products'},
+                    {icon: '⚡', text: 'Same Day Shipping'},
+                    {icon: '💰', text: 'Best Price Guarantee'}
+                ],
+                discount: '-15% OFF'
+            },
+            {
+                id: 3,
+                badge: 'Laptops & Tablets',
+                badgeColor: 'bg-purple-500',
+                title: 'Powerful Laptops for Work & Play',
+                description: 'Discover high-performance laptops from Dell, HP, Lenovo, and more. Perfect for work, gaming, or creative projects.',
+                ctaPrimary: {text: 'Shop Laptops', link: '/laptops'},
+                ctaSecondary: {text: 'View Tablets', link: '/tablets'},
+                image: '/images/phone_repair.jpg',
+                gradient: 'from-purple-600 via-pink-600 to-red-600',
+                trustBadges: [
+                    {icon: '🎮', text: 'Gaming Ready'},
+                    {icon: '💻', text: 'Professional Grade'},
+                    {icon: '🔧', text: 'Free Setup'}
+                ],
+                discount: '-25% OFF'
+            },
+            {
+                id: 4,
+                badge: 'Audio & Accessories',
+                badgeColor: 'bg-green-500',
+                title: 'Premium Audio Experience',
+                description: 'AirPods, headphones, and speakers from top brands. Crystal clear sound for music, calls, and gaming.',
+                ctaPrimary: {text: 'Shop Audio', link: '/category/audio'},
+                ctaSecondary: {text: 'View Deals', link: '/deals/audio'},
+                image: '/images/phone_repair.jpg',
+                gradient: 'from-green-600 via-emerald-600 to-teal-600',
+                trustBadges: [
+                    {icon: '🎧', text: 'Studio Quality'},
+                    {icon: '🔋', text: 'Long Battery Life'},
+                    {icon: '🎵', text: 'Noise Canceling'}
+                ],
+                discount: '-30% OFF'
+            },
+            {
+                id: 5,
+                badge: 'Wholesale B2B & B2C',
+                badgeColor: 'bg-orange-500',
+                title: 'Bulk Orders & Wholesale Pricing',
+                description: 'Special pricing for businesses, repair shops, and resellers. Get the best wholesale rates on all products.',
+                ctaPrimary: {text: 'Contact Sales', link: '/wholesale'},
+                ctaSecondary: {text: 'View Catalog', link: '/wholesale/catalog'},
+                image: '/images/phone_repair.jpg',
+                gradient: 'from-orange-600 via-red-600 to-pink-600',
+                trustBadges: [
+                    {icon: '📦', text: 'Bulk Discounts'},
+                    {icon: '🤝', text: 'B2B Support'},
+                    {icon: '🚛', text: 'Free Shipping'}
+                ],
+                discount: 'Up to 40% OFF'
+            }
+        ]
+
+        // Hero Slides
+        const {data: heroSlides, error} = await supabase
+            .from('hero_slides')
+            .select(`
+                    id,
+                    badge,
+                    badge_color,
+                    title,
+                    description,
+                    cta_primary,
+                    cta_secondary,
+                    image,
+                    gradient,
+                    trust_badges,
+                    discount
+                  `)
+            .order('sort_order', {ascending: true})
+            .limit(10)
+
+        if (error) {
+            console.error('Hero slides error:', error)
         }
 
         // Categories - 8 icons
-        const { data: categoriesData } = await supabase
+        const {data: categoriesData} = await supabase
             .from('categories')
             .select('id, name, slug, icon')
             .is('parent_id', null)
             .eq('is_active', true)
-            .order('sort_order', { ascending: true })
+            .order('sort_order', {ascending: true})
             .limit(8)
 
         const categories = (categoriesData || []).map((cat: any, index: number) => ({
@@ -39,12 +138,12 @@ export async function GET(request: NextRequest) {
         }))
 
         // Flash Deals - Featured products
-        const { data: flashProducts } = await supabase
+        const {data: flashProducts} = await supabase
             .from('products')
             .select('id, name, slug, thumbnail, images, base_price, wholesale_tier1_discount')
             .eq('is_active', true)
             .eq('is_featured', true)
-            .order('created_at', { ascending: false })
+            .order('created_at', {ascending: false})
             .limit(8)
 
         const flashDealsProducts = (flashProducts || []).map((product: any) => {
@@ -73,12 +172,12 @@ export async function GET(request: NextRequest) {
         }
 
         // New Arrivals
-        const { data: newProducts } = await supabase
+        const {data: newProducts} = await supabase
             .from('products')
             .select('id, name, slug, thumbnail, images, base_price')
             .eq('is_active', true)
             .eq('is_new', true)
-            .order('created_at', { ascending: false })
+            .order('created_at', {ascending: false})
             .limit(10)
 
         const newArrivals = (newProducts || []).map((product: any) => {
@@ -96,16 +195,16 @@ export async function GET(request: NextRequest) {
 
         // Brands (static)
         const brands = [
-            { name: 'Apple', logo: '🍎' },
-            { name: 'Samsung', logo: '📱' },
-            { name: 'Sony', logo: 'S' },
-            { name: 'Dell', logo: 'D' },
-            { name: 'Canon', logo: '📷' },
-            { name: 'Microsoft', logo: 'M' }
+            {name: 'Apple', logo: '🍎'},
+            {name: 'Samsung', logo: '📱'},
+            {name: 'Sony', logo: 'S'},
+            {name: 'Dell', logo: 'D'},
+            {name: 'Canon', logo: '📷'},
+            {name: 'Microsoft', logo: 'M'}
         ]
 
         // Stores - FIXED: zip_code instead of zip, operating_hours JSONB
-        const { data: storesData } = await supabase
+        const {data: storesData} = await supabase
             .from('stores')
             .select('id, name, address, city, state, zip_code, phone, email, operating_hours')
             .eq('is_active', true)
@@ -136,10 +235,10 @@ export async function GET(request: NextRequest) {
 
         // Features
         const features = [
-            { icon: '🚚', title: 'Free Shipping', description: 'On all orders over $50' },
-            { icon: '🛡️', title: '180 Day Warranty', description: 'On all repairs & parts' },
-            { icon: '⭐', title: 'Top Quality', description: 'OEM & premium parts only' },
-            { icon: '💰', title: 'Best Price', description: 'Guaranteed lowest prices' }
+            {icon: '🚚', title: 'Free Shipping', description: 'On all orders over $50'},
+            {icon: '🛡️', title: '180 Day Warranty', description: 'On all repairs & parts'},
+            {icon: '⭐', title: 'Top Quality', description: 'OEM & premium parts only'},
+            {icon: '💰', title: 'Best Price', description: 'Guaranteed lowest prices'}
         ]
 
         // CTA
@@ -147,8 +246,8 @@ export async function GET(request: NextRequest) {
             title: "Can't Visit a Store? We Ship Nationwide!",
             subtitle: 'Order online and get your phone parts delivered anywhere in the US.',
             buttons: [
-                { text: 'Shop Online', link: '/shop', variant: 'primary' as const },
-                { text: 'Contact Us', link: '/contact', variant: 'secondary' as const }
+                {text: 'Shop Online', link: '/shop', variant: 'primary' as const},
+                {text: 'Contact Us', link: '/contact', variant: 'secondary' as const}
             ]
         }
 
@@ -162,7 +261,9 @@ export async function GET(request: NextRequest) {
                 brands,
                 stores,
                 features,
-                cta
+                cta,
+                heroSlides,
+                heroError: error
             }
         })
 
@@ -174,7 +275,7 @@ export async function GET(request: NextRequest) {
                 error: 'Failed to load homepage data',
                 message: error instanceof Error ? error.message : 'Unknown error'
             },
-            { status: 500 }
+            {status: 500}
         )
     }
 }
