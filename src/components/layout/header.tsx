@@ -118,7 +118,7 @@ export function Header() {
                   <span>818-402-4931</span>
                 </div>
                 <div className="hidden xl:flex items-center gap-2">
-                  <span>✅ Free Shipping on Orders $50+</span>
+                  <span>✅ Free Shipping on Orders $100+</span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
