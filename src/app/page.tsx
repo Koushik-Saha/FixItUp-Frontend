@@ -12,8 +12,7 @@ export const dynamic = 'force-dynamic'
 
 async function getHomepageData() {
     try {
-        const url = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/homepage`
-        const res = await fetch(url, { next: { revalidate: 300 } })
+        const res = await fetch('/api/homepage', { next: { revalidate: 300 } })
 
         if (!res.ok) throw new Error('Failed to fetch')
 
