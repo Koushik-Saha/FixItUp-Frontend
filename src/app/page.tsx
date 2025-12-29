@@ -37,13 +37,19 @@ export default async function HomePage() {
             <HeroCarousel />
 
             {/* Shop By Category */}
-            <ShopByCategory categories={data?.categories} />
+            {
+                data && data?.categories && <ShopByCategory categories={data?.categories ?? []} />
+            }
 
             {/* Flash Deals */}
-            <FlashDeals flashDeals={data?.flashDeals ?? []}/>
+            {
+                data && data?.flashDeals && <FlashDeals flashDeals={data?.flashDeals ?? []}/>
+            }
 
             {/* Top Brands */}
-            <TopBrand  topBrands={data?.brands ?? []}/>
+            {
+                data && data?.brands && <TopBrand  topBrands={data?.brands ?? []}/>
+            }
 
             {/* Store Locations */}
             <StoreLocations />
