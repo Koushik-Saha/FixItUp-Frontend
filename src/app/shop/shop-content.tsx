@@ -87,8 +87,6 @@ export default function ShopContent() {
             router.push('/auth/login')
             return
         }
-
-        debugger
         
         try {
             setCartLoading(productId)

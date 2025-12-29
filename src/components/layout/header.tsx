@@ -118,7 +118,7 @@ export function Header() {
                   <span>818-402-4931</span>
                 </div>
                 <div className="hidden xl:flex items-center gap-2">
-                  <span>✅ Free Shipping on Orders $50+</span>
+                  <span>✅ Free Shipping on Orders $100+</span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -237,7 +237,7 @@ export function Header() {
                   </Link>
               ) : (
                   <Link href="/auth/login" className="hidden lg:block">
-                    <Button size="sm" className="text-black dark:text-white">
+                    <Button variant="ghost" size="sm" className="text-black dark:text-white">
                       Sign In
                     </Button>
                   </Link>

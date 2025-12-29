@@ -327,40 +327,12 @@ export default function CustomerDashboard() {
                                 </div>
 
                                 <div className="overflow-x-auto">
-                                    <table className="min-w-full text-sm">
-                                        <thead className="text-xs uppercase text-neutral-500 border-b border-neutral-800">
-                                        <tr>
-                                            <th className="py-2 text-left">Order</th>
-                                            <th className="py-2 text-left">Date</th>
-                                            <th className="py-2 text-left">Items</th>
-                                            <th className="py-2 text-left">Total</th>
-                                            <th className="py-2 text-left">Status</th>
-                                            <th className="py-2 text-left">Actions</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        {orders.map((order) => (
-                                            <tr
-                                                key={order.id}
-                                                className="border-b border-neutral-900"
-                                            >
-                                                <td className="py-2">{order.id}</td>
-                                                <td className="py-2">{order.date}</td>
-                                                <td className="py-2">{order.items}</td>
-                                                <td className="py-2">
-                                                    ${order.total.toFixed(2)}
-                                                </td>
-                                                <td className="py-2">{order.status}</td>
-                                                <td className="py-2">
-                                                    <button className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-blue-200">
-                                                        <Eye className="h-3 w-3" />
-                                                        View
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        </tbody>
-                                    </table>
+                                    <button
+                                        onClick={() => router.push('/orders')}
+                                        className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"
+                                    >
+                                        View all orders
+                                    </button>
                                 </div>
                             </section>
                         )}
