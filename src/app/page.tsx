@@ -31,13 +31,6 @@ export default async function HomePage() {
 
     console.log("homepagedata", data)
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error("Missing Supabase env vars (URL / ANON KEY). Check Vercel env settings.");
-    }
-
     return (
         <section>
             {/* Hero Carousel */}
