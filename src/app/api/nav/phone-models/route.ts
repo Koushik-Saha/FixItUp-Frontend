@@ -80,12 +80,6 @@ export async function GET() {
         .select('id')
         .limit(1)
 
-    console.log('PING DATA:', ping)
-    console.log('PING ERROR:', pingErr)
-
-    debugger
-
-
     // 1) Load brand categories (top-level)
     // You already have these slugs in your UI
     const brandSlugs = ["apple", "samsung", "motorola", "google"];

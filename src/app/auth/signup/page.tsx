@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 export default function SignupPage() {
     const router = useRouter();
     const { user, register, isLoading, error, init } = useAuth();
+    const [successMessage, setSuccessMessage] = useState("");
 
     const [form, setForm] = useState({
         full_name: "",
@@ -41,6 +42,7 @@ export default function SignupPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSuccessMessage("");
 
         if (form.password !== form.confirmPassword) {
             alert("Passwords do not match");
@@ -48,18 +50,40 @@ export default function SignupPage() {
         }
 
         try {
-            await register({
-                full_name: form.full_name,
-                email: form.email,
-                phone: form.phone || undefined,
-                password: form.password,
-                wantsWholesale: form.wantsWholesale,
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    full_name: form.full_name,
+                    email: form.email,
+                    phone: form.phone || undefined,
+                    password: form.password,
+                }),
             });
-            // Registration successful - user will need to verify email
-            alert("Registration successful! Please check your email to verify your account.");
-            router.push("/auth/login");
-        } catch {
-            // error already in store
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setSuccessMessage(data.message);
+
+                // If in dev mode (no verification required), redirect to login after 2 seconds
+                if (!data.data.requires_verification) {
+                    setTimeout(() => {
+                        router.push("/auth/login");
+                    }, 2000);
+                } else {
+                    // In production, show success message and wait for user to verify email
+                    setTimeout(() => {
+                        router.push("/auth/login");
+                    }, 5000);
+                }
+            } else {
+                console.error('Registration error:', data);
+            }
+        } catch (err) {
+            console.error('Registration failed:', err);
         }
     };
 
@@ -73,6 +97,12 @@ export default function SignupPage() {
                     Sign up as a regular customer or apply for a wholesale
                     account.
                 </p>
+
+                {successMessage && (
+                    <div className="mb-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 text-sm">
+                        {successMessage}
+                    </div>
+                )}
 
                 {error && (
                     <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-3 py-2 text-sm">
@@ -92,6 +122,7 @@ export default function SignupPage() {
                             value={form.full_name}
                             onChange={handleChange}
                             required
+                            disabled={isLoading}
                         />
                     </div>
 
@@ -103,21 +134,25 @@ export default function SignupPage() {
                             type="email"
                             name="email"
                             className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="you@example.com"
                             value={form.email}
                             onChange={handleChange}
                             required
+                            disabled={isLoading}
                         />
                     </div>
 
                     <div className="col-span-1">
                         <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
-                            Phone
+                            Phone (Optional)
                         </label>
                         <input
                             name="phone"
                             className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="(555) 123-4567"
                             value={form.phone}
                             onChange={handleChange}
+                            disabled={isLoading}
                         />
                     </div>
 
@@ -129,9 +164,12 @@ export default function SignupPage() {
                             type="password"
                             name="password"
                             className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="••••••••"
                             value={form.password}
                             onChange={handleChange}
                             required
+                            minLength={6}
+                            disabled={isLoading}
                         />
                     </div>
 
@@ -143,9 +181,12 @@ export default function SignupPage() {
                             type="password"
                             name="confirmPassword"
                             className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="••••••••"
                             value={form.confirmPassword}
                             onChange={handleChange}
                             required
+                            minLength={6}
+                            disabled={isLoading}
                         />
                     </div>
 
@@ -157,6 +198,7 @@ export default function SignupPage() {
                             className="mt-1"
                             checked={form.wantsWholesale}
                             onChange={handleChange}
+                            disabled={isLoading}
                         />
                         <label
                             htmlFor="wantsWholesale"
@@ -173,9 +215,16 @@ export default function SignupPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full inline-flex items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2.5 hover:bg-blue-700 disabled:opacity-60"
+                            className="w-full inline-flex items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2.5 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                            {isLoading ? "Creating account..." : "Create Account"}
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    Creating account...
+                                </div>
+                            ) : (
+                                "Create Account"
+                            )}
                         </button>
                     </div>
                 </form>
@@ -189,6 +238,14 @@ export default function SignupPage() {
                         Sign in
                     </Link>
                 </p>
+
+                {process.env.NODE_ENV === 'development' && (
+                    <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <p className="text-xs text-amber-800 dark:text-amber-400">
+                            <strong>Dev Mode:</strong> Email verification is disabled. You can login immediately after registration.
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );
