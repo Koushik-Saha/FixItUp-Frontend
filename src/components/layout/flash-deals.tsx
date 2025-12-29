@@ -92,8 +92,6 @@ type FlashDealsProps = {
 
 export default function FlashDeals({ flashDeals }: FlashDealsProps) {
 
-    const { title, subtitle, endsAt, products } = flashDeals
-
     return (
         <section className="py-8 md:py-10 lg:py-12 bg-white dark:bg-neutral-950">
         <div className="container px-4 mx-auto">
@@ -118,7 +116,7 @@ export default function FlashDeals({ flashDeals }: FlashDealsProps) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6">
-                {products.map((product, index) => (
+                {(flashDeals?.products || []).map((product, index) => (
                     <motion.div
                         key={product.id}
                         initial={{ opacity: 0, y: 20 }}
