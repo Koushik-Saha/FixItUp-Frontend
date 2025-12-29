@@ -7,6 +7,8 @@ import ShopByCategory from "@/components/layout/shop-by-category";
 import TopBrand from "@/components/layout/top-brand";
 import FlashDeals from "@/components/layout/flash-deals";
 
+export const dynamic = 'force-dynamic'
+
 
 async function getHomepageData() {
     try {
