@@ -7,8 +7,6 @@ import ShopByCategory from "@/components/layout/shop-by-category";
 import TopBrand from "@/components/layout/top-brand";
 import FlashDeals from "@/components/layout/flash-deals";
 
-export const dynamic = 'force-dynamic'
-
 
 async function getHomepageData() {
     try {
@@ -29,6 +27,8 @@ export default async function HomePage() {
 
     const data = await getHomepageData()
 
+    console.log("homepagedata", data)
+
     return (
         <section>
             {/* Hero Carousel */}
@@ -38,7 +38,7 @@ export default async function HomePage() {
             <ShopByCategory categories={data?.categories} />
 
             {/* Flash Deals */}
-            <FlashDeals flashDeals={data.flashDeals}/>
+            <FlashDeals flashDeals={data?.flashDeals ?? []}/>
 
             {/* Top Brands */}
             <TopBrand  topBrands={data?.brands ?? []}/>
