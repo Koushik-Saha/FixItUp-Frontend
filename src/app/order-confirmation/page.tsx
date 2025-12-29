@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import {
     CheckCircle,
     Package,
@@ -50,7 +50,8 @@ type Order = {
     order_items: OrderItem[]
 }
 
-export default function OrderConfirmationPage() {
+// Separate component that uses useSearchParams
+function OrderConfirmationContent() {
     const searchParams = useSearchParams()
     const [order, setOrder] = useState<Order | null>(null)
     const [loading, setLoading] = useState(true)
@@ -328,5 +329,23 @@ export default function OrderConfirmationPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+// Loading fallback component
+function OrderConfirmationLoading() {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-neutral-50">
+            <p className="text-lg">Loading your order...</p>
+        </div>
+    )
+}
+
+// Main page component with Suspense boundary
+export default function OrderConfirmationPage() {
+    return (
+        <Suspense fallback={<OrderConfirmationLoading />}>
+            <OrderConfirmationContent />
+        </Suspense>
     )
 }
