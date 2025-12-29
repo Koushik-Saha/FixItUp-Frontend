@@ -6,23 +6,24 @@ import { StoreLocations } from '@/components/store-locations'
 import ShopByCategory from "@/components/layout/shop-by-category";
 import TopBrand from "@/components/layout/top-brand";
 import FlashDeals from "@/components/layout/flash-deals";
+import {getHomepageData} from "@/lib/homepage/get-homepage-data";
 
 export const dynamic = 'force-dynamic'
 
 
-async function getHomepageData() {
-    try {
-        const res = await fetch('/api/homepage', { next: { revalidate: 300 } })
-
-        if (!res.ok) throw new Error('Failed to fetch')
-
-        const { data } = await res.json()
-        return data
-    } catch (error) {
-        console.error('Homepage error:', error)
-        return null
-    }
-}
+// async function getHomepageData() {
+//     try {
+//         const res = await fetch('/api/homepage', { next: { revalidate: 300 } })
+//
+//         if (!res.ok) throw new Error('Failed to fetch')
+//
+//         const { data } = await res.json()
+//         return data
+//     } catch (error) {
+//         console.error('Homepage error:', error)
+//         return null
+//     }
+// }
 
 export default async function HomePage() {
 
@@ -41,9 +42,9 @@ export default async function HomePage() {
             }
 
             {/* Flash Deals */}
-            {
-                data && data?.flashDeals && <FlashDeals flashDeals={data?.flashDeals ?? []}/>
-            }
+            {data?.flashDeals ? (
+                <FlashDeals flashDeals={data.flashDeals} />
+            ) : null}
 
             {/* Top Brands */}
             {
