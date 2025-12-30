@@ -7,3 +7,4 @@ out/
 .claude/settings.local.json
 .claude/
 tsconfig.tsbuildinfo
+CLAUDE.md
