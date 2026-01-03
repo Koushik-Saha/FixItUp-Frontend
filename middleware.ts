@@ -61,7 +61,8 @@ export async function middleware(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser()
 
     // Protected routes - require authentication
-    const protectedPaths = ['/dashboard', '/checkout', '/cart', '/order-tracking', '/repairs']
+    // Note: cart and checkout now allow guest access
+    const protectedPaths = ['/dashboard', '/order-tracking', '/repairs']
     const adminPaths = ['/admin']
     const authPaths = ['/auth/login', '/auth/signup']
     const pathname = request.nextUrl.pathname

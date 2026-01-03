@@ -301,6 +301,44 @@ function OrderConfirmationContent() {
                         </div>
                     </section>
 
+                    {/* Guest Account Creation Prompt */}
+                    {(order as any)?.is_guest && (
+                        <section className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-800/50 rounded-2xl p-6">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div>
+                                    <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                                        <CheckCircle className="w-5 h-5 text-green-400" />
+                                        Create an Account for Easier Tracking
+                                    </h2>
+                                    <p className="text-sm text-neutral-300 mb-2">
+                                        Save your shipping info and track all your orders in one place
+                                    </p>
+                                    <ul className="text-sm text-neutral-400 space-y-1">
+                                        <li>✓ Track orders faster without entering email every time</li>
+                                        <li>✓ Save shipping addresses for quick checkout</li>
+                                        <li>✓ View order history and reorder easily</li>
+                                        <li>✓ Get exclusive deals and early access to sales</li>
+                                    </ul>
+                                </div>
+                                <div className="flex flex-col gap-2 md:flex-shrink-0">
+                                    <Link
+                                        href={`/auth/signup?email=${encodeURIComponent((order as any)?.customer_email || '')}&from=order-confirmation`}
+                                        className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-semibold text-white"
+                                    >
+                                        Create Account
+                                        <ArrowRight className="w-4 h-4" />
+                                    </Link>
+                                    <button
+                                        onClick={() => {/* Dismiss prompt */}}
+                                        className="text-sm text-neutral-400 hover:text-neutral-300"
+                                    >
+                                        Maybe later
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
                     {/* Support */}
                     <section className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>

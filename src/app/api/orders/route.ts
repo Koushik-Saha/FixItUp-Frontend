@@ -83,21 +83,62 @@ export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient()
 
-        // Get authenticated user
+        // Parse request body first
+        const body = await request.json()
+
+        // Get authenticated user (optional for guest checkout)
         const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to place an order')
+        const isGuest = !user || authError
+
+        // Guest checkout requires reCAPTCHA verification
+        if (isGuest) {
+            const recaptchaToken = body.recaptcha_token
+
+            if (!recaptchaToken) {
+                return NextResponse.json(
+                    { error: 'reCAPTCHA verification required for guest checkout' },
+                    { status: 400 }
+                )
+            }
+
+            // Verify reCAPTCHA token
+            const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY
+            if (!recaptchaSecret) {
+                console.error('RECAPTCHA_SECRET_KEY not configured')
+                return NextResponse.json(
+                    { error: 'Server configuration error' },
+                    { status: 500 }
+                )
+            }
+
+            const recaptchaResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `secret=${recaptchaSecret}&response=${recaptchaToken}`,
+            })
+
+            const recaptchaResult = await recaptchaResponse.json()
+
+            if (!recaptchaResult.success) {
+                return NextResponse.json(
+                    { error: 'reCAPTCHA verification failed. Please try again.' },
+                    { status: 400 }
+                )
+            }
         }
 
-        // Get user profile
-        const { data: profile } = await (supabase
-            .from('profiles') as any)
-            .select('role, wholesale_tier, full_name, phone')
-            .eq('id', user.id)
-            .single()
+        // Get user profile (for authenticated users)
+        let profile = null
+        if (user) {
+            const { data } = await (supabase
+                .from('profiles') as any)
+                .select('role, wholesale_tier, full_name, phone')
+                .eq('id', user.id)
+                .single()
+            profile = data
+        }
 
-        // Parse and validate request
-        const body = await request.json()
+        // Validate request
         const validation = validateData(createOrderSchema, body)
 
         if (!validation.success || !validation.data) {
@@ -106,7 +147,19 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const { items, shipping_address, billing_address, customer_notes } = validation.data
+        const { items, shipping_address, billing_address, customer_notes, customer_email } = validation.data
+
+        // Determine customer email
+        const orderEmail = isGuest
+            ? customer_email || shipping_address.email
+            : user!.email!
+
+        if (!orderEmail) {
+            return NextResponse.json(
+                { error: 'Customer email is required' },
+                { status: 400 }
+            )
+        }
 
         // Fetch all products in order
         const productIds = items.map(item => item.product_id)
@@ -212,9 +265,9 @@ export async function POST(request: NextRequest) {
             .from('orders') as any)
             .insert({
                 order_number: orderNumber,
-                user_id: user.id,
+                user_id: user?.id || null,
                 customer_name: shipping_address.full_name,
-                customer_email: user.email!,
+                customer_email: orderEmail,
                 customer_phone: shipping_address.phone || ((profile as any))?.phone,
                 subtotal: Number(subtotal.toFixed(2)),
                 discount_amount: Number(discountAmount.toFixed(2)),
@@ -223,6 +276,7 @@ export async function POST(request: NextRequest) {
                 total_amount: Number(totalAmount.toFixed(2)),
                 is_wholesale: ((profile as any))?.role === 'wholesale',
                 wholesale_tier: ((profile as any))?.wholesale_tier,
+                is_guest: isGuest,
                 shipping_address,
                 billing_address: billing_address || shipping_address,
                 customer_notes,
@@ -254,12 +308,14 @@ export async function POST(request: NextRequest) {
             throw new Error('Failed to create order items')
         }
 
-        // Clear cart items for this order
-        await (supabase
-            .from('cart_items') as any)
-            .delete()
-            .eq('user_id', user.id)
-            .in('product_id', productIds)
+        // Clear cart items for this order (only for authenticated users)
+        if (user) {
+            await (supabase
+                .from('cart_items') as any)
+                .delete()
+                .eq('user_id', user.id)
+                .in('product_id', productIds)
+        }
 
         // TODO: In production, integrate with payment processor (Stripe)
         // const paymentIntent = await stripe.paymentIntents.create({...})

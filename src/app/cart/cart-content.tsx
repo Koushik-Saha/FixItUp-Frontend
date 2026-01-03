@@ -110,9 +110,19 @@ export default function CartContent() {
         if (user) {
             loadCart()
         } else {
-            router.push('/auth/login')
+            // Guest user - cart will be managed via localStorage/Zustand
+            // Show empty state or load from Zustand store
+            setLoading(false)
+            setCartItems([])
+            setCartSummary({
+                subtotal: 0,
+                total_items: 0,
+                total_savings: 0,
+                is_wholesale: false,
+                wholesale_tier: null,
+            })
         }
-    }, [user, router])
+    }, [user])
 
     // Calculate totals with coupons and shipping
     const subtotal = cartSummary?.subtotal || 0

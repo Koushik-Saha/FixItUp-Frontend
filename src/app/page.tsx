@@ -5,6 +5,7 @@ import { StoreLocations } from "@/components/store-locations";
 import ShopByCategory from "@/components/layout/shop-by-category";
 import TopBrand from "@/components/layout/top-brand";
 import FlashDeals from "@/components/layout/flash-deals";
+import DeviceFinder from "@/components/device-finder";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,11 @@ export default async function HomePage() {
         <section>
             {/* Hero Carousel */}
             <HeroCarousel />
+
+            {/* Device Finder */}
+            <div className="container mx-auto px-4 py-8 md:py-12">
+                <DeviceFinder />
+            </div>
 
             {/* Shop By Category */}
             {data?.categories?.length ? (

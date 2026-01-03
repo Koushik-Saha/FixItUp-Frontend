@@ -65,8 +65,21 @@ export async function GET(request: NextRequest) {
 
         // Get authenticated user
         const {data: {user}, error: authError} = await supabase.auth.getUser()
+
+        // Guest users - return empty cart (they'll use localStorage)
         if (authError || !user) {
-            throw new UnauthorizedError('Please login to view cart')
+            return NextResponse.json({
+                data: {
+                    items: [],
+                    summary: {
+                        subtotal: 0,
+                        total_items: 0,
+                        total_savings: 0,
+                        is_wholesale: false,
+                        wholesale_tier: null,
+                    },
+                },
+            })
         }
 
         // Get user's cart items with product details
@@ -197,8 +210,32 @@ export async function POST(request: NextRequest) {
 
         // Get authenticated user
         const {data: {user}, error: authError} = await supabase.auth.getUser()
+
+        // Guest users - return success (they'll use localStorage cart)
         if (authError || !user) {
-            throw new UnauthorizedError('Please login to add items to cart')
+            // Parse request to validate format
+            const body = await request.json()
+            const validation = addToCartSchema.safeParse(body)
+
+            if (!validation.success) {
+                return NextResponse.json(
+                    {
+                        error: 'Invalid request',
+                        details: validation.error.flatten().fieldErrors,
+                    },
+                    {status: 400}
+                )
+            }
+
+            // Return success for guests (cart managed client-side)
+            return NextResponse.json({
+                message: 'Item added to cart successfully',
+                data: {
+                    guest: true,
+                    product_id: validation.data.product_id,
+                    quantity: validation.data.quantity,
+                },
+            }, {status: 201})
         }
 
         // Parse and validate request

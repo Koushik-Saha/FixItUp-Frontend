@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
     CreditCard,
     Truck,
@@ -15,6 +15,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import ReCAPTCHA from 'react-google-recaptcha'
 
 // Types that roughly match /api/cart response
 type CartItem = {
@@ -85,6 +86,7 @@ const SHIPPING_METHODS = [
 
 export default function CheckoutPage() {
     const router = useRouter()
+    const recaptchaRef = useRef<ReCAPTCHA>(null)
 
     // Cart state
     const [cartItems, setCartItems] = useState<CartItem[]>([])
@@ -98,6 +100,7 @@ export default function CheckoutPage() {
     const [discountCode, setDiscountCode] = useState('')
     const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; amount: number } | null>(null)
     const [sameAsShipping, setSameAsShipping] = useState(true)
+    const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [errors, setErrors] = useState<ErrorMap>({})
 
@@ -225,6 +228,11 @@ export default function CheckoutPage() {
             newErrors.cart = 'Your cart is empty'
         }
 
+        // For guest checkout, require reCAPTCHA
+        if (checkoutType === 'guest' && !recaptchaToken) {
+            newErrors.recaptcha = 'Please complete the reCAPTCHA verification'
+        }
+
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
@@ -268,6 +276,11 @@ export default function CheckoutPage() {
                 shipping_address,
                 billing_address,
                 customer_notes: '', // you can add a notes textarea later
+                // Guest checkout fields
+                ...(checkoutType === 'guest' && {
+                    customer_email: shippingInfo.email,
+                    recaptcha_token: recaptchaToken,
+                }),
             }
 
             const res = await fetch('/api/orders', {
@@ -745,6 +758,25 @@ export default function CheckoutPage() {
                                     </div>
                                 )}
                             </div>
+
+                            {/* reCAPTCHA for guest checkout */}
+                            {checkoutType === 'guest' && (
+                                <div className="mt-4 mb-4">
+                                    <ReCAPTCHA
+                                        ref={recaptchaRef}
+                                        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
+                                        onChange={(token) => {
+                                            setRecaptchaToken(token)
+                                            setErrors((prev) => ({ ...prev, recaptcha: '' }))
+                                        }}
+                                        onExpired={() => setRecaptchaToken(null)}
+                                        theme="dark"
+                                    />
+                                    {errors.recaptcha && (
+                                        <p className="mt-1 text-sm text-red-400">{errors.recaptcha}</p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Discount code */}
                             <div className="mt-2 flex items-center gap-2">
