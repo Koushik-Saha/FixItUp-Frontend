@@ -41,7 +41,7 @@ export function Footer() {
 
             {/* Main Footer Content */}
             <div className="container py-12 md:py-16">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
 
                     {/* Newsletter Column */}
                     <div className="lg:col-span-1">
@@ -100,18 +100,8 @@ export function Footer() {
                         <h3 className="text-lg font-bold mb-4 tracking-wide">Max Fix IT Club</h3>
                         <ul className="space-y-3">
                             <li>
-                                <Link href="/mobile-app" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    Get Co-Lab Mobile App
-                                </Link>
-                            </li>
-                            <li>
                                 <Link href="/authentication" className="text-sm text-neutral-300 hover:text-white transition-colors">
                                     Max Fix IT Authentication
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/promo-codes" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    Promo Codes & Coupons
                                 </Link>
                             </li>
                             <li>
@@ -120,86 +110,13 @@ export function Footer() {
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/student-discount" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    Student Discounts
-                                </Link>
-                            </li>
-                            <li>
                                 <Link href="/reviews" className="text-sm text-neutral-300 hover:text-white transition-colors">
                                     Reviews
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/travel" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    Max Fix IT Travel
                                 </Link>
                             </li>
                         </ul>
                     </div>
 
-                    {/* Device Column */}
-                    <div>
-                        <h3 className="text-lg font-bold mb-4 tracking-wide">DEVICE</h3>
-
-                        {/* Apple Section */}
-                        <div className="mb-6">
-                            <h4 className="text-sm font-bold mb-3">Apple</h4>
-                            <ul className="space-y-2">
-                                <li>
-                                    <Link href="/phones/apple/iphone-17-pro-max" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                        iPhone 17 Pro Max
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/phones/apple/iphone-17-pro" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                        iPhone 17 Pro
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/phones/apple/iphone-air" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                        iPhone Air
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/phones/apple/iphone-17" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                        iPhone 17
-                                    </Link>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Samsung Section */}
-                        <div>
-                            <h4 className="text-sm font-bold mb-3">Samsung</h4>
-                            <ul className="space-y-2">
-                                <li>
-                                    <Link href="/phones/samsung/galaxy-s25-ultra" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                        Galaxy S25 Ultra
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/phones/samsung/galaxy-s25" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                        Galaxy S25
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/phones/samsung/galaxy-s25-plus" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                        Galaxy S25+
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/phones/samsung/galaxy-z-flip7" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                        Galaxy Z Flip7
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/phones/samsung/galaxy-z-fold7" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                        Galaxy Z Fold7
-                                    </Link>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
 
                     {/* About Max Fix IT Column */}
                     <div>
@@ -218,21 +135,6 @@ export function Footer() {
                             <li>
                                 <Link href="/about" className="text-sm text-neutral-300 hover:text-white transition-colors">
                                     About Us
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/standard" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    #TheMax Fix ITStandard
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/customization" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    #Max Fix ITCustomization
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/sustainability" className="text-sm text-neutral-300 hover:text-white transition-colors">
-                                    #Max Fix ITSustainability
                                 </Link>
                             </li>
                             <li>
