@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
 
         // Determine customer email
         const orderEmail = isGuest
-            ? customer_email || shipping_address.email
+            ? customer_email
             : user!.email!
 
         if (!orderEmail) {

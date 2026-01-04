@@ -41,6 +41,9 @@ export const createOrderSchema = z.object({
     shipping_address: shippingAddressSchema,
     billing_address: shippingAddressSchema.optional(),
     customer_notes: z.string().max(500).optional(),
+    customer_email: z.string().email().optional(), // For guest checkout
+    recaptcha_token: z.string().optional(), // For guest checkout
+    is_guest: z.boolean().optional(),
 })
 
 // Repair ticket validation

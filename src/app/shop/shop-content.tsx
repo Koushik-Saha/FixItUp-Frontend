@@ -10,6 +10,7 @@ import { getProducts, Product } from '@/lib/api/products'
 import { addToCart } from '@/lib/api/cart'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import StockIndicator from '@/components/stock-indicator'
 
 const SORT_OPTIONS = [
     { value: 'created_at', label: 'Most Recent' },
@@ -515,13 +516,7 @@ function ProductCard({ product, viewMode, onAddToCart, isLoading, user }: Produc
 
                         <div className="flex items-center gap-4 mb-3">
                             {/* Stock */}
-                            <span className={`text-sm font-medium ${
-                                product.total_stock > 0
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : 'text-red-600 dark:text-red-400'
-                            }`}>
-                                {product.total_stock > 0 ? `${product.total_stock} in stock` : 'Out of stock'}
-                            </span>
+                            <StockIndicator stock={product.total_stock} showCount={true} size="sm" />
 
                             {/* Badges */}
                             {product.is_new && (
@@ -613,13 +608,9 @@ function ProductCard({ product, viewMode, onAddToCart, isLoading, user }: Produc
                 )}
 
                 {/* Stock */}
-                <p className={`text-sm font-medium mb-3 ${
-                    product.total_stock > 0
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400'
-                }`}>
-                    {product.total_stock > 0 ? `${product.total_stock} in stock` : 'Out of stock'}
-                </p>
+                <div className="mb-3">
+                    <StockIndicator stock={product.total_stock} showCount={true} size="sm" />
+                </div>
 
                 {/* Add to Cart */}
                 <Button 

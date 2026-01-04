@@ -8,11 +8,12 @@ import { Heart, Eye, ShoppingCart, Star } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { cn, formatCurrency, calculateDiscount, getStockStatus } from '@/lib/utils'
+import { cn, formatCurrency, calculateDiscount } from '@/lib/utils'
 import { useAuthStore } from '@/store'
 import { useCartStore } from '@/store'
 import { useWishlistStore } from '@/store'
 import type { Product } from '@/types'
+import StockIndicator from '@/components/stock-indicator'
 
 interface ProductCardProps {
   product: Product
@@ -24,9 +25,8 @@ export function ProductCard({ product, showQuickView = true, className }: Produc
   const { user } = useAuthStore()
   const { addItem } = useCartStore()
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
-  
+
   const isWishlisted = isInWishlist(product.id)
-  const stockStatus = getStockStatus(product.stock)
   
   // Calculate pricing based on user type
   const getPrice = () => {
@@ -239,18 +239,7 @@ export function ProductCard({ product, showQuickView = true, className }: Produc
 
             {/* Stock Status */}
             <div className="mt-3">
-              <Badge
-                variant={
-                  stockStatus.status === 'in-stock'
-                    ? 'success'
-                    : stockStatus.status === 'low-stock'
-                    ? 'warning'
-                    : 'error'
-                }
-                size="sm"
-              >
-                {stockStatus.label}
-              </Badge>
+              <StockIndicator stock={product.stock} showCount={false} size="sm" />
             </div>
 
             {/* Add to Cart Button */}

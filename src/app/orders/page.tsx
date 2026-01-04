@@ -13,6 +13,7 @@ import {
     Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import QuickReorderButton from '@/components/quick-reorder-button'
 
 // Adjust this type if your /api/orders response shape differs slightly
 type OrderSummary = {
@@ -164,58 +165,74 @@ export default function OrdersPage() {
                                             : order.payment_status
 
                             return (
-                                <Link
+                                <div
                                     key={order.id}
-                                    href={`/order-confirmation?orderId=${encodeURIComponent(
-                                        order.id,
-                                    )}&orderNumber=${encodeURIComponent(order.order_number)}`}
+                                    className="group rounded-2xl border border-neutral-800 bg-neutral-900/80 hover:bg-neutral-900 hover:border-neutral-700 transition-colors px-4 py-4 md:px-5 md:py-5"
                                 >
-                                    <div className="group rounded-2xl border border-neutral-800 bg-neutral-900/80 hover:bg-neutral-900 hover:border-neutral-700 transition-colors px-4 py-4 md:px-5 md:py-5 cursor-pointer">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="flex items-start gap-3">
-                                                <div className="mt-0.5">
-                                                    <div className="rounded-lg bg-neutral-800 p-2">
-                                                        <Package className="h-4 w-4 text-neutral-300" />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-neutral-400 mb-1">
-                                                        Order #{order.order_number}
-                                                    </p>
-                                                    <p className="text-sm font-medium">
-                                                        {order.item_count ?? '—'} item
-                                                        {(order.item_count ?? 0) !== 1 ? 's' : ''} · Placed on {createdDate}
-                                                    </p>
-                                                    <p className="mt-1 text-xs text-neutral-500">
-                                                        Order ID: <span className="font-mono">{order.id}</span>
-                                                    </p>
+                                    <div className="flex items-start justify-between gap-3">
+                                        <Link
+                                            href={`/order-confirmation?orderId=${encodeURIComponent(
+                                                order.id,
+                                            )}&orderNumber=${encodeURIComponent(order.order_number)}`}
+                                            className="flex items-start gap-3 flex-1"
+                                        >
+                                            <div className="mt-0.5">
+                                                <div className="rounded-lg bg-neutral-800 p-2">
+                                                    <Package className="h-4 w-4 text-neutral-300" />
                                                 </div>
                                             </div>
-
-                                            <div className="flex flex-col items-end gap-2">
-                                                <div className="flex items-center gap-1 text-sm font-semibold">
-                                                    <DollarSign className="h-3 w-3" />
-                                                    <span>${order.total_amount.toFixed(2)}</span>
-                                                </div>
-                                                <div className="flex gap-2">
-                          <span
-                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusColor}`}
-                          >
-                            {order.status}
-                          </span>
-                                                    <span className="inline-flex items-center rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] text-neutral-300">
-                            {paymentLabel}
-                          </span>
-                                                </div>
+                                            <div className="flex-1">
+                                                <p className="text-xs text-neutral-400 mb-1">
+                                                    Order #{order.order_number}
+                                                </p>
+                                                <p className="text-sm font-medium">
+                                                    {order.item_count ?? '—'} item
+                                                    {(order.item_count ?? 0) !== 1 ? 's' : ''} · Placed on {createdDate}
+                                                </p>
+                                                <p className="mt-1 text-xs text-neutral-500">
+                                                    Order ID: <span className="font-mono">{order.id}</span>
+                                                </p>
                                             </div>
-                                        </div>
+                                        </Link>
 
-                                        <div className="mt-3 flex items-center justify-between text-xs text-neutral-400">
-                                            <span>Click to view details</span>
-                                            <ChevronRight className="h-4 w-4 text-neutral-500 group-hover:text-neutral-300" />
+                                        <div className="flex flex-col items-end gap-2">
+                                            <div className="flex items-center gap-1 text-sm font-semibold">
+                                                <DollarSign className="h-3 w-3" />
+                                                <span>${order.total_amount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                      <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusColor}`}
+                      >
+                        {order.status}
+                      </span>
+                                                <span className="inline-flex items-center rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] text-neutral-300">
+                        {paymentLabel}
+                      </span>
+                                            </div>
                                         </div>
                                     </div>
-                                </Link>
+
+                                    <div className="mt-3 flex items-center justify-between gap-3">
+                                        <Link
+                                            href={`/order-confirmation?orderId=${encodeURIComponent(
+                                                order.id,
+                                            )}&orderNumber=${encodeURIComponent(order.order_number)}`}
+                                            className="text-xs text-neutral-400 hover:text-neutral-300 flex items-center gap-1"
+                                        >
+                                            View details
+                                            <ChevronRight className="h-3 w-3" />
+                                        </Link>
+                                        <div onClick={(e) => e.stopPropagation()}>
+                                            <QuickReorderButton
+                                                orderId={order.id}
+                                                orderNumber={order.order_number}
+                                                variant="outline"
+                                                size="sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             )
                         })}
                     </div>

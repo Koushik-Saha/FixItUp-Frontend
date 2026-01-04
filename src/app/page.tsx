@@ -6,6 +6,7 @@ import ShopByCategory from "@/components/layout/shop-by-category";
 import TopBrand from "@/components/layout/top-brand";
 import FlashDeals from "@/components/layout/flash-deals";
 import DeviceFinder from "@/components/device-finder";
+import RecentlyViewedProducts from "@/components/recently-viewed-products";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +60,11 @@ export default async function HomePage() {
 
             {/* Flash Deals (expects object) */}
             {data?.flashDeals ? <FlashDeals flashDeals={data.flashDeals} /> : null}
+
+            {/* Recently Viewed Products */}
+            <div className="container mx-auto px-4 py-8 md:py-12">
+                <RecentlyViewedProducts limit={8} />
+            </div>
 
             {/* Top Brands */}
             {data?.brands?.length ? <TopBrand topBrands={data.brands} /> : null}

@@ -74,8 +74,11 @@ export default function DeviceFinder() {
             const res = await fetch('/api/nav/phone-models')
             const data = await res.json()
 
+            const rowBrandData = Object.keys(data?.data)
+            if (!rowBrandData) return
+
             // Extract brand names from response
-            const brandNames = Object.keys(data)
+            const brandNames = rowBrandData
             const brandList: Brand[] = brandNames.map(name => ({
                 name,
                 slug: name.toLowerCase()
@@ -89,25 +92,50 @@ export default function DeviceFinder() {
         }
     }
 
+    const slugify = (s: string) =>
+        s
+            .toLowerCase()
+            .trim()
+            .replace(/[()]/g, '')          // remove parentheses
+            .replace(/[^a-z0-9]+/g, '-')   // non-alphanum -> dash
+            .replace(/-+/g, '-')           // collapse dashes
+            .replace(/^-|-$/g, '')         // trim dashes
+
     const loadModels = async (brandSlug: string) => {
         try {
             setLoadingModels(true)
+
             const res = await fetch('/api/nav/phone-models')
-            const data = await res.json()
+            const json = await res.json()
 
-            const brandData = data[selectedBrand!.name]
-            if (!brandData) return
+            // ✅ your API response has { success, data }
+            const brandsMap = json?.data
+            const brandData = brandsMap?.[selectedBrand!.name]
 
-            // Extract models from all subcategories
+            if (!brandData?.bySubcategory) {
+                setModels([]) // clear list if brand not found / no models
+                return
+            }
+
             const modelList: PhoneModel[] = []
-            Object.values(brandData.bySubcategory || {}).forEach((subcat: any) => {
-                subcat.columns?.forEach((col: any) => {
-                    col.items?.forEach((item: any) => {
-                        modelList.push({
+            const seen = new Set<string>()
+
+            Object.values(brandData.bySubcategory).forEach((subcat: any) => {
+                subcat?.columns?.forEach((col: any) => {
+                    col?.items?.forEach((item: any) => {
+                        if (!item?.name) return
+
+                        const model: PhoneModel = {
                             name: item.name,
-                            slug: item.name.toLowerCase().replace(/\s+/g, '-'),
+                            slug: slugify(item.name),
                             year: item.new ? new Date().getFullYear() : undefined
-                        })
+                        }
+
+                        // ✅ avoid duplicates (since models can appear across columns)
+                        if (!seen.has(model.slug)) {
+                            seen.add(model.slug)
+                            modelList.push(model)
+                        }
                     })
                 })
             })
@@ -115,6 +143,7 @@ export default function DeviceFinder() {
             setModels(modelList)
         } catch (error) {
             console.error('Failed to load models:', error)
+            setModels([])
         } finally {
             setLoadingModels(false)
         }

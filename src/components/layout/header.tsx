@@ -23,6 +23,7 @@ import { useAuth } from '@/hooks/useAuth'
 import {CategorySection} from "@/components/category-section"
 import {MobileMenu} from "@/components/mobile-menu"
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import SmartSearch from '@/components/smart-search'
 
 // All US Phone Brands
 const PHONE_BRANDS = [
@@ -176,13 +177,7 @@ export function Header() {
 
             {/* Search Bar - Desktop Only */}
             <div className="hidden lg:flex flex-1 max-w-2xl">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400" />
-                <Input
-                    placeholder="Search by brand, model, or product..."
-                    className="pl-10 pr-4 h-12 bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
-                />
-              </div>
+              <SmartSearch />
             </div>
 
             {/* Right - Actions */}

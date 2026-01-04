@@ -119,7 +119,7 @@ export default function CartContent() {
                 total_items: 0,
                 total_savings: 0,
                 is_wholesale: false,
-                wholesale_tier: null,
+                wholesale_tier: undefined,
             })
         }
     }, [user])

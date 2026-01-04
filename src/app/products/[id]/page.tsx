@@ -1,13 +1,18 @@
 'use client'
 
-import { useState } from 'react'
-import { ShoppingCart, Heart, Share2, ChevronLeft, ChevronRight, Check, Truck, Shield, RotateCcw, Star } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ShoppingCart, Heart, Share2, ChevronLeft, ChevronRight, Check, Truck, Shield, RotateCcw, Star, Play } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import StockIndicator from '@/components/stock-indicator'
+import NotifyWhenAvailable from '@/components/notify-when-available'
+import QualityComparisonTool from '@/components/quality-comparison-tool'
+import RecentlyViewedProducts from '@/components/recently-viewed-products'
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
 
 // Sample product data
 const PRODUCT = {
-    id: 1,
+    id: '1',
     name: 'iPhone 15 Pro Max OLED Display Assembly',
     brand: 'Apple',
     sku: 'IP15PM-OLED-01',
@@ -17,6 +22,9 @@ const PRODUCT = {
     wholesalePrice: 59.99,
     inventory: 'In Stock',
     inventoryCount: 50,
+    installationVideo: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Sample YouTube embed URL
+    installationDifficulty: 'Medium',
+    installationTime: '15-20 minutes',
     images: [
         '/images/products/iphone-15-display-1.jpg',
         '/images/products/iphone-15-display-2.jpg',
@@ -110,9 +118,22 @@ export default function ProductDetailPage() {
     const [quantity, setQuantity] = useState(1)
     const [userRole, setUserRole] = useState<'retail' | 'wholesale'>('retail')
     const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'shipping' | 'warranty'>('description')
+    const { addProduct } = useRecentlyViewed()
 
     const currentPrice = userRole === 'retail' ? PRODUCT.retailPrice : PRODUCT.wholesalePrice
     const totalPrice = currentPrice * quantity
+
+    // Track this product as recently viewed
+    useEffect(() => {
+        addProduct({
+            id: PRODUCT.id,
+            name: PRODUCT.name,
+            brand: PRODUCT.brand,
+            deviceModel: 'iPhone 15 Pro Max', // You would get this from the product data
+            thumbnail: PRODUCT.images[0] || null,
+            price: PRODUCT.retailPrice
+        })
+    }, [addProduct])
 
     const nextImage = () => {
         setSelectedImage((prev) => (prev + 1) % PRODUCT.images.length)
@@ -248,12 +269,39 @@ export default function ProductDetailPage() {
                         </div>
 
                         {/* Inventory Status */}
-                        <div className="flex items-center gap-2 mb-6">
-                            <Check className="h-5 w-5 text-green-600" />
-                            <span className="font-medium text-green-600 dark:text-green-400">
-                {PRODUCT.inventory} - {PRODUCT.inventoryCount} units available
-              </span>
+                        <div className="mb-6">
+                            <StockIndicator stock={PRODUCT.inventoryCount} showCount={true} size="md" />
                         </div>
+
+                        {/* Installation Video Preview */}
+                        {PRODUCT.installationVideo && (
+                            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0">
+                                        <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                                            <Play className="w-6 h-6 text-white" />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                                            Installation Video Available
+                                        </h3>
+                                        <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                                            Watch step-by-step installation guide · {PRODUCT.installationTime} · {PRODUCT.installationDifficulty} difficulty
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                const videoSection = document.getElementById('installation-video')
+                                                videoSection?.scrollIntoView({ behavior: 'smooth' })
+                                            }}
+                                            className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                                        >
+                                            Watch Video Below ↓
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Pricing Toggle */}
                         <div className="mb-6">
@@ -321,18 +369,27 @@ export default function ProductDetailPage() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-3 mb-6">
-                            <button className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-semibold">
-                                <ShoppingCart className="h-5 w-5" />
-                                Add to Cart
-                            </button>
-                            <button className="p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                                <Heart className="h-5 w-5" />
-                            </button>
-                            <button className="p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                                <Share2 className="h-5 w-5" />
-                            </button>
-                        </div>
+                        {PRODUCT.inventoryCount === 0 ? (
+                            <div className="mb-6">
+                                <NotifyWhenAvailable
+                                    productId={PRODUCT.id}
+                                    productName={PRODUCT.name}
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex gap-3 mb-6">
+                                <button className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-semibold">
+                                    <ShoppingCart className="h-5 w-5" />
+                                    Add to Cart
+                                </button>
+                                <button className="p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                                    <Heart className="h-5 w-5" />
+                                </button>
+                                <button className="p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                                    <Share2 className="h-5 w-5" />
+                                </button>
+                            </div>
+                        )}
 
                         {/* Quick Info Icons */}
                         <div className="grid grid-cols-3 gap-4 py-6 border-y border-neutral-200 dark:border-neutral-700">
@@ -498,6 +555,88 @@ export default function ProductDetailPage() {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Installation Video Section */}
+                {PRODUCT.installationVideo && (
+                    <div id="installation-video" className="mb-16">
+                        <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-4">
+                            Installation Guide
+                        </h2>
+                        <p className="text-neutral-600 dark:text-neutral-400 mb-6">
+                            Watch our comprehensive step-by-step installation video to help you replace this component with confidence.
+                        </p>
+
+                        <div className="bg-neutral-50 dark:bg-neutral-800 rounded-lg p-6 border border-neutral-200 dark:border-neutral-700">
+                            {/* Video Player */}
+                            <div className="aspect-video bg-black rounded-lg overflow-hidden mb-4">
+                                <iframe
+                                    src={PRODUCT.installationVideo}
+                                    className="w-full h-full"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                    title="Installation Guide Video"
+                                />
+                            </div>
+
+                            {/* Video Info */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                                        <Play className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-neutral-900 dark:text-white mb-1">Duration</h3>
+                                        <p className="text-sm text-neutral-600 dark:text-neutral-400">{PRODUCT.installationTime}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
+                                        <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-neutral-900 dark:text-white mb-1">Difficulty</h3>
+                                        <p className="text-sm text-neutral-600 dark:text-neutral-400">{PRODUCT.installationDifficulty}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                                        <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-neutral-900 dark:text-white mb-1">Tools Required</h3>
+                                        <p className="text-sm text-neutral-600 dark:text-neutral-400">Basic repair kit</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Important Tips */}
+                            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
+                                    <Shield className="w-4 h-4" />
+                                    Installation Tips
+                                </h3>
+                                <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+                                    <li>• Power off the device completely before starting</li>
+                                    <li>• Work in a clean, well-lit environment</li>
+                                    <li>• Keep track of all screws and small components</li>
+                                    <li>• Take your time and follow each step carefully</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Quality Comparison Tool */}
+                <div className="mb-16">
+                    <QualityComparisonTool />
+                </div>
+
+                {/* Recently Viewed Products */}
+                <div className="mb-16">
+                    <RecentlyViewedProducts limit={8} />
                 </div>
 
                 {/* Related Products */}
