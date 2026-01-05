@@ -55,8 +55,8 @@ export async function getCurrentUser(): Promise<User | null> {
         if (error || !user) return null;
 
         // Get full profile
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
+        const { data: profile, error: profileError } = await (supabase
+            .from('profiles') as any)
             .select('*')
             .eq('id', user.id)
             .maybeSingle();

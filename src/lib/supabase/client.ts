@@ -13,8 +13,10 @@ export function createClient() {
                 persistSession: true,
                 storageKey: 'max-phone-repair-auth',
                 storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
             },
-            cookies: {
+            cookieOptions: {
                 name: 'max-phone-repair-auth',
                 maxAge: 86400, // 1 day in seconds
                 sameSite: 'lax',
