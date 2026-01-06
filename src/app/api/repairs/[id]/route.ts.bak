@@ -133,12 +133,7 @@ export async function PUT(
             throw new NotFoundError('Repair ticket')
         }
 
-        // Send email notification to customer about status update
-        if (body.status && ['confirmed', 'in_progress', 'waiting_parts', 'completed', 'cancelled', 'customer_pickup'].includes(body.status)) {
-            await sendRepairStatusUpdateEmail(updatedTicket, body.status).catch(err =>
-                console.error('Failed to send repair status update email:', err)
-            )
-        }
+        // TODO: Send email notification to customer about status update
 
         return NextResponse.json({
             message: 'Repair ticket updated successfully',

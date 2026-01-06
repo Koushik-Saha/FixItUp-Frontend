@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError, ConflictError } from '@/lib/utils/errors'
 import { wholesaleApplicationSchema, validateData, formatValidationErrors } from '@/utils/validation'
+import { sendWholesaleApplicationEmail } from '@/lib/email'
 
 // POST /api/wholesale/apply - Submit wholesale application
 export async function POST(request: NextRequest) {
@@ -73,8 +74,12 @@ export async function POST(request: NextRequest) {
             throw new Error('Failed to submit application')
         }
 
-        // TODO: Send confirmation email to applicant
-        // TODO: Send notification to admin for review
+        // Send confirmation email to applicant
+        await sendWholesaleApplicationEmail(application).catch(err =>
+            console.error('Failed to send wholesale application confirmation email:', err)
+        )
+
+        // TODO: Send notification to admin for review (requires admin email configuration)
 
         return NextResponse.json(
             {

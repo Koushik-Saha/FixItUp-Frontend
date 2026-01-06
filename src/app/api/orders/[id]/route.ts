@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
+import { sendOrderStatusUpdateEmail } from '@/lib/email'
 
 // GET /api/orders/[id] - Get order details
 export async function GET(
@@ -143,7 +144,12 @@ export async function PUT(
             throw new NotFoundError('Order')
         }
 
-        // TODO: Send email notification to customer about status update
+        // Send email notification to customer about status update
+        if (body.status && ['processing', 'shipped', 'delivered', 'cancelled', 'refunded'].includes(body.status)) {
+            await sendOrderStatusUpdateEmail(updatedOrder, body.status).catch(err =>
+                console.error('Failed to send order status update email:', err)
+            )
+        }
 
         return NextResponse.json({
             message: 'Order updated successfully',

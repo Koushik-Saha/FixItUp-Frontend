@@ -134,10 +134,7 @@ export async function POST(request: NextRequest) {
             throw new Error('Failed to create repair ticket')
         }
 
-        // Send confirmation email to customer
-        await sendRepairConfirmationEmail(ticket).catch(err =>
-            console.error('Failed to send repair confirmation email:', err)
-        )
+        // TODO: Send confirmation email to customer
         // TODO: Send notification to admin
 
         return NextResponse.json(

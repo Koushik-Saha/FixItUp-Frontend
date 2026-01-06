@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, Plus, Minus, Tag, ShoppingCart, ArrowRight, X, Loader2, AlertCircle } from 'lucide-react'
+import { Trash2, Plus, Minus, Tag, ShoppingCart, ArrowRight, X, Loader2, AlertCircle, Info } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -9,11 +9,19 @@ import { useAuth } from '@/hooks/useAuth'
 import { getCart, updateCartItem, removeFromCart, CartItem, CartSummary } from '@/lib/api/cart'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { useCartStore } from '@/store'
 
 export default function CartContent() {
     const router = useRouter()
     const { user } = useAuth()
-    
+
+    // Zustand store for guest cart
+    const guestCartItems = useCartStore((state) => state.items)
+    const guestRemoveItem = useCartStore((state) => state.removeItem)
+    const guestUpdateQuantity = useCartStore((state) => state.updateQuantity)
+    const guestGetSubtotal = useCartStore((state) => state.getSubtotal)
+    const guestGetItemCount = useCartStore((state) => state.getItemCount)
+
     // State
     const [cartItems, setCartItems] = useState<CartItem[]>([])
     const [cartSummary, setCartSummary] = useState<CartSummary | null>(null)
@@ -48,12 +56,22 @@ export default function CartContent() {
     const handleUpdateQuantity = async (itemId: string, change: number) => {
         try {
             setUpdateLoading(itemId)
-            
+
+            if (!user) {
+                // Guest user - update Zustand store
+                const currentItem = guestCartItems.find(item => item.productId === itemId)
+                if (!currentItem) return
+                const newQuantity = Math.max(1, currentItem.quantity + change)
+                guestUpdateQuantity(itemId, newQuantity)
+                setUpdateLoading(null)
+                return
+            }
+
             const currentItem = cartItems.find(item => item.id === itemId)
             if (!currentItem) return
-            
+
             const newQuantity = Math.max(1, currentItem.quantity + change)
-            
+
             await updateCartItem(itemId, newQuantity)
             await loadCart() // Reload to get updated pricing
         } catch (err) {
@@ -67,6 +85,14 @@ export default function CartContent() {
     const handleRemoveItem = async (itemId: string) => {
         try {
             setRemoveLoading(itemId)
+
+            if (!user) {
+                // Guest user - update Zustand store
+                guestRemoveItem(itemId)
+                setRemoveLoading(null)
+                return
+            }
+
             await removeFromCart(itemId)
             await loadCart() // Reload cart
         } catch (err) {
@@ -110,19 +136,43 @@ export default function CartContent() {
         if (user) {
             loadCart()
         } else {
-            // Guest user - cart will be managed via localStorage/Zustand
-            // Show empty state or load from Zustand store
+            // Guest user - load from Zustand store (localStorage)
             setLoading(false)
-            setCartItems([])
+
+            // Map Zustand cart items to CartItem format
+            const mappedItems: CartItem[] = guestCartItems.map((item) => ({
+                id: item.productId,
+                product_id: item.productId,
+                quantity: item.quantity,
+                product: {
+                    id: item.product.id,
+                    sku: item.product.sku,
+                    name: item.product.name,
+                    slug: item.product.sku.toLowerCase(), // Use SKU as fallback for slug
+                    brand: item.product.brand,
+                    device_model: item.product.model,
+                    image: item.product.images?.[0]?.url || '',
+                    in_stock: item.product.stock > 0,
+                    available_quantity: item.product.stock,
+                },
+                pricing: {
+                    unit_price: item.price,
+                    original_price: item.price,
+                    discount_percentage: 0,
+                    subtotal: item.price * item.quantity,
+                },
+            }))
+
+            setCartItems(mappedItems)
             setCartSummary({
-                subtotal: 0,
-                total_items: 0,
+                subtotal: guestGetSubtotal(),
+                total_items: guestGetItemCount(),
                 total_savings: 0,
                 is_wholesale: false,
                 wholesale_tier: undefined,
             })
         }
-    }, [user])
+    }, [user, guestCartItems])
 
     // Calculate totals with coupons and shipping
     const subtotal = cartSummary?.subtotal || 0
@@ -188,6 +238,27 @@ export default function CartContent() {
                     )}
                 </div>
             </div>
+
+            {/* Guest User Banner */}
+            {!user && cartItems.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+                    <div className="container mx-auto px-4 py-3">
+                        <div className="flex items-center gap-3 text-blue-800 dark:text-blue-200">
+                            <Info className="h-5 w-5 flex-shrink-0" />
+                            <p className="text-sm">
+                                <Link href="/auth/login" className="font-semibold hover:underline">
+                                    Sign in
+                                </Link>
+                                {' '}or{' '}
+                                <Link href="/auth/signup" className="font-semibold hover:underline">
+                                    create an account
+                                </Link>
+                                {' '}to save your cart across devices and track your orders.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="container mx-auto px-4 py-8">
                 {cartItems.length === 0 ? (

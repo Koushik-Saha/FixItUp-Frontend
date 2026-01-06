@@ -423,6 +423,295 @@ export interface Database {
                     updated_at?: string
                 }
             }
+            reviews: {
+                Row: {
+                    id: string
+                    product_id: string
+                    user_id: string
+                    order_id: string | null
+                    rating: number
+                    title: string | null
+                    comment: string | null
+                    images: string[]
+                    is_verified_purchase: boolean
+                    is_approved: boolean
+                    helpful_count: number
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    product_id: string
+                    user_id: string
+                    order_id?: string | null
+                    rating: number
+                    title?: string | null
+                    comment?: string | null
+                    images?: string[]
+                    is_verified_purchase?: boolean
+                    is_approved?: boolean
+                    helpful_count?: number
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    rating?: number
+                    title?: string | null
+                    comment?: string | null
+                    images?: string[]
+                    is_approved?: boolean
+                    helpful_count?: number
+                    updated_at?: string
+                }
+            }
+            wishlists: {
+                Row: {
+                    id: string
+                    user_id: string
+                    product_id: string
+                    notify_on_price_drop: boolean
+                    notify_on_back_in_stock: boolean
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    product_id: string
+                    notify_on_price_drop?: boolean
+                    notify_on_back_in_stock?: boolean
+                    created_at?: string
+                }
+                Update: {
+                    notify_on_price_drop?: boolean
+                    notify_on_back_in_stock?: boolean
+                }
+            }
+            coupons: {
+                Row: {
+                    id: string
+                    code: string
+                    description: string | null
+                    discount_type: 'percentage' | 'fixed'
+                    discount_value: number
+                    minimum_purchase: number | null
+                    maximum_discount: number | null
+                    max_uses: number | null
+                    max_uses_per_user: number | null
+                    times_used: number
+                    applies_to: 'all' | 'products' | 'categories'
+                    product_ids: string[]
+                    category_ids: string[]
+                    user_restrictions: 'all' | 'new_customers' | 'wholesale' | 'retail'
+                    start_date: string
+                    end_date: string | null
+                    is_active: boolean
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    code: string
+                    description?: string | null
+                    discount_type: 'percentage' | 'fixed'
+                    discount_value: number
+                    minimum_purchase?: number | null
+                    maximum_discount?: number | null
+                    max_uses?: number | null
+                    max_uses_per_user?: number | null
+                    times_used?: number
+                    applies_to?: 'all' | 'products' | 'categories'
+                    product_ids?: string[]
+                    category_ids?: string[]
+                    user_restrictions?: 'all' | 'new_customers' | 'wholesale' | 'retail'
+                    start_date?: string
+                    end_date?: string | null
+                    is_active?: boolean
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    code?: string
+                    description?: string | null
+                    discount_type?: 'percentage' | 'fixed'
+                    discount_value?: number
+                    minimum_purchase?: number | null
+                    maximum_discount?: number | null
+                    max_uses?: number | null
+                    max_uses_per_user?: number | null
+                    times_used?: number
+                    applies_to?: 'all' | 'products' | 'categories'
+                    product_ids?: string[]
+                    category_ids?: string[]
+                    user_restrictions?: 'all' | 'new_customers' | 'wholesale' | 'retail'
+                    start_date?: string
+                    end_date?: string | null
+                    is_active?: boolean
+                    updated_at?: string
+                }
+            }
+            coupon_usage: {
+                Row: {
+                    id: string
+                    coupon_id: string
+                    user_id: string
+                    order_id: string
+                    used_at: string
+                }
+                Insert: {
+                    id?: string
+                    coupon_id: string
+                    user_id: string
+                    order_id: string
+                    used_at?: string
+                }
+            }
+            addresses: {
+                Row: {
+                    id: string
+                    user_id: string
+                    type: 'shipping' | 'billing' | 'both'
+                    full_name: string
+                    address_line1: string
+                    address_line2: string | null
+                    city: string
+                    state: string
+                    zip_code: string
+                    country: string
+                    phone: string | null
+                    is_default: boolean
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    type?: 'shipping' | 'billing' | 'both'
+                    full_name: string
+                    address_line1: string
+                    address_line2?: string | null
+                    city: string
+                    state: string
+                    zip_code: string
+                    country?: string
+                    phone?: string | null
+                    is_default?: boolean
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    type?: 'shipping' | 'billing' | 'both'
+                    full_name?: string
+                    address_line1?: string
+                    address_line2?: string | null
+                    city?: string
+                    state?: string
+                    zip_code?: string
+                    country?: string
+                    phone?: string | null
+                    is_default?: boolean
+                    updated_at?: string
+                }
+            }
+            notifications: {
+                Row: {
+                    id: string
+                    user_id: string
+                    type: 'order_update' | 'repair_update' | 'wholesale_update' | 'price_drop' | 'back_in_stock' | 'promotion'
+                    title: string
+                    message: string
+                    link: string | null
+                    is_read: boolean
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    type: 'order_update' | 'repair_update' | 'wholesale_update' | 'price_drop' | 'back_in_stock' | 'promotion'
+                    title: string
+                    message: string
+                    link?: string | null
+                    is_read?: boolean
+                    created_at?: string
+                }
+                Update: {
+                    is_read?: boolean
+                }
+            }
+            stock_alerts: {
+                Row: {
+                    id: string
+                    product_id: string
+                    user_id: string
+                    email: string
+                    is_notified: boolean
+                    notified_at: string | null
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    product_id: string
+                    user_id: string
+                    email: string
+                    is_notified?: boolean
+                    notified_at?: string | null
+                    created_at?: string
+                }
+                Update: {
+                    is_notified?: boolean
+                    notified_at?: string | null
+                }
+            }
+            homepage_banners: {
+                Row: {
+                    id: string
+                    title: string
+                    subtitle: string | null
+                    image_url: string
+                    mobile_image_url: string | null
+                    link_url: string | null
+                    link_text: string | null
+                    background_color: string | null
+                    text_color: string | null
+                    display_order: number
+                    is_active: boolean
+                    start_date: string | null
+                    end_date: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    title: string
+                    subtitle?: string | null
+                    image_url: string
+                    mobile_image_url?: string | null
+                    link_url?: string | null
+                    link_text?: string | null
+                    background_color?: string | null
+                    text_color?: string | null
+                    display_order?: number
+                    is_active?: boolean
+                    start_date?: string | null
+                    end_date?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    title?: string
+                    subtitle?: string | null
+                    image_url?: string
+                    mobile_image_url?: string | null
+                    link_url?: string | null
+                    link_text?: string | null
+                    background_color?: string | null
+                    text_color?: string | null
+                    display_order?: number
+                    is_active?: boolean
+                    start_date?: string | null
+                    end_date?: string | null
+                    updated_at?: string
+                }
+            }
         }
         Functions: {
             get_wholesale_price: {
@@ -436,6 +725,20 @@ export interface Database {
             generate_ticket_number: {
                 Args: Record<string, never>
                 Returns: string
+            }
+            validate_coupon: {
+                Args: {
+                    coupon_code: string
+                    user_id: string | null
+                    cart_total: number
+                    product_ids: string[]
+                }
+                Returns: {
+                    is_valid: boolean
+                    error_message: string | null
+                    discount_amount: number | null
+                    coupon_id: string | null
+                }
             }
         }
     }

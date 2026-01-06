@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
+import { sendPaymentSuccessEmail, sendPaymentFailedEmail, sendRefundConfirmationEmail } from '@/lib/email'
 
 function getStripe() {
     return new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -39,17 +40,27 @@ export async function POST(request: NextRequest) {
                 const paymentIntent = event.data.object as Stripe.PaymentIntent
 
                 // Update order status
-                await (supabase as any)
+                const { data: updatedOrder } = await (supabase as any)
                     .from('orders')
                     .update({
                         payment_status: 'paid',
                         status: 'processing',
                     })
                     .eq('payment_intent_id', paymentIntent.id)
+                    .select(`
+                        *,
+                        items:order_items(*)
+                    `)
+                    .single()
 
                 console.log('Payment succeeded:', paymentIntent.id)
 
-                // TODO: Send order confirmation email
+                // Send order confirmation email
+                if (updatedOrder) {
+                    await sendPaymentSuccessEmail(updatedOrder).catch(err =>
+                        console.error('Failed to send order confirmation email:', err)
+                    )
+                }
 
                 break
             }
@@ -58,16 +69,23 @@ export async function POST(request: NextRequest) {
                 const paymentIntent = event.data.object as Stripe.PaymentIntent
 
                 // Update order status
-                await (supabase as any)
+                const { data: failedOrder } = await (supabase as any)
                     .from('orders')
                     .update({
                         payment_status: 'failed',
                     })
                     .eq('payment_intent_id', paymentIntent.id)
+                    .select()
+                    .single()
 
                 console.log('Payment failed:', paymentIntent.id)
 
-                // TODO: Send payment failure email
+                // Send payment failure email
+                if (failedOrder) {
+                    await sendPaymentFailedEmail(failedOrder).catch(err =>
+                        console.error('Failed to send payment failure email:', err)
+                    )
+                }
 
                 break
             }
@@ -95,17 +113,25 @@ export async function POST(request: NextRequest) {
                 const paymentIntentId = charge.payment_intent as string
 
                 // Update order status
-                await (supabase as any)
+                const { data: refundedOrder } = await (supabase as any)
                     .from('orders')
                     .update({
                         payment_status: 'refunded',
                         status: 'refunded',
                     })
                     .eq('payment_intent_id', paymentIntentId)
+                    .select()
+                    .single()
 
                 console.log('Charge refunded:', paymentIntentId)
 
-                // TODO: Send refund confirmation email
+                // Send refund confirmation email
+                if (refundedOrder) {
+                    const refundAmount = charge.amount_refunded / 100 // Convert from cents
+                    await sendRefundConfirmationEmail(refundedOrder, refundAmount).catch(err =>
+                        console.error('Failed to send refund confirmation email:', err)
+                    )
+                }
 
                 break
             }

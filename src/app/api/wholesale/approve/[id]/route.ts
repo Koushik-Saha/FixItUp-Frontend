@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError, ForbiddenError, NotFoundError } from '@/lib/utils/errors'
+import { sendWholesaleApprovalEmail, sendWholesaleRejectionEmail } from '@/lib/email'
 
 // POST /api/wholesale/approve/[id] - Approve or reject application
 export async function POST(
@@ -103,7 +104,10 @@ export async function POST(
                 throw new Error('Failed to update user profile')
             }
 
-            // TODO: Send approval email with wholesale credentials
+            // Send approval email with wholesale credentials
+            await sendWholesaleApprovalEmail(application).catch(err =>
+                console.error('Failed to send wholesale approval email:', err)
+            )
 
             return NextResponse.json({
                 message: 'Application approved successfully',
@@ -151,7 +155,10 @@ export async function POST(
                 throw new Error('Failed to update user profile')
             }
 
-            // TODO: Send rejection email with reason
+            // Send rejection email with reason
+            await sendWholesaleRejectionEmail(application, rejection_reason).catch(err =>
+                console.error('Failed to send wholesale rejection email:', err)
+            )
 
             return NextResponse.json({
                 message: 'Application rejected',

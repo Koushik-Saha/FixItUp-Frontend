@@ -9,77 +9,121 @@ const ORDER_STATUSES = [
     { id: 'delivered', label: 'Delivered', icon: CheckCircle, description: 'Your order has been delivered' }
 ]
 
-// Sample order data
-const SAMPLE_ORDERS: Record<string, any> = {
-    'ORD-123456': {
-        number: 'ORD-123456',
-        status: 'shipped',
-        email: 'john@example.com',
-        items: [
-            { name: 'iPhone 15 Pro Max OLED Display', quantity: 1 },
-            { name: 'Premium Tool Kit', quantity: 1 }
-        ],
-        trackingNumber: 'TRK-9876543210',
-        carrier: 'USPS',
-        carrierLink: 'https://tools.usps.com/go/TrackConfirmAction?tLabels=',
-        estimatedDelivery: 'Friday, December 15, 2024',
-        currentLocation: 'Los Angeles, CA Distribution Center',
-        timeline: [
-            { date: 'Dec 10, 2024 10:30 AM', status: 'Order Placed', location: 'Santa Barbara, CA' },
-            { date: 'Dec 10, 2024 2:15 PM', status: 'Order Processed', location: 'Santa Barbara, CA' },
-            { date: 'Dec 11, 2024 8:00 AM', status: 'Shipped', location: 'Santa Barbara, CA' },
-            { date: 'Dec 12, 2024 3:45 PM', status: 'In Transit', location: 'Los Angeles, CA' }
-        ]
-    },
-    'ORD-789012': {
-        number: 'ORD-789012',
-        status: 'delivered',
-        email: 'jane@example.com',
-        items: [
-            { name: 'Samsung S24 Screen', quantity: 1 }
-        ],
-        trackingNumber: 'TRK-1234567890',
-        carrier: 'FedEx',
-        carrierLink: 'https://www.fedex.com/fedextrack/?trknbr=',
-        estimatedDelivery: 'Delivered on December 8, 2024',
-        currentLocation: 'Delivered',
-        timeline: [
-            { date: 'Dec 5, 2024 9:00 AM', status: 'Order Placed', location: 'Santa Barbara, CA' },
-            { date: 'Dec 5, 2024 1:30 PM', status: 'Order Processed', location: 'Santa Barbara, CA' },
-            { date: 'Dec 6, 2024 7:00 AM', status: 'Shipped', location: 'Santa Barbara, CA' },
-            { date: 'Dec 7, 2024 10:30 AM', status: 'Out for Delivery', location: 'Campbell, CA' },
-            { date: 'Dec 8, 2024 2:15 PM', status: 'Delivered', location: 'Campbell, CA' }
-        ]
-    }
-}
-
 export default function OrderTrackingPage() {
     const [orderNumber, setOrderNumber] = useState('')
     const [email, setEmail] = useState('')
     const [tracking, setTracking] = useState<any>(null)
     const [error, setError] = useState('')
+    const [loading, setLoading] = useState(false)
 
-    const handleTrack = (e: React.FormEvent) => {
+    const handleTrack = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
+        setLoading(true)
 
-        // Check if order exists
-        const order = SAMPLE_ORDERS[orderNumber]
+        try {
+            // Call API to track order
+            const response = await fetch('/api/orders/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_number: orderNumber,
+                    email: email,
+                }),
+            })
 
-        if (!order) {
-            setError('Order not found. Please check your order number.')
+            const result = await response.json()
+
+            if (!response.ok) {
+                setError(result.error || 'Failed to track order')
+                setTracking(null)
+                return
+            }
+
+            // Transform API response to match UI expectations
+            const order = result.data
+            setTracking({
+                number: order.order_number,
+                status: order.status,
+                email: email,
+                items: order.items.map((item: any) => ({
+                    name: item.product_name,
+                    quantity: item.quantity,
+                })),
+                trackingNumber: order.tracking_number || 'N/A',
+                carrier: order.carrier || 'Not shipped yet',
+                carrierLink: getCarrierLink(order.carrier),
+                estimatedDelivery: order.delivered_at
+                    ? `Delivered on ${new Date(order.delivered_at).toLocaleDateString()}`
+                    : order.shipped_at
+                    ? 'In Transit'
+                    : 'Processing',
+                currentLocation: getStatusLabel(order.status),
+                timeline: generateTimeline(order),
+            })
+        } catch (err: any) {
+            setError(err.message || 'Failed to track order')
             setTracking(null)
-            return
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const getCarrierLink = (carrier: string | null) => {
+        if (!carrier) return ''
+        const carriers: Record<string, string> = {
+            'USPS': 'https://tools.usps.com/go/TrackConfirmAction?tLabels=',
+            'FedEx': 'https://www.fedex.com/fedextrack/?trknbr=',
+            'UPS': 'https://www.ups.com/track?loc=en_US&tracknum=',
+        }
+        return carriers[carrier] || ''
+    }
+
+    const getStatusLabel = (status: string) => {
+        const labels: Record<string, string> = {
+            pending: 'Order Received',
+            processing: 'Processing Order',
+            shipped: 'In Transit',
+            delivered: 'Delivered',
+            cancelled: 'Cancelled',
+        }
+        return labels[status] || status
+    }
+
+    const generateTimeline = (order: any) => {
+        const timeline = []
+
+        timeline.push({
+            date: new Date(order.created_at).toLocaleString(),
+            status: 'Order Placed',
+            location: 'Online',
+        })
+
+        if (order.status !== 'pending') {
+            timeline.push({
+                date: new Date(order.updated_at).toLocaleString(),
+                status: 'Order Processed',
+                location: order.shipping_address?.city || 'Processing Center',
+            })
         }
 
-        // Verify email
-        if (order.email.toLowerCase() !== email.toLowerCase()) {
-            setError('Email does not match our records.')
-            setTracking(null)
-            return
+        if (order.shipped_at) {
+            timeline.push({
+                date: new Date(order.shipped_at).toLocaleString(),
+                status: 'Shipped',
+                location: order.shipping_address?.city || 'Warehouse',
+            })
         }
 
-        setTracking(order)
+        if (order.delivered_at) {
+            timeline.push({
+                date: new Date(order.delivered_at).toLocaleString(),
+                status: 'Delivered',
+                location: order.shipping_address?.city || 'Destination',
+            })
+        }
+
+        return timeline.reverse()
     }
 
     const getStatusIndex = (status: string) => {
@@ -143,21 +187,27 @@ export default function OrderTrackingPage() {
 
                             <button
                                 type="submit"
-                                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                                disabled={loading}
+                                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <Search className="h-5 w-5" />
-                                Track Order
+                                {loading ? (
+                                    <>
+                                        <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Tracking...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Search className="h-5 w-5" />
+                                        Track Order
+                                    </>
+                                )}
                             </button>
                         </form>
 
-                        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                            <p className="text-sm text-neutral-700 dark:text-neutral-300 mb-2">
-                                <strong>Sample Orders (for demo):</strong>
+                        <div className="mt-6 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg">
+                            <p className="text-sm text-neutral-700 dark:text-neutral-300">
+                                <strong>Note:</strong> Your order number can be found in the confirmation email sent to you after placing your order.
                             </p>
-                            <ul className="text-sm text-neutral-600 dark:text-neutral-400 space-y-1">
-                                <li>• Order: ORD-123456 | Email: john@example.com (Shipped)</li>
-                                <li>• Order: ORD-789012 | Email: jane@example.com (Delivered)</li>
-                            </ul>
                         </div>
                     </div>
 
