@@ -172,24 +172,30 @@ describe('Login System', () => {
         })
 
         it('should use secure cookies in production', async () => {
-            // Mock production environment
-            const originalEnv = process.env.NODE_ENV
-            process.env.NODE_ENV = 'production'
+            const original = process.env.NODE_ENV
+
+            Object.defineProperty(process.env, 'NODE_ENV', {
+                value: 'production',
+                configurable: true,
+            })
 
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email: 'test@example.com',
-                    password: 'ValidPassword123!'
-                })
+                    password: 'ValidPassword123!',
+                }),
             })
 
             const setCookieHeader = response.headers.get('set-cookie')
             expect(setCookieHeader).toContain('Secure')
 
-            // Restore environment
-            process.env.NODE_ENV = originalEnv
+            // restore
+            Object.defineProperty(process.env, 'NODE_ENV', {
+                value: original,
+                configurable: true,
+            })
         })
 
         it('should use SameSite=Lax for CSRF protection', async () => {
