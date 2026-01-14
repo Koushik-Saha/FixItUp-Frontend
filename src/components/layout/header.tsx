@@ -91,20 +91,8 @@ export function Header() {
   const { getItemCount } = useCartStore()
   const { items: wishlistItems } = useWishlistStore()
 
-  const [activeMenu, setActiveMenu] = useState<string | null>(null)
-  const [activeDevice, setActiveDevice] = useState<'phones' | 'laptops' | 'tablets' | null>(null)
-
   const cartCount = getItemCount()
   const wishlistCount = wishlistItems.length
-
-  const handleMenuEnter = (menu: string) => {
-    setActiveMenu(menu)
-  }
-
-  const handleMenuLeave = () => {
-    setActiveMenu(null)
-    setActiveDevice(null)
-  }
 
   return (
       <header className="sticky top-0 z-50 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
@@ -242,10 +230,7 @@ export function Header() {
         </div>
 
         {/* Navigation with Category Section - Desktop Only */}
-        <div
-            className="hidden lg:block border-t border-neutral-200 dark:border-neutral-800"
-            onMouseLeave={handleMenuLeave}
-        >
+        <div className="hidden lg:block border-t border-neutral-200 dark:border-neutral-800">
           <CategorySection />
         </div>
       </header>

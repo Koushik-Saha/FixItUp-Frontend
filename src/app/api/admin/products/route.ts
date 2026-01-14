@@ -1,129 +1,165 @@
 // app/api/admin/products/route.ts
-// Admin Products API - List and Create products
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { errorResponse, UnauthorizedError } from "@/lib/utils/errors";
+
+// Put your frontend URL here (dev + prod)
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://localhost:5001",
+    "http://127.0.0.1:5001",
+    process.env.NEXT_PUBLIC_SITE_URL, // e.g. https://yourdomain.com
+].filter(Boolean) as string[];
+
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+        "Access-Control-Allow-Credentials": "true", // needed when using cookies/session
+        "Vary": "Origin",
+    };
+}
+
+// Preflight handler (THIS is what fixes browser CORS blocks)
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
 
 // Helper to check if user is admin
 async function checkAdmin(supabase: any, userId: string) {
-    const { data: profile } = await (supabase
-        .from('profiles') as any)
-        .select('role')
-        .eq('id', userId)
-        .single()
+    const { data: profile } = await (supabase.from("profiles") as any)
+        .select("role")
+        .eq("id", userId)
+        .single();
 
-    if (!profile || profile.role !== 'admin') {
-        throw new UnauthorizedError('Admin access required')
+    if (!profile || profile.role !== "admin") {
+        throw new UnauthorizedError("Admin access required");
     }
 }
 
 // GET /api/admin/products - List products with filters
 export async function GET(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
-        const { searchParams } = new URL(request.url)
+        const supabase = await createClient();
+        const { searchParams } = new URL(request.url);
 
         // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser();
+
         if (authError || !user) {
-            throw new UnauthorizedError('Please login to access this resource')
+            throw new UnauthorizedError("Please login to access this resource");
         }
 
         // Check admin role
-        await checkAdmin(supabase, user.id)
+        await checkAdmin(supabase, user.id);
 
         // Get query parameters
-        const search = searchParams.get('search')
-        const category = searchParams.get('category')
-        const brand = searchParams.get('brand')
-        const status = searchParams.get('status')
-        const stock = searchParams.get('stock')
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '50')
+        const search = searchParams.get("search");
+        const category = searchParams.get("category");
+        const brand = searchParams.get("brand");
+        const status = searchParams.get("status");
+        const stock = searchParams.get("stock");
+        const page = parseInt(searchParams.get("page") || "1", 10);
+        const limit = parseInt(searchParams.get("limit") || "50", 10);
 
         // Build query
-        let query = (supabase
-            .from('products') as any)
-            .select('*, categories(id, name, slug)', { count: 'exact' })
+        let query = (supabase.from("products") as any).select(
+            `
+              *,
+              categories(id, name, slug),
+              product_models!fk_products_model_id (
+                id,
+                name
+              )
+            `,
+            { count: "exact" }
+        );
 
-        // Apply search filter
         if (search) {
-            query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%,brand.ilike.%${search}%,device_model.ilike.%${search}%`)
+            query = query.or(
+                `name.ilike.%${search}%,sku.ilike.%${search}%,brand.ilike.%${search}%,device_model.ilike.%${search}%`
+            );
         }
 
-        // Apply category filter
-        if (category) {
-            query = query.eq('category_id', category)
-        }
+        if (category) query = query.eq("category_id", category);
+        if (brand) query = query.eq("brand", brand);
 
-        // Apply brand filter
-        if (brand) {
-            query = query.eq('brand', brand)
-        }
+        if (status === "active") query = query.eq("is_active", true);
+        if (status === "inactive") query = query.eq("is_active", false);
 
-        // Apply status filter
-        if (status === 'active') {
-            query = query.eq('is_active', true)
-        } else if (status === 'inactive') {
-            query = query.eq('is_active', false)
-        }
+        if (stock === "out-of-stock") query = query.eq("total_stock", 0);
+        if (stock === "low-stock") query = query.gt("total_stock", 0).lte("total_stock", "low_stock_threshold");
+        if (stock === "in-stock") query = query.gt("total_stock", 0);
 
-        // Apply stock filter
-        if (stock === 'out-of-stock') {
-            query = query.eq('total_stock', 0)
-        } else if (stock === 'low-stock') {
-            query = query.gt('total_stock', 0).lte('total_stock', 'low_stock_threshold')
-        } else if (stock === 'in-stock') {
-            query = query.gt('total_stock', 0)
-        }
+        query = query.order("created_at", { ascending: false });
 
-        // Apply sorting
-        query = query.order('created_at', { ascending: false })
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+        query = query.range(from, to);
 
-        // Apply pagination
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-        query = query.range(from, to)
-
-        const { data: products, error, count } = await query
+        const { data: products, error, count } = await query;
 
         if (error) {
-            console.error('Failed to fetch products:', error)
-            throw new Error('Failed to fetch products')
+            console.error("Failed to fetch products:", error);
+            return NextResponse.json({ error: "Failed to fetch products" }, { status: 500, headers: corsHeaders });
         }
 
-        return NextResponse.json({
-            data: products,
-            pagination: {
-                page,
-                limit,
-                total: count || 0,
-                totalPages: Math.ceil((count || 0) / limit),
+        return NextResponse.json(
+            {
+                data: products,
+                pagination: {
+                    page,
+                    limit,
+                    total: count || 0,
+                    totalPages: Math.ceil((count || 0) / limit),
+                },
             },
-        })
-
-    } catch (error) {
-        return errorResponse(error)
+            { headers: corsHeaders }
+        );
+    } catch (err) {
+        // Ensure CORS headers are included even on error
+        const res = errorResponse(err);
+        res.headers.set("Access-Control-Allow-Origin", corsHeaders["Access-Control-Allow-Origin"]);
+        res.headers.set("Access-Control-Allow-Methods", corsHeaders["Access-Control-Allow-Methods"]);
+        res.headers.set("Access-Control-Allow-Headers", corsHeaders["Access-Control-Allow-Headers"]);
+        res.headers.set("Access-Control-Allow-Credentials", corsHeaders["Access-Control-Allow-Credentials"]);
+        res.headers.set("Vary", corsHeaders["Vary"]);
+        return res;
     }
 }
 
 // POST /api/admin/products - Create new product
 export async function POST(request: NextRequest) {
-    try {
-        const supabase = await createClient()
-        const body = await request.json()
+    const corsHeaders = getCorsHeaders(request);
 
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+    try {
+        const supabase = await createClient();
+        const body = await request.json();
+
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser();
+
         if (authError || !user) {
-            throw new UnauthorizedError('Please login to access this resource')
+            throw new UnauthorizedError("Please login to access this resource");
         }
 
-        // Check admin role
-        await checkAdmin(supabase, user.id)
+        await checkAdmin(supabase, user.id);
 
-        // Extract product data
         const {
             name,
             sku,
@@ -149,33 +185,28 @@ export async function POST(request: NextRequest) {
             is_featured,
             is_new,
             is_bestseller,
-        } = body
+        } = body;
 
-        // Validate required fields
         if (!name || !sku || !slug || !brand || base_price === undefined) {
             return NextResponse.json(
-                { error: 'Missing required fields: name, sku, slug, brand, base_price' },
-                { status: 400 }
-            )
+                { error: "Missing required fields: name, sku, slug, brand, base_price" },
+                { status: 400, headers: corsHeaders }
+            );
         }
 
-        // Check if SKU already exists
-        const { data: existingProduct } = await (supabase
-            .from('products') as any)
-            .select('id')
-            .eq('sku', sku)
-            .single()
+        const { data: existingProduct } = await (supabase.from("products") as any)
+            .select("id")
+            .eq("sku", sku)
+            .single();
 
         if (existingProduct) {
             return NextResponse.json(
-                { error: 'Product with this SKU already exists' },
-                { status: 400 }
-            )
+                { error: "Product with this SKU already exists" },
+                { status: 400, headers: corsHeaders }
+            );
         }
 
-        // Create product
-        const { data: product, error: createError } = await (supabase
-            .from('products') as any)
+        const { data: product, error: createError } = await (supabase.from("products") as any)
             .insert({
                 name,
                 sku,
@@ -203,22 +234,24 @@ export async function POST(request: NextRequest) {
                 is_bestseller: is_bestseller || false,
             })
             .select()
-            .single()
+            .single();
 
         if (createError) {
-            console.error('Failed to create product:', createError)
-            throw new Error('Failed to create product')
+            console.error("Failed to create product:", createError);
+            return NextResponse.json({ error: "Failed to create product" }, { status: 500, headers: corsHeaders });
         }
 
         return NextResponse.json(
-            {
-                message: 'Product created successfully',
-                data: product,
-            },
-            { status: 201 }
-        )
-
-    } catch (error) {
-        return errorResponse(error)
+            { message: "Product created successfully", data: product },
+            { status: 201, headers: corsHeaders }
+        );
+    } catch (err) {
+        const res = errorResponse(err);
+        res.headers.set("Access-Control-Allow-Origin", corsHeaders["Access-Control-Allow-Origin"]);
+        res.headers.set("Access-Control-Allow-Methods", corsHeaders["Access-Control-Allow-Methods"]);
+        res.headers.set("Access-Control-Allow-Headers", corsHeaders["Access-Control-Allow-Headers"]);
+        res.headers.set("Access-Control-Allow-Credentials", corsHeaders["Access-Control-Allow-Credentials"]);
+        res.headers.set("Vary", corsHeaders["Vary"]);
+        return res;
     }
 }

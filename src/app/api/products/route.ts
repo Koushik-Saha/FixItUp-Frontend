@@ -9,6 +9,8 @@ import { productSchema, validateData, formatValidationErrors } from '@/utils/val
 // GET /api/products - List products with filtering
 export async function GET(request: NextRequest) {
     try {
+
+
         const supabase = await createClient()
         const { searchParams } = new URL(request.url)
 
@@ -29,10 +31,11 @@ export async function GET(request: NextRequest) {
         const to = from + limit - 1
 
         // Build query
-        let query = (supabase
-            .from('products') as any)
-            .select('*, category:categories(id, name, slug)', { count: 'exact' })
+        let query = supabase
+            .from('products')
+            .select('*, category:categories!fk_products_category_id(id, name, slug)', { count: 'exact' })
             .eq('is_active', true)
+
 
         // Apply filters
         if (category) {

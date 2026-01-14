@@ -125,57 +125,59 @@ export default function FlashDeals({ flashDeals }: FlashDealsProps) {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.1 }}
                     >
-                        <Card className="group bg-white/95 dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden">
-                            <div className="relative aspect-square bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                                <img
-                                    src={product.image}
-                                    alt={product.name}
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                />
-                                <Badge
-                                    className={`absolute top-2 left-2 md:top-3 md:left-3 ${product.badgeColor} text-white text-xs px-2 py-0.5`}
-                                >
-                                    {product.badge}
-                                </Badge>
-                                <button className="absolute top-2 right-2 md:top-3 md:right-3 bg-white/90 dark:bg-neutral-900/90 border border-neutral-200/70 dark:border-neutral-700/70 p-1.5 md:p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors">
-                                    <Heart className="h-4 w-4 md:h-5 md:w-5 text-neutral-600 dark:text-neutral-300" />
-                                </button>
-                                <Badge className="absolute bottom-2 right-2 md:bottom-3 md:right-3 bg-red-500 text-white text-sm md:text-lg font-bold px-2 py-1 md:px-3">
-                                    -{product.discount}%
-                                </Badge>
-                            </div>
-                            <CardContent className="p-3 md:p-4">
-                                <h3 className="font-semibold text-sm md:text-base lg:text-lg mb-2 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
-                                    {product.name}
-                                </h3>
-                                <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
-                                    <div className="flex items-center gap-1">
-                                        <Star className="h-3 w-3 md:h-4 md:w-4 fill-yellow-400 text-yellow-400" />
-                                        <span className="text-xs md:text-sm font-semibold">
+                        <Link href={`/products/${product.id}`}>
+                            <Card className="group bg-white/95 dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-sm hover:shadow-2xl transition-all overflow-hidden">
+                                <div className="relative aspect-square bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                                    <img
+                                        src={product.image}
+                                        alt={product.name}
+                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                    />
+                                    <Badge
+                                        className={`absolute top-2 left-2 md:top-3 md:left-3 ${product.badgeColor} text-white text-xs px-2 py-0.5`}
+                                    >
+                                        {product.badge}
+                                    </Badge>
+                                    <button className="absolute top-2 right-2 md:top-3 md:right-3 bg-white/90 dark:bg-neutral-900/90 border border-neutral-200/70 dark:border-neutral-700/70 p-1.5 md:p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors">
+                                        <Heart className="h-4 w-4 md:h-5 md:w-5 text-neutral-600 dark:text-neutral-300" />
+                                    </button>
+                                    <Badge className="absolute bottom-2 right-2 md:bottom-3 md:right-3 bg-red-500 text-white text-sm md:text-lg font-bold px-2 py-1 md:px-3">
+                                        -{product.discount}%
+                                    </Badge>
+                                </div>
+                                <CardContent className="p-3 md:p-4">
+                                    <h3 className="font-semibold text-sm md:text-base lg:text-lg mb-2 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+                                        {product.name}
+                                    </h3>
+                                    <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
+                                        <div className="flex items-center gap-1">
+                                            <Star className="h-3 w-3 md:h-4 md:w-4 fill-yellow-400 text-yellow-400" />
+                                            <span className="text-xs md:text-sm font-semibold">
                           {product.rating}
                         </span>
-                                    </div>
-                                    <span className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400">
+                                        </div>
+                                        <span className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400">
                         ({product.reviews.toLocaleString()})
                       </span>
-                                </div>
-                                <div className="flex items-baseline gap-2 mb-2 md:mb-3 lg:mb-4">
+                                    </div>
+                                    <div className="flex items-baseline gap-2 mb-2 md:mb-3 lg:mb-4">
                       <span className="text-lg md:text-xl lg:text-2xl font-bold text-blue-600 dark:text-blue-400">
                         ${product.salePrice}
                       </span>
-                                    <span className="text-xs md:text-sm text-neutral-500 line-through">
+                                        <span className="text-xs md:text-sm text-neutral-500 line-through">
                         ${product.originalPrice}
                       </span>
-                                </div>
-                                <p className="text-xs md:text-sm text-green-600 dark:text-green-400 font-medium mb-3 md:mb-4">
-                                    Save ${product.originalPrice - product.salePrice}
-                                </p>
-                                <Button className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 h-8 md:h-9 lg:h-10 text-xs md:text-sm">
-                                    <ShoppingCart className="mr-1.5 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-                                    Add to Cart
-                                </Button>
-                            </CardContent>
-                        </Card>
+                                    </div>
+                                    <p className="text-xs md:text-sm text-green-600 dark:text-green-400 font-medium mb-3 md:mb-4">
+                                        Save ${(product.originalPrice - product.price).toFixed(2)}
+                                    </p>
+                                    <Button className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 h-8 md:h-9 lg:h-10 text-xs md:text-sm">
+                                        <ShoppingCart className="mr-1.5 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                                        Add to Cart
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        </Link>
                     </motion.div>
                 ))}
             </div>
