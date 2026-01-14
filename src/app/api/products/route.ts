@@ -33,22 +33,23 @@ export async function GET(request: NextRequest) {
         // Build query
         let query = supabase
             .from('products')
-            .select('*, category:categories!fk_products_category_id(id, name, slug)', { count: 'exact' })
+            .select('*, category:categories(id, name, slug)', { count: 'exact' })
             .eq('is_active', true)
 
 
         // Apply filters
         if (category) {
             // If category is a slug, look up the ID first
-            const { data: categoryData } = await (supabase
+            const { data: categoryData, error: categoryError } = await (supabase
                 .from('categories') as any)
                 .select('id')
                 .eq('slug', category)
-                .single()
+                .maybeSingle()
 
-            if (categoryData) {
+            if (categoryData && !categoryError) {
                 query = query.eq('category_id', categoryData.id)
             }
+            // If category lookup fails, the filter is ignored (possibly it's a brand or invalid slug)
         }
 
         if (brand) {

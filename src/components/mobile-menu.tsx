@@ -89,7 +89,7 @@ export function MobileMenu() {
                                             {models.map((model) => (
                                                 <Link
                                                     key={model}
-                                                    href={`/shop?category=${brand.toLowerCase()}&device=${model}`}
+                                                    href={`/shop?brand=${brand.toLowerCase()}&device=${model}`}
                                                     onClick={() => setIsOpen(false)}
                                                     className="block py-2 px-4 text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg transition-colors"
                                                 >
@@ -97,7 +97,7 @@ export function MobileMenu() {
                                                 </Link>
                                             ))}
                                             <Link
-                                                href={`/shop?category=${brand.toLowerCase()}`}
+                                                href={`/shop?brand=${brand.toLowerCase()}`}
                                                 onClick={() => setIsOpen(false)}
                                                 className="block py-2 px-4 text-blue-600 dark:text-blue-400 font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800 rounded-lg transition-colors"
                                             >

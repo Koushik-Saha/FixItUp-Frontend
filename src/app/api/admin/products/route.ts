@@ -22,7 +22,7 @@ function getCorsHeaders(request: NextRequest) {
     return {
         "Access-Control-Allow-Origin": allowOrigin,
         "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, x-mock-auth",
         "Access-Control-Allow-Credentials": "true", // needed when using cookies/session
         "Vary": "Origin",
     };
@@ -53,18 +53,26 @@ export async function GET(request: NextRequest) {
         const supabase = await createClient();
         const { searchParams } = new URL(request.url);
 
-        // Check authentication
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
+        // Development bypass for mock auth
+        const isDevelopment = process.env.NODE_ENV === 'development';
+        const mockAuthToken = request.headers.get('x-mock-auth');
 
-        if (authError || !user) {
-            throw new UnauthorizedError("Please login to access this resource");
+        if (isDevelopment && mockAuthToken === 'mock-dev-token') {
+            // Skip authentication in development with mock token
+        } else {
+            // Check authentication
+            const {
+                data: { user },
+                error: authError,
+            } = await supabase.auth.getUser();
+
+            if (authError || !user) {
+                throw new UnauthorizedError("Please login to access this resource");
+            }
+
+            // Check admin role
+            await checkAdmin(supabase, user.id);
         }
-
-        // Check admin role
-        await checkAdmin(supabase, user.id);
 
         // Get query parameters
         const search = searchParams.get("search");

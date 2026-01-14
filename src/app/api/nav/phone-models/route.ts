@@ -19,9 +19,9 @@ type CategoryRow = {
 }
 
 function toShopLink(categorySlug: string, modelName: string) {
-    // keep your existing query structure
+    // Use 'brand' parameter instead of 'category' since these are brand names
     const device = encodeURIComponent(modelName);
-    return `/shop?category=${encodeURIComponent(categorySlug)}&device=${device}`;
+    return `/shop?brand=${encodeURIComponent(categorySlug)}&device=${device}`;
 }
 
 /**
@@ -147,7 +147,7 @@ export async function GET() {
         if (!grouped[brandName].bySubcategory[subcat]) {
             grouped[brandName].bySubcategory[subcat] = {
                 columns: [
-                    { title: subcat, items: [], viewAll: `/shop?category=${brandSlug}&type=${encodeURIComponent(subcat)}` },
+                    { title: subcat, items: [], viewAll: `/shop?brand=${brandSlug}&type=${encodeURIComponent(subcat)}` },
                     { title: "", items: [] },
                     { title: "", items: [] },
                 ],
