@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
+import {Database} from "@/types/database";
 
 // Helper function to add CORS headers
 function corsHeaders(origin: string | null) {
@@ -42,6 +43,8 @@ export async function GET(request: NextRequest) {
     try {
         const supabase = await createClient()
 
+        type Profile = Database['public']['Tables']['profiles']['Row']
+
         // Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) {
@@ -53,7 +56,7 @@ export async function GET(request: NextRequest) {
             .from('profiles')
             .select('*')
             .eq('id', user.id)
-            .single()
+            .single<Profile>()
 
         if (profileError) {
             console.error('Profile fetch error:', profileError)
@@ -63,8 +66,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             id: user.id,
             email: user.email || '',
-            name: profile?.full_name || '',
-            role: profile?.role || 'customer',
+            name: profile?.full_name ?? '',
+            role: profile?.role ?? 'customer',
             createdAt: user.created_at || new Date().toISOString(),
             lastLoginAt: user.last_sign_in_at || undefined,
             // Also include full profile for frontend use

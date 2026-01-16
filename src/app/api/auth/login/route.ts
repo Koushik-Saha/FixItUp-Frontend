@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import {Database} from "@/types/database";
 
 const loginSchema = z.object({
     email: z.string().email('Invalid email address'),
@@ -47,6 +48,8 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
 
+        type Profile = Database['public']['Tables']['profiles']['Row']
+
         // Validate input
         const validation = loginSchema.safeParse(body)
         if (!validation.success) {
@@ -81,15 +84,15 @@ export async function POST(request: NextRequest) {
             .from('profiles')
             .select('*')
             .eq('id', data.user.id)
-            .maybeSingle()
+            .maybeSingle<Profile>()
 
         // Transform response to match admin panel format
         return NextResponse.json({
             user: {
                 id: data.user.id,
                 email: data.user.email || '',
-                name: profile?.full_name || '',
-                role: profile?.role || 'customer',
+                name: profile?.full_name ?? '',
+                role: profile?.role ?? 'customer',
                 createdAt: data.user.created_at || new Date().toISOString(),
                 lastLoginAt: data.user.last_sign_in_at || undefined,
                 // Also include full profile for frontend use
