@@ -6,9 +6,16 @@ import { sendRepairConfirmationEmail, sendRepairStatusUpdateEmail } from '@/lib/
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
 import { createRepairTicketSchema, validateData, formatValidationErrors } from '@/utils/validation'
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
+
+// OPTIONS /api/repairs - Handle CORS preflight
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request)
+}
 
 // GET /api/repairs - List repair tickets
 export async function GET(request: NextRequest) {
+    const origin = request.headers.get('origin')
     try {
         const supabase = await createClient()
         const { searchParams } = new URL(request.url)
@@ -72,15 +79,24 @@ export async function GET(request: NextRequest) {
                 total: count || 0,
                 totalPages: Math.ceil((count || 0) / limit),
             },
-        })
+        }, { headers: getCorsHeaders(origin) })
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }
 
 // POST /api/repairs - Create repair ticket
 export async function POST(request: NextRequest) {
+    const origin = request.headers.get('origin')
     try {
         const supabase = await createClient()
 
@@ -97,7 +113,7 @@ export async function POST(request: NextRequest) {
                     error: 'Validation failed',
                     errors: formatValidationErrors(validation.errors!),
                 },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -148,10 +164,18 @@ export async function POST(request: NextRequest) {
                     ticket_number: ticket.ticket_number,
                 },
             },
-            { status: 201 }
+            { status: 201, headers: getCorsHeaders(origin) }
         )
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }

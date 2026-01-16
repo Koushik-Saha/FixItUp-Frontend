@@ -5,9 +5,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError, ValidationError } from '@/lib/utils/errors'
 import { createOrderSchema, validateData, formatValidationErrors } from '@/utils/validation'
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
+
+// OPTIONS /api/orders - Handle CORS preflight
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request)
+}
 
 // GET /api/orders - List user's orders
 export async function GET(request: NextRequest) {
+    const origin = request.headers.get('origin')
     try {
         const supabase = await createClient()
         const { searchParams } = new URL(request.url)
@@ -71,15 +78,24 @@ export async function GET(request: NextRequest) {
                 total: count || 0,
                 totalPages: Math.ceil((count || 0) / limit),
             },
-        })
+        }, { headers: getCorsHeaders(origin) })
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }
 
 // POST /api/orders - Create new order
 export async function POST(request: NextRequest) {
+    const origin = request.headers.get('origin')
     try {
         const supabase = await createClient()
 
@@ -97,7 +113,7 @@ export async function POST(request: NextRequest) {
             if (!recaptchaToken) {
                 return NextResponse.json(
                     { error: 'reCAPTCHA verification required for guest checkout' },
-                    { status: 400 }
+                    { status: 400, headers: getCorsHeaders(origin) }
                 )
             }
 
@@ -107,7 +123,7 @@ export async function POST(request: NextRequest) {
                 console.error('RECAPTCHA_SECRET_KEY not configured')
                 return NextResponse.json(
                     { error: 'Server configuration error' },
-                    { status: 500 }
+                    { status: 500, headers: getCorsHeaders(origin) }
                 )
             }
 
@@ -122,7 +138,7 @@ export async function POST(request: NextRequest) {
             if (!recaptchaResult.success) {
                 return NextResponse.json(
                     { error: 'reCAPTCHA verification failed. Please try again.' },
-                    { status: 400 }
+                    { status: 400, headers: getCorsHeaders(origin) }
                 )
             }
         }
@@ -157,7 +173,7 @@ export async function POST(request: NextRequest) {
         if (!orderEmail) {
             return NextResponse.json(
                 { error: 'Customer email is required' },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -171,7 +187,7 @@ export async function POST(request: NextRequest) {
         if (productsError || !products || products.length !== items.length) {
             return NextResponse.json(
                 { error: 'One or more products not found' },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -185,14 +201,14 @@ export async function POST(request: NextRequest) {
             if (!product) {
                 return NextResponse.json(
                     { error: `Product ${item.product_id} not found` },
-                    { status: 400 }
+                    { status: 400, headers: getCorsHeaders(origin) }
                 )
             }
 
             if (!product.is_active) {
                 return NextResponse.json(
                     { error: `Product ${product.name} is not available` },
-                    { status: 400 }
+                    { status: 400, headers: getCorsHeaders(origin) }
                 )
             }
 
@@ -203,7 +219,7 @@ export async function POST(request: NextRequest) {
                         available: product.total_stock,
                         requested: item.quantity,
                     },
-                    { status: 400 }
+                    { status: 400, headers: getCorsHeaders(origin) }
                 )
             }
 
@@ -331,10 +347,18 @@ export async function POST(request: NextRequest) {
                     // client_secret: paymentIntent.client_secret,
                 },
             },
-            { status: 201 }
+            { status: 201, headers: getCorsHeaders(origin) }
         )
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }

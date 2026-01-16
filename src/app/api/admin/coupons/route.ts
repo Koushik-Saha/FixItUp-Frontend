@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
 
 // Helper to check if user is admin
 async function checkAdmin(supabase: any, userId: string) {
@@ -18,9 +19,15 @@ async function checkAdmin(supabase: any, userId: string) {
     }
 }
 
+// OPTIONS /api/admin/coupons - Handle preflight request
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request)
+}
+
 // GET /api/admin/coupons - List coupons with filters
 export async function GET(request: NextRequest) {
     try {
+        const origin = request.headers.get('origin')
         const supabase = await createClient()
         const { searchParams } = new URL(request.url)
 
@@ -87,16 +94,28 @@ export async function GET(request: NextRequest) {
                 total: count || 0,
                 totalPages: Math.ceil((count || 0) / limit),
             },
+        }, {
+            headers: getCorsHeaders(origin)
         })
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        const origin = request.headers.get('origin')
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }
 
 // POST /api/admin/coupons - Create new coupon
 export async function POST(request: NextRequest) {
     try {
+        const origin = request.headers.get('origin')
         const supabase = await createClient()
         const body = await request.json()
 
@@ -131,7 +150,7 @@ export async function POST(request: NextRequest) {
         if (!code || !discount_type || discount_value === undefined) {
             return NextResponse.json(
                 { error: 'Missing required fields: code, discount_type, discount_value' },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -139,7 +158,7 @@ export async function POST(request: NextRequest) {
         if (!['percentage', 'fixed'].includes(discount_type)) {
             return NextResponse.json(
                 { error: 'Discount type must be either "percentage" or "fixed"' },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -153,7 +172,7 @@ export async function POST(request: NextRequest) {
         if (existingCoupon) {
             return NextResponse.json(
                 { error: 'Coupon code already exists' },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -191,10 +210,19 @@ export async function POST(request: NextRequest) {
                 message: 'Coupon created successfully',
                 data: coupon,
             },
-            { status: 201 }
+            { status: 201, headers: getCorsHeaders(origin) }
         )
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        const origin = request.headers.get('origin')
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }

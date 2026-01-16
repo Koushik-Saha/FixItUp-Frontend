@@ -18,8 +18,40 @@ const registerSchema = z.object({
     phone: z.string().regex(/^(?:\+1\s?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}$/, 'Invalid US phone number').optional(),
 })
 
+// Helper function to add CORS headers
+function corsHeaders(origin: string | null) {
+    const allowedOrigins = [
+        'https://fix-it-admin-pearl.vercel.app',
+        'http://localhost:5001',
+        'http://localhost:3001',
+        'http://localhost:3000',
+    ]
+
+    const headers: Record<string, string> = {}
+    if (origin && allowedOrigins.includes(origin)) {
+        headers['Access-Control-Allow-Origin'] = origin
+        headers['Access-Control-Allow-Credentials'] = 'true'
+        headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    }
+    return headers
+}
+
+// OPTIONS /api/auth/register - Handle preflight requests
+export async function OPTIONS(request: NextRequest) {
+    const origin = request.headers.get('origin')
+    return new NextResponse(null, {
+        status: 200,
+        headers: {
+            ...corsHeaders(origin),
+            'Access-Control-Max-Age': '86400',
+        },
+    })
+}
+
 // POST /api/auth/register - User registration
 export async function POST(request: NextRequest) {
+    const origin = request.headers.get('origin')
     try {
         const body = await request.json()
 
@@ -33,7 +65,7 @@ export async function POST(request: NextRequest) {
                     error: 'Validation failed',
                     errors: validation.error.flatten().fieldErrors,
                 },
-                { status: 400 }
+                { status: 400, headers: corsHeaders(origin) }
             )
         }
 
@@ -61,14 +93,14 @@ export async function POST(request: NextRequest) {
         if (error) {
             return NextResponse.json(
                 { error: error.message },
-                { status: 400 }
+                { status: 400, headers: corsHeaders(origin) }
             )
         }
 
         if (!data.user) {
             return NextResponse.json(
                 { error: 'Registration failed' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders(origin) }
             )
         }
 
@@ -97,26 +129,30 @@ export async function POST(request: NextRequest) {
 
         console.log(`📝 User registered: ${email} (${isDevelopment ? 'auto-confirmed' : 'needs email verification'})`)
 
+        // Transform response to match admin panel format
         return NextResponse.json(
             {
-                message: message,
-                data: {
-                    user: {
-                        id: data.user.id,
-                        email: data.user.email,
-                        full_name,
-                        phone,
-                    },
+                user: {
+                    id: data.user.id,
+                    email: data.user.email || '',
+                    name: full_name,
+                    role: 'customer',
+                    createdAt: data.user.created_at || new Date().toISOString(),
+                    lastLoginAt: undefined,
+                    // Also include full profile for frontend use
+                    full_name,
+                    phone,
                 },
+                message: message,
             },
-            { status: 201 }
+            { status: 201, headers: corsHeaders(origin) }
         )
 
     } catch (error) {
         console.error('Registration error:', error)
         return NextResponse.json(
             { error: 'Registration failed' },
-            { status: 500 }
+            { status: 500, headers: corsHeaders(origin) }
         )
     }
 }

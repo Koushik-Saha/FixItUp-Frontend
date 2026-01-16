@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
 
 // Helper to check if user is admin
 async function checkAdmin(supabase: any, userId: string) {
@@ -18,12 +19,18 @@ async function checkAdmin(supabase: any, userId: string) {
     }
 }
 
+// OPTIONS /api/admin/customers/[id]/block - Handle preflight request
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request)
+}
+
 // POST /api/admin/customers/[id]/block - Block or unblock customer
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const origin = request.headers.get('origin')
         const supabase = await createClient()
         const { id } = await params
         const body = await request.json()
@@ -42,7 +49,7 @@ export async function POST(
         if (typeof blocked !== 'boolean') {
             return NextResponse.json(
                 { error: 'Blocked status must be a boolean' },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -56,7 +63,7 @@ export async function POST(
         if (!existingCustomer) {
             return NextResponse.json(
                 { error: 'Customer not found' },
-                { status: 404 }
+                { status: 404, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -64,7 +71,7 @@ export async function POST(
         if (existingCustomer.role === 'admin') {
             return NextResponse.json(
                 { error: 'Cannot block admin users' },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -87,9 +94,20 @@ export async function POST(
         return NextResponse.json({
             success: true,
             message: `Customer ${blocked ? 'blocked' : 'unblocked'} successfully`,
+        }, {
+            headers: getCorsHeaders(origin)
         })
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        const origin = request.headers.get('origin')
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }

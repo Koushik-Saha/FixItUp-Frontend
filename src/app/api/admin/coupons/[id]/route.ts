@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
 
 // Helper to check if user is admin
 async function checkAdmin(supabase: any, userId: string) {
@@ -18,12 +19,18 @@ async function checkAdmin(supabase: any, userId: string) {
     }
 }
 
+// OPTIONS /api/admin/coupons/[id] - Handle preflight request
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request)
+}
+
 // GET /api/admin/coupons/[id] - Get single coupon
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const origin = request.headers.get('origin')
         const supabase = await createClient()
         const { id } = await params
 
@@ -46,7 +53,7 @@ export async function GET(
         if (error || !coupon) {
             return NextResponse.json(
                 { error: 'Coupon not found' },
-                { status: 404 }
+                { status: 404, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -61,10 +68,21 @@ export async function GET(
                 ...coupon,
                 usage_count: usageCount || 0,
             },
+        }, {
+            headers: getCorsHeaders(origin)
         })
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        const origin = request.headers.get('origin')
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }
 
@@ -74,6 +92,7 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const origin = request.headers.get('origin')
         const supabase = await createClient()
         const { id } = await params
         const body = await request.json()
@@ -97,7 +116,7 @@ export async function PUT(
         if (!existingCoupon) {
             return NextResponse.json(
                 { error: 'Coupon not found' },
-                { status: 404 }
+                { status: 404, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -113,7 +132,7 @@ export async function PUT(
             if (duplicateCode) {
                 return NextResponse.json(
                     { error: 'Another coupon with this code already exists' },
-                    { status: 400 }
+                    { status: 400, headers: getCorsHeaders(origin) }
                 )
             }
         }
@@ -141,10 +160,21 @@ export async function PUT(
         return NextResponse.json({
             message: 'Coupon updated successfully',
             data: coupon,
+        }, {
+            headers: getCorsHeaders(origin)
         })
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        const origin = request.headers.get('origin')
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }
 
@@ -154,6 +184,7 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const origin = request.headers.get('origin')
         const supabase = await createClient()
         const { id } = await params
 
@@ -176,7 +207,7 @@ export async function DELETE(
         if (!existingCoupon) {
             return NextResponse.json(
                 { error: 'Coupon not found' },
-                { status: 404 }
+                { status: 404, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -204,6 +235,8 @@ export async function DELETE(
             return NextResponse.json({
                 success: true,
                 message: 'Coupon has been deactivated (cannot delete used coupons)',
+            }, {
+                headers: getCorsHeaders(origin)
             })
         }
 
@@ -221,9 +254,20 @@ export async function DELETE(
         return NextResponse.json({
             success: true,
             message: 'Coupon deleted successfully',
+        }, {
+            headers: getCorsHeaders(origin)
         })
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        const origin = request.headers.get('origin')
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }

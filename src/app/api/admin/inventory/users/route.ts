@@ -6,13 +6,20 @@ import {
     ForbiddenError,
 } from "@/lib/utils/errors";
 import type { Database } from "@/types/database";
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors';
 
 type Tables = Database["public"]["Tables"];
 type ProfileRow = Tables["profiles"]["Row"]; // <-- strongly typed user
 
+// OPTIONS /api/admin/inventory/users - Handle preflight request
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request);
+}
+
 // GET /api/admin/users - List all users
 export async function GET(request: NextRequest) {
     try {
+        const origin = request.headers.get('origin');
         const supabase = await createClient();
 
         // Auth
@@ -85,8 +92,19 @@ export async function GET(request: NextRequest) {
                 total: count ?? 0,
                 totalPages: Math.ceil((count ?? 0) / limit),
             },
+        }, {
+            headers: getCorsHeaders(origin),
         });
     } catch (error) {
-        return errorResponse(error);
+        const errorRes = errorResponse(error);
+        const headers = new Headers(errorRes.headers);
+        const origin = request.headers.get('origin');
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value);
+        });
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        });
     }
 }

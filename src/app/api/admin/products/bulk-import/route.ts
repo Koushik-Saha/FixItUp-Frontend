@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
 
 // Helper to check if user is admin
 async function checkAdmin(supabase: any, userId: string) {
@@ -18,9 +19,15 @@ async function checkAdmin(supabase: any, userId: string) {
     }
 }
 
+// OPTIONS /api/admin/products/bulk-import - Handle preflight request
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request)
+}
+
 // POST /api/admin/products/bulk-import - Bulk import products
 export async function POST(request: NextRequest) {
     try {
+        const origin = request.headers.get('origin')
         const supabase = await createClient()
         const body = await request.json()
 
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
         if (!products || !Array.isArray(products) || products.length === 0) {
             return NextResponse.json(
                 { error: 'Products array is required and must not be empty' },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             )
         }
 
@@ -135,9 +142,20 @@ export async function POST(request: NextRequest) {
                 total: products.length,
                 errors: errors.length > 0 ? errors : undefined,
             },
+        }, {
+            headers: getCorsHeaders(origin)
         })
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        const origin = request.headers.get('origin')
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }

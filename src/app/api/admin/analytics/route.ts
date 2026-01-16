@@ -6,6 +6,7 @@ import {
     ForbiddenError,
 } from "@/lib/utils/errors";
 import type { Database } from "@/types/database";
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors';
 
 type ProfileRoleRow = { role: string };
 
@@ -31,9 +32,15 @@ type CategoryItem = {
     products: { categories: { name: string | null } | null } | null;
 };
 
+// OPTIONS /api/admin/analytics - Handle preflight request
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request);
+}
+
 // GET /api/admin/analytics - Get analytics data
 export async function GET(request: NextRequest) {
     try {
+        const origin = request.headers.get('origin');
         const supabase = await createClient();
 
         // Get authenticated user
@@ -184,9 +191,20 @@ export async function GET(request: NextRequest) {
                     end: new Date().toISOString(),
                 },
             },
+        }, {
+            headers: getCorsHeaders(origin),
         });
     } catch (error) {
-        return errorResponse(error);
+        const errorRes = errorResponse(error);
+        const headers = new Headers(errorRes.headers);
+        const origin = request.headers.get('origin');
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value);
+        });
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        });
     }
 }
 

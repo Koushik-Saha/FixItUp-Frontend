@@ -9,6 +9,7 @@ import {
     ForbiddenError,
 } from "@/lib/utils/errors";
 import type { Database } from "@/types/database";
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors';
 
 // --- DB helper types ---
 type Tables = Database["public"]["Tables"];
@@ -29,9 +30,15 @@ type InventoryWithRelations = InventoryRow & {
 
 type InventoryQuantityRow = Pick<InventoryRow, "quantity">;
 
+// OPTIONS /api/admin/inventory - Handle preflight request
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request);
+}
+
 // GET /api/admin/inventory - Get inventory overview
 export async function GET(request: NextRequest) {
     try {
+        const origin = request.headers.get('origin');
         const supabase = await createClient();
 
         // Get authenticated user
@@ -135,15 +142,27 @@ export async function GET(request: NextRequest) {
                     total_value: Number(totalValue.toFixed(2)),
                 },
             },
+        }, {
+            headers: getCorsHeaders(origin),
         });
     } catch (error) {
-        return errorResponse(error);
+        const errorRes = errorResponse(error);
+        const headers = new Headers(errorRes.headers);
+        const origin = request.headers.get('origin');
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value);
+        });
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        });
     }
 }
 
 // PUT /api/admin/inventory - Update inventory
 export async function PUT(request: NextRequest) {
     try {
+        const origin = request.headers.get('origin');
         const supabase = await createClient();
 
         // Get authenticated user
@@ -172,7 +191,7 @@ export async function PUT(request: NextRequest) {
         if (!inventory_id) {
             return NextResponse.json(
                 { error: "inventory_id is required" },
-                { status: 400 }
+                { status: 400, headers: getCorsHeaders(origin) }
             );
         }
 
@@ -186,7 +205,7 @@ export async function PUT(request: NextRequest) {
         if (fetchError || !currentInventory) {
             return NextResponse.json(
                 { error: "Inventory not found" },
-                { status: 404 }
+                { status: 404, headers: getCorsHeaders(origin) }
             );
         }
 
@@ -220,8 +239,19 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({
             message: "Inventory updated successfully",
             data: updated,
+        }, {
+            headers: getCorsHeaders(origin),
         });
     } catch (error) {
-        return errorResponse(error);
+        const errorRes = errorResponse(error);
+        const headers = new Headers(errorRes.headers);
+        const origin = request.headers.get('origin');
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value);
+        });
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        });
     }
 }

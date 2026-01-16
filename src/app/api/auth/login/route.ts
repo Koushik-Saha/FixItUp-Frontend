@@ -10,8 +10,40 @@ const loginSchema = z.object({
     password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
+// Helper function to add CORS headers
+function corsHeaders(origin: string | null) {
+    const allowedOrigins = [
+        'https://fix-it-admin-pearl.vercel.app',
+        'http://localhost:5001',
+        'http://localhost:3001',
+        'http://localhost:3000',
+    ]
+
+    const headers: Record<string, string> = {}
+    if (origin && allowedOrigins.includes(origin)) {
+        headers['Access-Control-Allow-Origin'] = origin
+        headers['Access-Control-Allow-Credentials'] = 'true'
+        headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    }
+    return headers
+}
+
+// OPTIONS /api/auth/login - Handle preflight requests
+export async function OPTIONS(request: NextRequest) {
+    const origin = request.headers.get('origin')
+    return new NextResponse(null, {
+        status: 200,
+        headers: {
+            ...corsHeaders(origin),
+            'Access-Control-Max-Age': '86400',
+        },
+    })
+}
+
 // POST /api/auth/login - User login
 export async function POST(request: NextRequest) {
+    const origin = request.headers.get('origin')
     try {
         const body = await request.json()
 
@@ -23,7 +55,7 @@ export async function POST(request: NextRequest) {
                     error: 'Validation failed',
                     errors: validation.error.flatten().fieldErrors,
                 },
-                { status: 400 }
+                { status: 400, headers: corsHeaders(origin) }
             )
         }
 
@@ -40,38 +72,37 @@ export async function POST(request: NextRequest) {
         if (error) {
             return NextResponse.json(
                 { error: error.message },
-                { status: 401 }
+                { status: 401, headers: corsHeaders(origin) }
             )
         }
 
         // Get user profile
         const { data: profile } = await supabase
             .from('profiles')
-            .select('id, full_name, phone, role, wholesale_tier, wholesale_status')
+            .select('*')
             .eq('id', data.user.id)
             .maybeSingle()
 
+        // Transform response to match admin panel format
         return NextResponse.json({
-            message: 'Login successful',
-            data: {
-                user: {
-                    id: data.user.id,
-                    email: data.user.email,
-                    ...profile ?? {},
-                },
-                session: {
-                    access_token: data.session?.access_token,
-                    refresh_token: data.session?.refresh_token,
-                    expires_at: data.session?.expires_at,
-                },
+            user: {
+                id: data.user.id,
+                email: data.user.email || '',
+                name: profile?.full_name || '',
+                role: profile?.role || 'customer',
+                createdAt: data.user.created_at || new Date().toISOString(),
+                lastLoginAt: data.user.last_sign_in_at || undefined,
+                // Also include full profile for frontend use
+                ...profile ?? {},
             },
-        })
+            message: 'Login successful',
+        }, { headers: corsHeaders(origin) })
 
     } catch (error) {
         console.error('Login error:', error)
         return NextResponse.json(
             { error: 'Login failed' },
-            { status: 500 }
+            { status: 500, headers: corsHeaders(origin) }
         )
     }
 }

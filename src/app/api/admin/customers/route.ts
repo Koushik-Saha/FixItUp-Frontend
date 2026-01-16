@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
+import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
 
 // Helper to check if user is admin
 async function checkAdmin(supabase: any, userId: string) {
@@ -18,8 +19,14 @@ async function checkAdmin(supabase: any, userId: string) {
     }
 }
 
+// OPTIONS /api/admin/customers - Handle CORS preflight
+export async function OPTIONS(request: NextRequest) {
+    return handleCorsPreflightRequest(request)
+}
+
 // GET /api/admin/customers - List customers with filters
 export async function GET(request: NextRequest) {
+    const origin = request.headers.get('origin')
     try {
         const supabase = await createClient()
         const { searchParams } = new URL(request.url)
@@ -101,9 +108,17 @@ export async function GET(request: NextRequest) {
                 total: count || 0,
                 totalPages: Math.ceil((count || 0) / limit),
             },
-        })
+        }, { headers: getCorsHeaders(origin) })
 
     } catch (error) {
-        return errorResponse(error)
+        const errorRes = errorResponse(error)
+        const headers = new Headers(errorRes.headers)
+        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
+            headers.set(key, value)
+        })
+        return new NextResponse(errorRes.body, {
+            status: errorRes.status,
+            headers,
+        })
     }
 }
