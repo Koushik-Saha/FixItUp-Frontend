@@ -50,22 +50,36 @@ export async function GET(request: NextRequest) {
         let user = null
         let authError = null
 
+        console.log('🔍 /api/auth/me - Origin:', origin);
+        console.log('🔍 /api/auth/me - Has Authorization header:', !!authHeader);
+
         if (authHeader?.startsWith('Bearer ')) {
             // Extract token from Authorization header
             const token = authHeader.substring(7)
+            console.log('🔍 /api/auth/me - Using Bearer token:', token.substring(0, 20) + '...');
+
             const { data, error } = await supabase.auth.getUser(token)
             user = data.user
             authError = error
+
+            console.log('🔍 /api/auth/me - Bearer auth result:', { hasUser: !!user, error: error?.message });
         } else {
             // Fall back to cookie-based auth
+            console.log('🔍 /api/auth/me - Using cookie-based auth');
+
             const { data, error } = await supabase.auth.getUser()
             user = data.user
             authError = error
+
+            console.log('🔍 /api/auth/me - Cookie auth result:', { hasUser: !!user, error: error?.message });
         }
 
         if (authError || !user) {
+            console.error('❌ /api/auth/me - Authentication failed:', authError?.message);
             throw new UnauthorizedError('Not authenticated')
         }
+
+        console.log('✅ /api/auth/me - User authenticated:', user.email);
 
         // Get profile
         const { data: profile, error: profileError } = await supabase
