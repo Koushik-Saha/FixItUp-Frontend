@@ -80,8 +80,23 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // Get current user session
-    const { data: { user }, error } = await supabase.auth.getUser()
+    // Get current user session - check Authorization header first (for cross-domain admin panel)
+    const authHeader = request.headers.get('authorization')
+    let user = null
+    let error = null
+
+    if (authHeader?.startsWith('Bearer ')) {
+        // Extract token from Authorization header
+        const token = authHeader.substring(7)
+        const { data, error: authError } = await supabase.auth.getUser(token)
+        user = data.user
+        error = authError
+    } else {
+        // Fall back to cookie-based auth
+        const { data, error: authError } = await supabase.auth.getUser()
+        user = data.user
+        error = authError
+    }
 
     const pathname = request.nextUrl.pathname
 
