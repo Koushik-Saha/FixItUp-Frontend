@@ -45,8 +45,24 @@ export async function GET(request: NextRequest) {
 
         type Profile = Database['public']['Tables']['profiles']['Row']
 
-        // Get authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        // Check for Authorization header (for cross-domain admin panel)
+        const authHeader = request.headers.get('authorization')
+        let user = null
+        let authError = null
+
+        if (authHeader?.startsWith('Bearer ')) {
+            // Extract token from Authorization header
+            const token = authHeader.substring(7)
+            const { data, error } = await supabase.auth.getUser(token)
+            user = data.user
+            authError = error
+        } else {
+            // Fall back to cookie-based auth
+            const { data, error } = await supabase.auth.getUser()
+            user = data.user
+            authError = error
+        }
+
         if (authError || !user) {
             throw new UnauthorizedError('Not authenticated')
         }
