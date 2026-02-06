@@ -17,28 +17,29 @@ function ResetPasswordContent() {
     const [isLoading, setIsLoading] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
-    const [tokens, setTokens] = useState<{ access_token: string; refresh_token: string } | null>(null)
+    const [token, setToken] = useState<string | null>(null)
 
     const router = useRouter()
     const searchParams = useSearchParams()
 
     useEffect(() => {
-        // Extract tokens from URL hash (Supabase auth callback)
-        const hash = window.location.hash.substring(1)
-        const params = new URLSearchParams(hash)
-        
-        const accessToken = params.get('access_token')
-        const refreshToken = params.get('refresh_token')
+        // Extract token from query params (Custom Auth)
+        const tokenParam = searchParams.get('token')
 
-        if (accessToken && refreshToken) {
-            setTokens({ 
-                access_token: accessToken, 
-                refresh_token: refreshToken 
-            })
+        if (tokenParam) {
+            setToken(tokenParam)
         } else {
-            setError('Invalid or expired reset link')
+            // Check for legacy hash fragment just in case (optional, but cleaner to remove)
+            const hash = window.location.hash.substring(1)
+            const params = new URLSearchParams(hash)
+            const accessToken = params.get('access_token')
+            if (accessToken) {
+                setError('Legacy reset link detected. Please request a new password reset.')
+            } else {
+                setError('Invalid or missing reset token')
+            }
         }
-    }, [])
+    }, [searchParams])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -58,8 +59,8 @@ function ResetPasswordContent() {
             return
         }
 
-        if (!tokens) {
-            setError('Invalid reset link')
+        if (!token) {
+            setError('Invalid reset token')
             setIsLoading(false)
             return
         }
@@ -72,8 +73,7 @@ function ResetPasswordContent() {
                 },
                 body: JSON.stringify({
                     password,
-                    access_token: tokens.access_token,
-                    refresh_token: tokens.refresh_token,
+                    token
                 }),
             })
 
@@ -94,7 +94,7 @@ function ResetPasswordContent() {
         }
     }
 
-    if (!tokens && !error) {
+    if (!token && !error) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
@@ -109,7 +109,7 @@ function ResetPasswordContent() {
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 <div className="mb-6">
-                    <Link 
+                    <Link
                         href="/auth/login"
                         className="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
                     >
@@ -130,7 +130,7 @@ function ResetPasswordContent() {
                             Enter your new password below.
                         </CardDescription>
                     </CardHeader>
-                    
+
                     <CardContent className="space-y-6">
                         {message && (
                             <Alert className="border-green-200 bg-green-50">
@@ -139,7 +139,7 @@ function ResetPasswordContent() {
                                 </AlertDescription>
                             </Alert>
                         )}
-                        
+
                         {error && (
                             <Alert className="border-red-200 bg-red-50">
                                 <AlertDescription className="text-red-800">
@@ -201,10 +201,10 @@ function ResetPasswordContent() {
                                 </div>
                             </div>
 
-                            <Button 
-                                type="submit" 
+                            <Button
+                                type="submit"
                                 className="w-full h-11"
-                                disabled={isLoading || !tokens}
+                                disabled={isLoading || !token}
                             >
                                 {isLoading ? (
                                     <div className="flex items-center gap-2">

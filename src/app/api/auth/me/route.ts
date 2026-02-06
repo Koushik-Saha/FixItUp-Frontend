@@ -1,119 +1,113 @@
-// app/api/auth/me/route.ts
-// Get current user info
+import { NextResponse } from "next/server";
+import { getSession } from "@/lib/jwt";
+import prisma from "@/lib/prisma";
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
-import {Database} from "@/types/database";
-
-// Helper function to add CORS headers
-function corsHeaders(origin: string | null) {
-    const allowedOrigins = [
-        'https://fix-it-admin-pearl.vercel.app',
-        'http://localhost:5001',
-        'http://localhost:3001',
-        'http://localhost:3000',
-    ]
-
-    const headers: Record<string, string> = {}
-    if (origin && allowedOrigins.includes(origin)) {
-        headers['Access-Control-Allow-Origin'] = origin
-        headers['Access-Control-Allow-Credentials'] = 'true'
-        headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-    }
-    return headers
-}
-
-// OPTIONS /api/auth/me - Handle preflight requests
-export async function OPTIONS(request: NextRequest) {
-    const origin = request.headers.get('origin')
-    return new NextResponse(null, {
-        status: 200,
-        headers: {
-            ...corsHeaders(origin),
-            'Access-Control-Max-Age': '86400',
-        },
-    })
-}
-
-// GET /api/auth/me - Get current user
-export async function GET(request: NextRequest) {
-    const origin = request.headers.get('origin')
+// GET /api/auth/me - Get current user profile
+export async function GET() {
     try {
-        const supabase = await createClient()
+        const session = await getSession();
+        console.log("Session Check:", session ? "Valid" : "Null");
 
-        type Profile = Database['public']['Tables']['profiles']['Row']
-
-        // Check for Authorization header (for cross-domain admin panel)
-        const authHeader = request.headers.get('authorization')
-        let user = null
-        let authError = null
-
-        console.log('🔍 /api/auth/me - Origin:', origin);
-        console.log('🔍 /api/auth/me - Has Authorization header:', !!authHeader);
-
-        if (authHeader?.startsWith('Bearer ')) {
-            // Extract token from Authorization header
-            const token = authHeader.substring(7)
-            console.log('🔍 /api/auth/me - Using Bearer token:', token.substring(0, 20) + '...');
-
-            const { data, error } = await supabase.auth.getUser(token)
-            user = data.user
-            authError = error
-
-            console.log('🔍 /api/auth/me - Bearer auth result:', { hasUser: !!user, error: error?.message });
-        } else {
-            // Fall back to cookie-based auth
-            console.log('🔍 /api/auth/me - Using cookie-based auth');
-
-            const { data, error } = await supabase.auth.getUser()
-            user = data.user
-            authError = error
-
-            console.log('🔍 /api/auth/me - Cookie auth result:', { hasUser: !!user, error: error?.message });
+        if (!session) {
+            console.log("Session invalid, returning 401");
+            return NextResponse.json({ user: null }, { status: 401 });
         }
 
-        if (authError || !user) {
-            console.error('❌ /api/auth/me - Authentication failed:', authError?.message);
-            throw new UnauthorizedError('Not authenticated')
+        console.log("Session valid for UserID:", session.id);
+        const user = await prisma.user.findUnique({
+            where: { id: session.id },
+            select: {
+                id: true,
+                email: true,
+                fullName: true,
+                phone: true,
+                role: true,
+                wholesaleStatus: true,
+                wholesaleTier: true,
+                createdAt: true,
+            }
+        });
+
+        if (!user) {
+            return NextResponse.json({ user: null }, { status: 404 });
         }
 
-        console.log('✅ /api/auth/me - User authenticated:', user.email);
+        // Map Prisma camelCase to expected response format if necessary
+        // The auth-client expects camelCase for new implementation, but
+        // confirming alignment with `src/types/auth.ts` or `auth-client.ts` usage.
+        // Looking at auth-client.ts, it expects snake_case for legacy compat OR camelCase if we update it.
+        // We are updating auth-client.ts too, so let's stick to camelCase API response
+        // but map to what the frontend expects.
 
-        // Get profile
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single<Profile>()
+        // Actually, the legacy `getCurrentUser` returned snake_case for some fields (full_name, wholesale_status).
+        // I will map them to match the User interface in `auth-client.ts` and `types/auth.ts`.
 
-        if (profileError) {
-            console.error('Profile fetch error:', profileError)
-        }
-
-        // Transform response to match admin panel format
-        return NextResponse.json({
+        const responseUser = {
             id: user.id,
-            email: user.email || '',
-            name: profile?.full_name ?? '',
-            role: profile?.role ?? 'customer',
-            createdAt: user.created_at || new Date().toISOString(),
-            lastLoginAt: user.last_sign_in_at || undefined,
-            // Also include full profile for frontend use
-            ...profile ?? {},
-        }, { headers: corsHeaders(origin) })
+            email: user.email,
+            full_name: user.fullName,
+            phone: user.phone || undefined,
+            role: user.role.toLowerCase(), // Prisma enum is uppercase
+            wholesale_status: user.wholesaleStatus?.toLowerCase(),
+            wholesale_tier: user.wholesaleTier?.toLowerCase()
+        };
+
+        return NextResponse.json({ user: responseUser });
 
     } catch (error) {
-        const errorRes = errorResponse(error)
-        // Add CORS headers to error response
-        const headers = new Headers(errorRes.headers)
-        Object.entries(corsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+        console.error("Profile fetch error:", error);
+        return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
+    }
+}
+
+// PUT /api/auth/me - Update user profile
+export async function PUT(request: Request) {
+    try {
+        const session = await getSession();
+
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await request.json();
+        const { full_name, phone } = body;
+
+        // Validation
+        if (!full_name) {
+            return NextResponse.json({ error: "Full name is required" }, { status: 400 });
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: session.id },
+            data: {
+                fullName: full_name,
+                phone: phone || null,
+            },
+            select: {
+                id: true,
+                email: true,
+                fullName: true,
+                phone: true,
+                role: true,
+                wholesaleStatus: true,
+                wholesaleTier: true,
+            }
+        });
+
+        const responseUser = {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            full_name: updatedUser.fullName,
+            phone: updatedUser.phone || undefined,
+            role: updatedUser.role.toLowerCase(),
+            wholesale_status: updatedUser.wholesaleStatus?.toLowerCase(),
+            wholesale_tier: updatedUser.wholesaleTier?.toLowerCase()
+        };
+
+        return NextResponse.json({ user: responseUser });
+
+    } catch (error) {
+        console.error("Profile update error:", error);
+        return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
     }
 }

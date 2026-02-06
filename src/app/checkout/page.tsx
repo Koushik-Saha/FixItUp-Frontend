@@ -16,6 +16,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import ReCAPTCHA from 'react-google-recaptcha'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 // Types that roughly match /api/cart response
 type CartItem = {
@@ -356,9 +358,9 @@ export default function CheckoutPage() {
                         <p className="mt-1 text-neutral-400 text-sm">
                             Secure checkout •{' '}
                             <span className="inline-flex items-center gap-1">
-                <Lock className="w-3 h-3" />
-                SSL encrypted
-              </span>
+                                <Lock className="w-3 h-3" />
+                                SSL encrypted
+                            </span>
                         </p>
                     </div>
                 </div>
@@ -379,22 +381,20 @@ export default function CheckoutPage() {
                                 <button
                                     type="button"
                                     onClick={() => setCheckoutType('guest')}
-                                    className={`flex-1 px-6 py-3 rounded-lg font-medium text-sm transition-colors ${
-                                        checkoutType === 'guest'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-300'
-                                    }`}
+                                    className={`flex-1 px-6 py-3 rounded-lg font-medium text-sm transition-colors ${checkoutType === 'guest'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-300'
+                                        }`}
                                 >
                                     Guest Checkout
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setCheckoutType('login')}
-                                    className={`flex-1 px-6 py-3 rounded-lg font-medium text-sm transition-colors ${
-                                        checkoutType === 'login'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-300'
-                                    }`}
+                                    className={`flex-1 px-6 py-3 rounded-lg font-medium text-sm transition-colors ${checkoutType === 'login'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-300'
+                                        }`}
                                 >
                                     Login
                                 </button>
@@ -402,12 +402,12 @@ export default function CheckoutPage() {
 
                             {checkoutType === 'login' && (
                                 <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-neutral-400">
-                    Already have an account?{' '}
-                      <Link href="/auth/login" className="text-blue-400 hover:text-blue-300">
-                      Login &amp; Continue
-                    </Link>
-                  </span>
+                                    <span className="text-neutral-400">
+                                        Already have an account?{' '}
+                                        <Link href="/auth/login" className="text-blue-400 hover:text-blue-300">
+                                            Login &amp; Continue
+                                        </Link>
+                                    </span>
                                     <Link
                                         href="/auth/register"
                                         className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
@@ -432,11 +432,11 @@ export default function CheckoutPage() {
                                         <User className="w-3 h-3" />
                                         First Name *
                                     </label>
-                                    <input
+                                    <Input
                                         name="firstName"
                                         value={shippingInfo.firstName}
                                         onChange={handleShippingChange}
-                                        className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="mt-1 bg-neutral-950 border-neutral-800"
                                     />
                                     {errors.firstName && (
                                         <p className="mt-1 text-xs text-red-400">{errors.firstName}</p>
@@ -447,11 +447,11 @@ export default function CheckoutPage() {
                                         <User className="w-3 h-3" />
                                         Last Name *
                                     </label>
-                                    <input
+                                    <Input
                                         name="lastName"
                                         value={shippingInfo.lastName}
                                         onChange={handleShippingChange}
-                                        className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="mt-1 bg-neutral-950 border-neutral-800"
                                     />
                                     {errors.lastName && (
                                         <p className="mt-1 text-xs text-red-400">{errors.lastName}</p>
@@ -465,12 +465,12 @@ export default function CheckoutPage() {
                                         <Mail className="w-3 h-3" />
                                         Email *
                                     </label>
-                                    <input
+                                    <Input
                                         type="email"
                                         name="email"
                                         value={shippingInfo.email}
                                         onChange={handleShippingChange}
-                                        className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="mt-1 bg-neutral-950 border-neutral-800"
                                     />
                                     {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
                                 </div>
@@ -479,13 +479,13 @@ export default function CheckoutPage() {
                                         <Phone className="w-3 h-3" />
                                         Phone *
                                     </label>
-                                    <input
+                                    <Input
                                         type="tel"
                                         name="phone"
                                         placeholder="(555) 123-4567"
                                         value={shippingInfo.phone}
                                         onChange={handleShippingChange}
-                                        className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="mt-1 bg-neutral-950 border-neutral-800"
                                     />
                                     {errors.phone && <p className="mt-1 text-xs text-red-400">{errors.phone}</p>}
                                 </div>
@@ -496,11 +496,11 @@ export default function CheckoutPage() {
                                     <label className="flex items-center gap-1 text-xs font-medium text-neutral-400 uppercase tracking-wide">
                                         Address *
                                     </label>
-                                    <input
+                                    <Input
                                         name="address"
                                         value={shippingInfo.address}
                                         onChange={handleShippingChange}
-                                        className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="mt-1 bg-neutral-950 border-neutral-800"
                                     />
                                     {errors.address && (
                                         <p className="mt-1 text-xs text-red-400">{errors.address}</p>
@@ -512,11 +512,11 @@ export default function CheckoutPage() {
                                         <label className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
                                             City *
                                         </label>
-                                        <input
+                                        <Input
                                             name="city"
                                             value={shippingInfo.city}
                                             onChange={handleShippingChange}
-                                            className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="mt-1 bg-neutral-950 border-neutral-800"
                                         />
                                         {errors.city && <p className="mt-1 text-xs text-red-400">{errors.city}</p>}
                                     </div>
@@ -524,12 +524,12 @@ export default function CheckoutPage() {
                                         <label className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
                                             State *
                                         </label>
-                                        <input
+                                        <Input
                                             name="state"
                                             placeholder="CA"
                                             value={shippingInfo.state}
                                             onChange={handleShippingChange}
-                                            className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="mt-1 bg-neutral-950 border-neutral-800"
                                         />
                                         {errors.state && <p className="mt-1 text-xs text-red-400">{errors.state}</p>}
                                     </div>
@@ -537,11 +537,11 @@ export default function CheckoutPage() {
                                         <label className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
                                             ZIP Code *
                                         </label>
-                                        <input
+                                        <Input
                                             name="zipCode"
                                             value={shippingInfo.zipCode}
                                             onChange={handleShippingChange}
-                                            className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="mt-1 bg-neutral-950 border-neutral-800"
                                         />
                                         {errors.zipCode && (
                                             <p className="mt-1 text-xs text-red-400">{errors.zipCode}</p>
@@ -561,11 +561,10 @@ export default function CheckoutPage() {
                                 {SHIPPING_METHODS.map((method) => (
                                     <label
                                         key={method.id}
-                                        className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm cursor-pointer transition-colors ${
-                                            shippingMethod === method.id
-                                                ? 'border-blue-500 bg-blue-500/10'
-                                                : 'border-neutral-800 hover:border-neutral-700'
-                                        }`}
+                                        className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm cursor-pointer transition-colors ${shippingMethod === method.id
+                                            ? 'border-blue-500 bg-blue-500/10'
+                                            : 'border-neutral-800 hover:border-neutral-700'
+                                            }`}
                                     >
                                         <div>
                                             <p className="font-medium">{method.name}</p>
@@ -598,22 +597,20 @@ export default function CheckoutPage() {
                                 <button
                                     type="button"
                                     onClick={() => setPaymentMethod('card')}
-                                    className={`flex-1 px-6 py-3 rounded-lg font-medium text-sm transition-colors ${
-                                        paymentMethod === 'card'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-300'
-                                    }`}
+                                    className={`flex-1 px-6 py-3 rounded-lg font-medium text-sm transition-colors ${paymentMethod === 'card'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-300'
+                                        }`}
                                 >
                                     Credit Card
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setPaymentMethod('paypal')}
-                                    className={`flex-1 px-6 py-3 rounded-lg font-medium text-sm transition-colors ${
-                                        paymentMethod === 'paypal'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-300'
-                                    }`}
+                                    className={`flex-1 px-6 py-3 rounded-lg font-medium text-sm transition-colors ${paymentMethod === 'paypal'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-300'
+                                        }`}
                                 >
                                     PayPal
                                 </button>
@@ -625,11 +622,11 @@ export default function CheckoutPage() {
                                         <label className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
                                             Card Number *
                                         </label>
-                                        <input
+                                        <Input
                                             name="cardNumber"
                                             value={billingInfo.cardNumber}
                                             onChange={handleBillingChange}
-                                            className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="mt-1 bg-neutral-950 border-neutral-800"
                                         />
                                         {errors.cardNumber && (
                                             <p className="mt-1 text-xs text-red-400">{errors.cardNumber}</p>
@@ -639,11 +636,11 @@ export default function CheckoutPage() {
                                         <label className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
                                             Name on Card *
                                         </label>
-                                        <input
+                                        <Input
                                             name="cardName"
                                             value={billingInfo.cardName}
                                             onChange={handleBillingChange}
-                                            className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="mt-1 bg-neutral-950 border-neutral-800"
                                         />
                                         {errors.cardName && (
                                             <p className="mt-1 text-xs text-red-400">{errors.cardName}</p>
@@ -654,12 +651,12 @@ export default function CheckoutPage() {
                                             <label className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
                                                 Expiry Date *
                                             </label>
-                                            <input
+                                            <Input
                                                 name="expiryDate"
                                                 placeholder="MM/YY"
                                                 value={billingInfo.expiryDate}
                                                 onChange={handleBillingChange}
-                                                className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="mt-1 bg-neutral-950 border-neutral-800"
                                             />
                                             {errors.expiryDate && (
                                                 <p className="mt-1 text-xs text-red-400">{errors.expiryDate}</p>
@@ -669,11 +666,11 @@ export default function CheckoutPage() {
                                             <label className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
                                                 CVV *
                                             </label>
-                                            <input
+                                            <Input
                                                 name="cvv"
                                                 value={billingInfo.cvv}
                                                 onChange={handleBillingChange}
-                                                className="mt-1 w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="mt-1 bg-neutral-950 border-neutral-800"
                                             />
                                             {errors.cvv && <p className="mt-1 text-xs text-red-400">{errors.cvv}</p>}
                                         </div>
@@ -695,9 +692,9 @@ export default function CheckoutPage() {
                             <div className="flex items-center justify-between">
                                 <h2 className="text-base font-semibold">Order Summary</h2>
                                 <span className="text-xs text-neutral-400">
-                  {cartSummary?.total_items || 0} item
+                                    {cartSummary?.total_items || 0} item
                                     {(cartSummary?.total_items || 0) !== 1 ? 's' : ''}
-                </span>
+                                </span>
                             </div>
 
                             <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
@@ -750,10 +747,10 @@ export default function CheckoutPage() {
                                 </div>
                                 {appliedDiscount && (
                                     <div className="flex items-center justify-between text-green-400">
-                    <span className="flex items-center gap-1">
-                      <Tag className="w-3 h-3" />
-                      Discount ({appliedDiscount.code})
-                    </span>
+                                        <span className="flex items-center gap-1">
+                                            <Tag className="w-3 h-3" />
+                                            Discount ({appliedDiscount.code})
+                                        </span>
                                         <span>- ${discountAmount.toFixed(2)}</span>
                                     </div>
                                 )}
@@ -780,33 +777,36 @@ export default function CheckoutPage() {
 
                             {/* Discount code */}
                             <div className="mt-2 flex items-center gap-2">
-                                <input
+                                <Input
                                     placeholder="Discount code"
                                     value={discountCode}
                                     onChange={(e) => setDiscountCode(e.target.value)}
-                                    className="flex-1 rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="flex-1 bg-neutral-950 border-neutral-800"
                                 />
-                                <button
+                                <Button
                                     type="button"
                                     onClick={applyDiscount}
-                                    className="px-3 py-2 rounded-lg bg-neutral-800 text-sm font-medium hover:bg-neutral-700"
+                                    variant="secondary"
+                                    className="bg-neutral-800 hover:bg-neutral-700 text-white"
                                 >
                                     Apply
-                                </button>
+                                </Button>
                             </div>
 
-                            <div className="border-t border-neutral-800 pt-3 flex items-center justify-between">
-                                <div>
+                            <div className="border-t border-neutral-800 pt-3">
+                                <div className="flex items-center justify-between mb-4">
                                     <p className="text-xs uppercase text-neutral-400 tracking-wide">Total</p>
                                     <p className="text-xl font-semibold">${total.toFixed(2)}</p>
                                 </div>
-                                <button
+                                <Button
                                     type="submit"
                                     disabled={submitting || cartItems.length === 0}
-                                    className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold shadow-sm disabled:opacity-60 disabled:pointer-events-none"
+                                    loading={submitting}
+                                    size="lg"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                                 >
                                     {submitting ? 'Placing order...' : 'Place Order Securely'}
-                                </button>
+                                </Button>
                             </div>
 
                             {errors.cart && <p className="mt-2 text-xs text-red-400">{errors.cart}</p>}

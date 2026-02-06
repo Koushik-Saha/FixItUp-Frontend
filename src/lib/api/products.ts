@@ -8,33 +8,36 @@ export interface Product {
     sku: string
     description: string
     brand: string
-    device_model: string
-    category_id: string
-    base_price: number
-    wholesale_tier1_discount: number
-    wholesale_tier2_discount: number
-    wholesale_tier3_discount: number
+    deviceModel: string
+    productType: string
+    categoryId: string
+    basePrice: number
+    tier1Discount: number
+    tier2Discount: number
+    tier3Discount: number
     images: string[]
     thumbnail: string
-    total_stock: number
-    is_active: boolean
-    is_featured: boolean
-    is_new: boolean
-    created_at: string
-    updated_at: string
-    
+    totalStock: number
+    isActive: boolean
+    isFeatured: boolean
+    isNew: boolean
+    createdAt: string
+    updatedAt: string
+
     // Calculated fields
     displayPrice?: number
     originalPrice?: number
     discountPercentage?: number
     isWholesale?: boolean
-    
+
     // Category data (joined)
     category?: {
         id: string
         name: string
         slug: string
     }
+
+    specifications?: Record<string, string | number | boolean>
 }
 
 export interface ProductsResponse {
@@ -81,7 +84,7 @@ export async function getProducts(params: {
     order?: 'asc' | 'desc'
 } = {}): Promise<ProductsResponse> {
     const searchParams = new URLSearchParams()
-    
+
     if (params.category) searchParams.set('category', params.category)
     if (params.brand) searchParams.set('brand', params.brand)
     if (params.device) searchParams.set('device', params.device)
@@ -118,7 +121,7 @@ export async function searchProducts(params: {
     limit?: number
 } = {}): Promise<SearchResponse> {
     const searchParams = new URLSearchParams()
-    
+
     if (params.query) searchParams.set('q', params.query)
     if (params.category) searchParams.set('category', params.category)
     if (params.brand) searchParams.set('brand', params.brand)

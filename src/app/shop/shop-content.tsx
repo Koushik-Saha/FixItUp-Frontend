@@ -30,7 +30,7 @@ export default function ShopContent() {
     const [error, setError] = useState<string | null>(null)
     const [cartLoading, setCartLoading] = useState<string | null>(null)
     const [addToCartMessage, setAddToCartMessage] = useState<string | null>(null)
-    
+
     // Filter states
     const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '')
     const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || '')
@@ -40,7 +40,7 @@ export default function ShopContent() {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [showFilters, setShowFilters] = useState(false)
-    
+
     // Pagination
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
@@ -52,26 +52,29 @@ export default function ShopContent() {
         try {
             setLoading(true)
             setError(null)
-            
+
             const params: any = {
                 page: currentPage,
                 limit,
                 sort: sortBy,
                 order: sortOrder,
             }
-            
+
             if (searchQuery) params.search = searchQuery
             if (selectedCategory) params.category = selectedCategory
             if (selectedBrand) params.brand = selectedBrand
-            
+            // Add device filter
+            const deviceParam = searchParams?.get('device')
+            if (deviceParam) params.device = deviceParam
+
             const response = await getProducts(params)
-            
+
             // Filter by price range on client side (since API doesn't support this directly)
             const filteredProducts = response.data.filter(product => {
-                const price = product.displayPrice || product.base_price
+                const price = product.displayPrice || product.basePrice
                 return price >= priceRange[0] && price <= priceRange[1]
             })
-            
+
             setProducts(filteredProducts)
             setTotalProducts(response.pagination.total)
             setTotalPages(response.pagination.totalPages)
@@ -88,7 +91,7 @@ export default function ShopContent() {
             router.push('/auth/login')
             return
         }
-        
+
         try {
             setCartLoading(productId)
             await addToCart(productId, 1)
@@ -108,7 +111,7 @@ export default function ShopContent() {
 
     // Handle sort change
     const handleSortChange = (value: string) => {
-        const option = SORT_OPTIONS.find(opt => 
+        const option = SORT_OPTIONS.find(opt =>
             value === `${opt.value}-${opt.order || 'desc'}`
         )
         if (option) {
@@ -131,7 +134,7 @@ export default function ShopContent() {
     // Get unique categories and brands from products
     const categories = [...new Set(products.map(p => p.category?.name).filter(Boolean))]
     const brands = [...new Set(products.map(p => p.brand).filter(Boolean))]
-    
+
     const hasActiveFilters = searchQuery || selectedCategory || selectedBrand || priceRange[0] > 0 || priceRange[1] < 1000
 
     if (loading && products.length === 0) {
@@ -152,10 +155,10 @@ export default function ShopContent() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                         {error}
-                        <Button 
-                            onClick={loadProducts} 
-                            variant="outline" 
-                            size="sm" 
+                        <Button
+                            onClick={loadProducts}
+                            variant="outline"
+                            size="sm"
                             className="mt-2 w-full"
                         >
                             Try Again
@@ -321,8 +324,8 @@ export default function ShopContent() {
                                         className="px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-sm"
                                     >
                                         {SORT_OPTIONS.map(option => (
-                                            <option 
-                                                key={`${option.value}-${option.order || 'desc'}`} 
+                                            <option
+                                                key={`${option.value}-${option.order || 'desc'}`}
                                                 value={`${option.value}-${option.order || 'desc'}`}
                                             >
                                                 {option.label}
@@ -416,11 +419,11 @@ export default function ShopContent() {
                                     >
                                         Previous
                                     </Button>
-                                    
+
                                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                         const page = currentPage <= 3 ? i + 1 : currentPage - 2 + i
                                         if (page > totalPages) return null
-                                        
+
                                         return (
                                             <Button
                                                 key={page}
@@ -432,7 +435,7 @@ export default function ShopContent() {
                                             </Button>
                                         )
                                     })}
-                                    
+
                                     <Button
                                         variant="outline"
                                         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
@@ -460,8 +463,8 @@ interface ProductCardProps {
 }
 
 function ProductCard({ product, viewMode, onAddToCart, isLoading, user }: ProductCardProps) {
-    const price = product.displayPrice || product.base_price
-    const originalPrice = product.originalPrice || product.base_price
+    const price = product.displayPrice || product.basePrice
+    const originalPrice = product.originalPrice || product.basePrice
     const discountPercentage = product.discountPercentage || 0
     const isWholesale = product.isWholesale || false
 
@@ -496,7 +499,7 @@ function ProductCard({ product, viewMode, onAddToCart, isLoading, user }: Produc
                                     </h3>
                                 </Link>
                                 <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                                    SKU: {product.sku} | {product.brand} | {product.device_model}
+                                    SKU: {product.sku} | {product.brand} | {product.deviceModel}
                                 </p>
                             </div>
                             <div className="text-right">
@@ -516,20 +519,20 @@ function ProductCard({ product, viewMode, onAddToCart, isLoading, user }: Produc
 
                         <div className="flex items-center gap-4 mb-3">
                             {/* Stock */}
-                            <StockIndicator stock={product.total_stock} showCount={true} size="sm" />
+                            <StockIndicator stock={product.totalStock} showCount={true} size="sm" />
 
                             {/* Badges */}
-                            {product.is_new && (
+                            {product.isNew && (
                                 <span className="bg-green-500 text-white text-xs px-2 py-1 rounded font-bold">NEW</span>
                             )}
-                            {product.is_featured && (
+                            {product.isFeatured && (
                                 <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded font-bold">FEATURED</span>
                             )}
                         </div>
 
-                        <Button 
+                        <Button
                             onClick={() => onAddToCart(product.id)}
-                            disabled={isLoading || product.total_stock <= 0 || !user}
+                            disabled={isLoading || product.totalStock <= 0 || !user}
                             className="w-full md:w-auto"
                         >
                             {isLoading ? (
@@ -562,13 +565,13 @@ function ProductCard({ product, viewMode, onAddToCart, isLoading, user }: Produc
                         <span className="text-6xl">{product.brand?.[0] || 'P'}</span>
                     </div>
                 )}
-                
+
                 {/* Badges */}
                 <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    {product.is_new && (
+                    {product.isNew && (
                         <span className="bg-green-500 text-white text-xs px-2 py-1 rounded font-bold">NEW</span>
                     )}
-                    {product.is_featured && (
+                    {product.isFeatured && (
                         <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded font-bold">FEATURED</span>
                     )}
                     {discountPercentage > 0 && (
@@ -588,7 +591,7 @@ function ProductCard({ product, viewMode, onAddToCart, isLoading, user }: Produc
                 </Link>
 
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
-                    {product.brand} | {product.device_model}
+                    {product.brand} | {product.deviceModel}
                 </p>
 
                 {/* Price */}
@@ -609,13 +612,13 @@ function ProductCard({ product, viewMode, onAddToCart, isLoading, user }: Produc
 
                 {/* Stock */}
                 <div className="mb-3">
-                    <StockIndicator stock={product.total_stock} showCount={true} size="sm" />
+                    <StockIndicator stock={product.totalStock} showCount={true} size="sm" />
                 </div>
 
                 {/* Add to Cart */}
-                <Button 
+                <Button
                     onClick={() => onAddToCart(product.id)}
-                    disabled={isLoading || product.total_stock <= 0 || !user}
+                    disabled={isLoading || product.totalStock <= 0 || !user}
                     className="w-full"
                 >
                     {isLoading ? (

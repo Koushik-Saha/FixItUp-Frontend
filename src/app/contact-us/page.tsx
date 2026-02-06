@@ -144,7 +144,7 @@ export default function ContactPage() {
 
                             <div>
                                 <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">Message *</label>
-                                <textarea name="message" value={formData.message} onChange={handleChange} rows={6} className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white resize-none ${errors.message ? 'border-red-500' : 'border-neutral-300 dark:border-neutral-600'}`} placeholder="Please describe your inquiry in detail..." />
+                                <textarea name="message" value={formData.message} onChange={handleChange} rows={6} className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white resize-none ${errors.message ? 'border-red-500' : 'border-neutral-300 dark:border-neutral-600'}`} placeholder="We&apos;re here to help! Send us a message and we&apos;ll respond as soon as possible." />
                                 {errors.message && <p className="text-red-600 text-sm mt-1">{errors.message}</p>}
                             </div>
 

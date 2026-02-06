@@ -1,201 +1,197 @@
-// app/api/products/route.ts
-// Products API - List and Create
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { errorResponse, NotFoundError, UnauthorizedError, ForbiddenError } from '@/lib/utils/errors'
+import prisma from '@/lib/prisma'
+import { errorResponse, UnauthorizedError, ForbiddenError, ValidationError } from '@/lib/utils/errors'
 import { productSchema, validateData, formatValidationErrors } from '@/utils/validation'
+import { Prisma } from '@prisma/client'
 
-// GET /api/products - List products with filtering
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
+
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
+}
+
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
+
 export async function GET(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
+        const { searchParams } = new URL(request.url);
 
+        // Params
+        const category = searchParams.get('category');
+        const brand = searchParams.get('brand');
+        const device = searchParams.get('device');
+        const search = searchParams.get('search');
+        const featured = searchParams.get('featured');
+        const isNew = searchParams.get('new');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const sortBy = searchParams.get('sort') || 'createdAt';
+        const sortOrder = searchParams.get('order') === 'asc' ? 'asc' : 'desc';
+        const skip = (page - 1) * limit;
 
-        const supabase = await createClient()
-        const { searchParams } = new URL(request.url)
+        const where: Prisma.ProductWhereInput = {
+            isActive: true
+        };
 
-        // Get query parameters
-        const category = searchParams.get('category')
-        const brand = searchParams.get('brand')
-        const device = searchParams.get('device')
-        const search = searchParams.get('search')
-        const featured = searchParams.get('featured')
-        const isNew = searchParams.get('new')
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '20')
-        const sortBy = searchParams.get('sort') || 'created_at'
-        const sortOrder = searchParams.get('order') || 'desc'
-
-        // Calculate pagination
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-
-        // Build query
-        let query = supabase
-            .from('products')
-            .select('*, category:categories(id, name, slug)', { count: 'exact' })
-            .eq('is_active', true)
-
-
-        // Apply filters
         if (category) {
-            // If category is a slug, look up the ID first
-            const { data: categoryData, error: categoryError } = await (supabase
-                .from('categories') as any)
-                .select('id')
-                .eq('slug', category)
-                .maybeSingle()
-
-            if (categoryData && !categoryError) {
-                query = query.eq('category_id', categoryData.id)
-            }
-            // If category lookup fails, the filter is ignored (possibly it's a brand or invalid slug)
+            // Find category by slug first
+            const cat = await prisma.category.findUnique({
+                where: { slug: category },
+                select: { id: true }
+            });
+            if (cat) where.categoryId = cat.id;
         }
 
-        if (brand) {
-            query = query.ilike('brand', brand)
-        }
-
-        if (device) {
-            query = query.ilike('device_model', `%${device}%`)
-        }
+        if (brand) where.brand = { contains: brand, mode: 'insensitive' };
+        if (device) where.deviceModel = { contains: device, mode: 'insensitive' };
 
         if (search) {
-            query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,sku.ilike.%${search}%`)
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+                { sku: { contains: search, mode: 'insensitive' } },
+            ];
         }
 
-        if (featured === 'true') {
-            query = query.eq('is_featured', true)
+        if (featured === 'true') where.isFeatured = true;
+        if (isNew === 'true') where.isNew = true;
+
+        // Pricing Context
+        const userId = request.headers.get('x-user-id');
+        let userRole = null;
+        let wholesaleTier = null;
+
+        if (userId) {
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { role: true, wholesaleTier: true }
+            });
+            if (user) {
+                userRole = user.role;
+                wholesaleTier = user.wholesaleTier;
+            }
         }
 
-        if (isNew === 'true') {
-            query = query.eq('is_new', true)
-        }
+        const [products, count] = await Promise.all([
+            prisma.product.findMany({
+                where,
+                include: {
+                    category: { select: { id: true, name: true, slug: true } }
+                },
+                orderBy: { [sortBy === 'created_at' ? 'createdAt' : sortBy]: sortOrder },
+                skip,
+                take: limit
+            }),
+            prisma.product.count({ where })
+        ]);
 
-        // Apply sorting
-        query = query.order(sortBy, { ascending: sortOrder === 'asc' })
+        // Calculate Pricing
+        const productsWithPricing = products.map(product => {
+            let displayPrice = Number(product.basePrice);
+            let discountPercentage = 0;
 
-        // Apply pagination
-        query = query.range(from, to)
+            if (userRole === 'WHOLESALE' && wholesaleTier) {
+                if (wholesaleTier === 'TIER1') discountPercentage = Number(product.tier1Discount);
+                else if (wholesaleTier === 'TIER2') discountPercentage = Number(product.tier2Discount);
+                else if (wholesaleTier === 'TIER3') discountPercentage = Number(product.tier3Discount);
 
-        // Execute query
-        const { data: products, error, count } = await query
-
-        if (error) {
-            console.error('Database error:', error)
-            throw new Error('Failed to fetch products')
-        }
-
-        // Calculate pricing for user
-        const { data: { user } } = await supabase.auth.getUser()
-        let userProfile = null
-
-        if (user) {
-            const { data: profile } = await (supabase
-                .from('profiles') as any)
-                .select('role, wholesale_tier')
-                .eq('id', user.id)
-                .single()
-
-            userProfile = profile
-        }
-
-        // Add calculated prices to products
-        const productsWithPricing = products?.map((product: any) => {
-            let displayPrice = product.base_price
-            let discountPercentage = 0
-
-            // Apply wholesale discount if applicable
-            if (userProfile?.role === 'wholesale') {
-                switch (userProfile.wholesale_tier) {
-                    case 'tier1':
-                        discountPercentage = product.wholesale_tier1_discount
-                        break
-                    case 'tier2':
-                        discountPercentage = product.wholesale_tier2_discount
-                        break
-                    case 'tier3':
-                        discountPercentage = product.wholesale_tier3_discount
-                        break
-                }
-                displayPrice = product.base_price * (1 - discountPercentage / 100)
+                displayPrice = displayPrice * (1 - discountPercentage / 100);
             }
 
             return {
                 ...product,
                 displayPrice: Number(displayPrice.toFixed(2)),
                 discountPercentage,
-                originalPrice: product.base_price,
-                isWholesale: userProfile?.role === 'wholesale',
-            }
-        })
+                originalPrice: Number(product.basePrice),
+                isWholesale: userRole === 'WHOLESALE'
+            };
+        });
 
         return NextResponse.json({
             data: productsWithPricing,
             pagination: {
                 page,
                 limit,
-                total: count || 0,
-                totalPages: Math.ceil((count || 0) / limit),
-            },
-        })
+                total: count,
+                totalPages: Math.ceil(count / limit),
+            }
+        }, { headers: corsHeaders });
 
     } catch (error) {
-        return errorResponse(error)
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// POST /api/products - Create new product (Admin only)
 export async function POST(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
-
-        // Check if user is authenticated
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError()
+        const userRole = request.headers.get('x-user-role');
+        if (userRole !== 'ADMIN') {
+            throw new ForbiddenError('Only admins can create products');
         }
 
-        // Check if user is admin
-        const { data: profile } = await (supabase
-            .from('profiles') as any)
-            .select('role')
-            .eq('id', user.id)
-            .single()
+        const body = await request.json();
+        const output = validateData(productSchema, body);
 
-        if (!profile || (profile as any).role !== 'admin') {
-            throw new ForbiddenError('Only admins can create products')
+        if (!output.success || !output.data) {
+            return NextResponse.json({
+                error: 'Validation failed',
+                errors: formatValidationErrors(output.errors!)
+            }, { status: 400, headers: corsHeaders });
         }
 
-        // Parse and validate request body
-        const body = await request.json()
-        const validation = validateData(productSchema, body)
+        const data = output.data;
 
-        if (!validation.success) {
-            return NextResponse.json(
-                {
-                    error: 'Validation failed',
-                    errors: formatValidationErrors(validation.errors!),
-                },
-                { status: 400 }
-            )
-        }
+        const product = await prisma.product.create({
+            data: {
+                name: data.name,
+                sku: data.sku,
+                slug: data.slug || data.name.toLowerCase().replace(/ /g, '-'), // Basic slug fallback
+                description: data.description,
+                brand: data.brand,
+                deviceModel: data.device_model,
+                productType: data.product_type,
+                categoryId: data.category_id ?? null,
+                basePrice: data.base_price,
+                costPrice: data.cost_price ?? null,
+                tier1Discount: data.wholesale_tier1_discount ?? 0,
+                tier2Discount: data.wholesale_tier2_discount ?? 0,
+                tier3Discount: data.wholesale_tier3_discount ?? 0,
+                totalStock: data.total_stock ?? 0,
+                lowStockThreshold: data.low_stock_threshold ?? 10,
+                images: data.images,
+                thumbnail: data.thumbnail,
+                specifications: data.specifications || Prisma.JsonNull,
+                isActive: data.is_active,
+                isFeatured: data.is_featured,
+                isNew: data.is_new
+            }
+        });
 
-        // Create product
-        const { data: product, error: createError } = await (supabase
-            .from('products') as any)
-            .insert(validation.data)
-            .select()
-            .single()
-
-        if (createError) {
-            console.error('Failed to create product:', createError)
-            throw new Error('Failed to create product')
-        }
-
-        return NextResponse.json({ data: product }, { status: 201 })
+        return NextResponse.json({ data: product }, { status: 201, headers: corsHeaders });
 
     } catch (error) {
-        return errorResponse(error)
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

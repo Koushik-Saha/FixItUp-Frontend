@@ -1,157 +1,108 @@
-// src/app/api/cart/[id]/route.ts
-
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { errorResponse, UnauthorizedError, NotFoundError } from "@/lib/utils/errors";
-import { z } from "zod";
-import type { Database } from "@/types/database";
+import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { errorResponse, UnauthorizedError, NotFoundError } from '@/lib/utils/errors'
+import { z } from 'zod'
 
 const updateCartSchema = z.object({
     quantity: z.number().int().positive().min(1).max(100),
-});
+})
 
-// --- DB helper types ---
-type Tables = Database["public"]["Tables"];
-type CartItemRow = Tables["cart_items"]["Row"];
-type ProductRow = Tables["products"]["Row"];
-type CartItemUpdate = Tables["cart_items"]["Update"];
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
 
-// cart_items joined to products (for stock & active checks)
-type CartItemWithProduct = CartItemRow & {
-    products: Pick<ProductRow, "total_stock" | "is_active"> | null;
-};
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
+}
 
-// PUT /api/cart/[id] - Update cart item quantity
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
+
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient();
         const { id } = await params;
+        const userId = request.headers.get('x-user-id');
+        if (!userId) throw new UnauthorizedError();
 
-        // Get authenticated user
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-        if (authError || !user) {
-            throw new UnauthorizedError();
-        }
-
-        // Parse and validate request
         const body = await request.json();
         const validation = updateCartSchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json(
-                {
-                    error: "Invalid request",
-                    details: validation.error.flatten().fieldErrors,
-                },
-                { status: 400 }
-            );
+            return NextResponse.json({
+                error: 'Invalid request'
+            }, { status: 400, headers: corsHeaders });
         }
 
         const { quantity } = validation.data;
 
-        // Get cart item and verify ownership
-        const { data: cartItem, error: fetchError } = await supabase
-            .from("cart_items")
-            .select(
-                "id, product_id, quantity, products(total_stock, is_active)"
-            )
-            .eq("id", id)
-            .eq("user_id", user.id)
-            .single<CartItemWithProduct>(); // 👈 typed row
-
-        if (fetchError || !cartItem) {
-            throw new NotFoundError("Cart item");
-        }
-
-        const product = cartItem.products;
-
-        // Check if product is still active
-        if (!product || !product.is_active) {
-            return NextResponse.json(
-                { error: "Product is no longer available" },
-                { status: 400 }
-            );
-        }
-
-        // Check stock
-        if (product.total_stock < quantity) {
-            return NextResponse.json(
-                {
-                    error: "Insufficient stock",
-                    available: product.total_stock,
-                },
-                { status: 400 }
-            );
-        }
-
-        // Build typed update payload
-        const updates: CartItemUpdate = {
-            quantity,
-            updated_at: new Date().toISOString(),
-        };
-
-        // Update quantity
-        // @ts-ignore - Supabase typing bug for update payload
-        const { data: updated, error: updateError } = await (supabase
-            .from("cart_items") as any)
-            .update(updates)
-            .eq("id", id)
-            .select()
-            .single();
-
-        if (updateError) {
-            console.error("Failed to update cart:", updateError);
-            throw new Error("Failed to update cart item");
-        }
-
-        return NextResponse.json({
-            message: "Cart item updated successfully",
-            data: updated,
+        // Fetch item to verify ownership and product stock
+        const item = await prisma.cartItem.findUnique({
+            where: { id },
+            include: { product: true }
         });
+
+        if (!item || item.userId !== userId) throw new NotFoundError('Cart item');
+
+        const product = item.product;
+        if (!product.isActive) {
+            return NextResponse.json({ error: 'Product no longer available' }, { status: 400, headers: corsHeaders });
+        }
+        if (product.totalStock < quantity) {
+            return NextResponse.json({ error: 'Insufficient stock', available: product.totalStock }, { status: 400, headers: corsHeaders });
+        }
+
+        const updated = await prisma.cartItem.update({
+            where: { id },
+            data: { quantity }
+        });
+
+        return NextResponse.json({ message: 'Cart updated', data: updated }, { headers: corsHeaders });
+
     } catch (error) {
-        return errorResponse(error);
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// DELETE /api/cart/[id] - Remove item from cart
 export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient();
         const { id } = await params;
+        const userId = request.headers.get('x-user-id');
+        if (!userId) throw new UnauthorizedError();
 
-        // Get authenticated user
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-        if (authError || !user) {
-            throw new UnauthorizedError();
-        }
+        // Verify owner before delete? Standard practice.
+        const item = await prisma.cartItem.findUnique({ where: { id } });
+        if (!item || item.userId !== userId) throw new NotFoundError('Cart item');
 
-        // Delete cart item (verify ownership with eq)
-        const { error: deleteError } = await supabase
-            .from("cart_items")
-            .delete()
-            .eq("id", id)
-            .eq("user_id", user.id);
+        await prisma.cartItem.delete({ where: { id } });
 
-        if (deleteError) {
-            throw new NotFoundError("Cart item");
-        }
+        return NextResponse.json({ message: 'Item removed' }, { headers: corsHeaders });
 
-        return NextResponse.json({
-            message: "Item removed from cart successfully",
-        });
     } catch (error) {
-        return errorResponse(error);
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

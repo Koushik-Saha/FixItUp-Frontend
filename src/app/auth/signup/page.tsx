@@ -5,11 +5,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function SignupPage() {
     const router = useRouter();
-    const { user, register, isLoading, error, init } = useAuth();
-    const [successMessage, setSuccessMessage] = useState("");
+    const { user, register, isLoading, init } = useAuth();
+    // successMessage state removed in favor of toast
 
     const [form, setForm] = useState({
         full_name: "",
@@ -42,48 +45,27 @@ export default function SignupPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSuccessMessage("");
 
         if (form.password !== form.confirmPassword) {
-            alert("Passwords do not match");
+            toast.error("Passwords do not match");
             return;
         }
 
         try {
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    full_name: form.full_name,
-                    email: form.email,
-                    phone: form.phone || undefined,
-                    password: form.password,
-                }),
+            await register({
+                full_name: form.full_name,
+                email: form.email,
+                phone: form.phone || undefined,
+                password: form.password,
             });
 
-            const data = await response.json();
+            toast.success("Account created successfully!");
+            // useAuth register handles the redirection on success via user state change?
+            // Actually useAuth doesn't auto redirect usually, but the useEffect([user]) above will handle it.
 
-            if (response.ok) {
-                setSuccessMessage(data.message);
-
-                // If in dev mode (no verification required), redirect to login after 2 seconds
-                if (!data.data.requires_verification) {
-                    setTimeout(() => {
-                        router.push("/auth/login");
-                    }, 2000);
-                } else {
-                    // In production, show success message and wait for user to verify email
-                    setTimeout(() => {
-                        router.push("/auth/login");
-                    }, 5000);
-                }
-            } else {
-                console.error('Registration error:', data);
-            }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Registration failed:', err);
+            toast.error(err.message || "Registration failed. Please try again.");
         }
     };
 
@@ -98,26 +80,13 @@ export default function SignupPage() {
                     account.
                 </p>
 
-                {successMessage && (
-                    <div className="mb-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 text-sm">
-                        {successMessage}
-                    </div>
-                )}
-
-                {error && (
-                    <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-3 py-2 text-sm">
-                        {error}
-                    </div>
-                )}
-
                 <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                         <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Full Name
                         </label>
-                        <input
+                        <Input
                             name="full_name"
-                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="John Doe"
                             value={form.full_name}
                             onChange={handleChange}
@@ -130,10 +99,9 @@ export default function SignupPage() {
                         <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Email
                         </label>
-                        <input
+                        <Input
                             type="email"
                             name="email"
-                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="you@example.com"
                             value={form.email}
                             onChange={handleChange}
@@ -146,9 +114,8 @@ export default function SignupPage() {
                         <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Phone (Optional)
                         </label>
-                        <input
+                        <Input
                             name="phone"
-                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="(555) 123-4567"
                             value={form.phone}
                             onChange={handleChange}
@@ -160,10 +127,9 @@ export default function SignupPage() {
                         <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Password
                         </label>
-                        <input
+                        <Input
                             type="password"
                             name="password"
-                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="••••••••"
                             value={form.password}
                             onChange={handleChange}
@@ -177,10 +143,9 @@ export default function SignupPage() {
                         <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Confirm Password
                         </label>
-                        <input
+                        <Input
                             type="password"
                             name="confirmPassword"
-                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="••••••••"
                             value={form.confirmPassword}
                             onChange={handleChange}
@@ -195,7 +160,7 @@ export default function SignupPage() {
                             id="wantsWholesale"
                             type="checkbox"
                             name="wantsWholesale"
-                            className="mt-1"
+                            className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                             checked={form.wantsWholesale}
                             onChange={handleChange}
                             disabled={isLoading}
@@ -212,20 +177,14 @@ export default function SignupPage() {
                     </div>
 
                     <div className="col-span-2 mt-4">
-                        <button
+                        <Button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full inline-flex items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2.5 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                            loading={isLoading}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                            {isLoading ? (
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    Creating account...
-                                </div>
-                            ) : (
-                                "Create Account"
-                            )}
-                        </button>
+                            Create Account
+                        </Button>
                     </div>
                 </form>
 

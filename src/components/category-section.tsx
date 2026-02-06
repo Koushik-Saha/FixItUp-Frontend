@@ -4,97 +4,67 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { Search, X, Pin, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
-// Keep this (optional)
-const COMPATIBILITY_DATA: {[key: string]: string[]} = {
-    'iPhone Air': ['A3520', 'A3258', 'A3519', 'A3521'],
-    'iPhone 17 Pro Max': ['A3520', 'A3258', 'A3519', 'A3521'],
-    'iPhone 17 Pro': ['A3520', 'A3258', 'A3519', 'A3521'],
-    'iPhone 17': ['A3520', 'A3258', 'A3519'],
-    'iPhone 13 Pro': ['A2638', 'A2483', 'A2636', 'A2639', 'A2640'],
-    'Series Ultra (3rd Gen) (49MM)': ['A2858', 'A2859', 'A2860'],
-    'Series 10 (46MM)': ['A3365', 'A3366'],
-    'Series 9 (45MM)': ['A2848', 'A2849'],
-    'iPad Pro 13" 8th Gen (2025)': ['A3089', 'A3090'],
-    'Galaxy S25 Ultra': ['SM-S928B', 'SM-S928U'],
+// Types based on the API response
+type PhoneModel = {
+    id: string
+    modelName: string
+    modelSlug: string
+    generatedSlug?: string
 }
 
-type ColumnItem = { name: string; link: string; new?: boolean }
-type Column = { title: string; items: ColumnItem[]; viewAll?: string }
-type SubcatData = { columns: Column[] }
-
-type BrandData = {
-    subcategories: string[]
-    bySubcategory: Record<string, SubcatData>
+type SubCategory = {
+    id: string
+    name: string
+    slug: string
+    phoneModels: PhoneModel[]
 }
 
-type ApiResponse = {
-    success: boolean
-    data?: Record<string, BrandData>
-    error?: string
+type BrandCategory = {
+    id: string
+    name: string
+    slug: string
+    children: SubCategory[]
 }
 
 export function CategorySection() {
-    const [activeBrand, setActiveBrand] = useState<string | null>(null)
+    // State
+    const [brands, setBrands] = useState<BrandCategory[]>([])
+    const [activeBrandId, setActiveBrandId] = useState<string | null>(null)
+    const [activeSubcatId, setActiveSubcatId] = useState<string | null>(null)
+    const [pinnedSubcatId, setPinnedSubcatId] = useState<string | null>(null) // New: Pinning
+    const [hoveredModel, setHoveredModel] = useState<PhoneModel | null>(null) // New: Hover Detail
+    const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
-    const [pinnedSubcategory, setPinnedSubcategory] = useState<{[key: string]: string | null}>({})
-    const [activeSubcategory, setActiveSubcategory] = useState<{[key: string]: string}>({
-        Apple: 'iPhone',
-        Samsung: 'S Series',
-        Motorola: 'Moto G Series',
-        Google: 'Pixel',
-    })
-    const [hoveredModel, setHoveredModel] = useState<string | null>(null)
 
-    // Scroll controls
+    // UI State
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const [canScrollLeft, setCanScrollLeft] = useState(false)
     const [canScrollRight, setCanScrollRight] = useState(false)
 
-    // Backend data
-    const [brandsData, setBrandsData] = useState<Record<string, BrandData>>({})
-    const [loading, setLoading] = useState(true)
-
+    // Fetch Data
     useEffect(() => {
-        let cancelled = false
         async function load() {
             try {
                 setLoading(true)
-                const res = await fetch('/api/nav/phone-models', { cache: 'no-store' })
-                const json = (await res.json()) as ApiResponse
-                if (!cancelled) {
-                    setBrandsData(json.success && json.data ? json.data : {})
-                }
-            } catch (e) {
-                if (!cancelled) setBrandsData({})
+                const res = await fetch('/api/categories/tree')
+                if (!res.ok) throw new Error('Failed to fetch')
+                const data = await res.json() as BrandCategory[]
+                setBrands(data)
+            } catch (error) {
+                console.error(error)
             } finally {
-                if (!cancelled) setLoading(false)
+                setLoading(false)
             }
         }
         load()
-        return () => { cancelled = true }
     }, [])
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            const target = event.target as HTMLElement
-            if (!target.closest('[data-category-section]')) {
-                setActiveBrand(null)
-            }
-        }
-
-        if (activeBrand) {
-            document.addEventListener('mousedown', handleClickOutside)
-            return () => document.removeEventListener('mousedown', handleClickOutside)
-        }
-    }, [activeBrand])
-
-    // Check scroll position
+    // Scroll Controls
     const checkScrollButtons = () => {
         if (scrollContainerRef.current) {
             const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current
             setCanScrollLeft(scrollLeft > 0)
-            setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
+            setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5)
         }
     }
 
@@ -102,340 +72,460 @@ export function CategorySection() {
         checkScrollButtons()
         window.addEventListener('resize', checkScrollButtons)
         return () => window.removeEventListener('resize', checkScrollButtons)
-    }, [])
+    }, [brands]) // Check when brands load
 
     const scroll = (direction: 'left' | 'right') => {
         if (scrollContainerRef.current) {
-            const scrollAmount = 300
-            scrollContainerRef.current.scrollBy({
-                left: direction === 'left' ? -scrollAmount : scrollAmount,
-                behavior: 'smooth'
-            })
+            const amount = 300
+            scrollContainerRef.current.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' })
             setTimeout(checkScrollButtons, 100)
         }
     }
 
-    const brands = ['Apple', 'Samsung', 'Motorola', 'Google', 'Other Parts', 'Game Console', 'Accessories', 'Tools & Supplies']
+    // Interaction Handlers
+    const handleBrandClick = (brand: BrandCategory) => {
+        if (activeBrandId === brand.id) {
+            setActiveBrandId(null)
+            setPinnedSubcatId(null)
+            setActiveSubcatId(null)
+        } else {
+            setActiveBrandId(brand.id)
+            // Default select first, but allow pinning behavior
+            if (brand.children.length > 0) {
+                const firstId = brand.children[0].id
+                setPinnedSubcatId(firstId)
+                setActiveSubcatId(firstId)
+            } else {
+                setActiveSubcatId(null)
+            }
+        }
+        setSearchQuery('')
+    }
 
-    const handleBrandClick = (brand: string) => {
-        if (['Apple', 'Samsung', 'Motorola', 'Google'].includes(brand)) {
-            setActiveBrand(activeBrand === brand ? null : brand)
-            setSearchQuery('')
+    const handleSubcatClick = (id: string) => {
+        if (pinnedSubcatId === id) {
+            // Unpin if clicked again? MobileSentrix usually just switches selection.
+            // Let's keep it simple: Click sets the "active" view and pins it until another is clicked.
+            // Actually, usually hover previews, click locks.
+            setPinnedSubcatId(id)
+            setActiveSubcatId(id)
+        } else {
+            setPinnedSubcatId(id)
+            setActiveSubcatId(id)
         }
     }
 
-    const togglePinSubcategory = (brand: string, subcat: string) => {
-        setPinnedSubcategory(prev => ({
-            ...prev,
-            [brand]: prev[brand] === subcat ? null : subcat
-        }))
-        handleSubcategoryChange(brand, subcat)
-    }
-
-    const handleSubcategoryChange = (brand: string, subcat: string) => {
-        setActiveSubcategory(prev => ({
-            ...prev,
-            [brand]: subcat
-        }))
-    }
-
-    const currentData: SubcatData | null = useMemo(() => {
-        if (!activeBrand) return null
-        if (!['Apple', 'Samsung', 'Motorola', 'Google'].includes(activeBrand)) return null
-
-        const brandBlock = brandsData[activeBrand]
-        if (!brandBlock) return null
-
-        const currentSubcat = activeSubcategory[activeBrand]
-        return brandBlock.bySubcategory[currentSubcat] || null
-    }, [activeBrand, brandsData, activeSubcategory])
-
-    const filteredData: SubcatData | null = useMemo(() => {
-        if (!currentData) return null
-        const q = searchQuery.trim().toLowerCase()
-        if (!q) return currentData
-
-        return {
-            columns: currentData.columns.map(col => ({
-                ...col,
-                items: col.items.filter(it => it.name.toLowerCase().includes(q))
-            }))
+    // Close on click outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            const target = event.target as HTMLElement
+            if (!target.closest('[data-category-section]')) {
+                setActiveBrandId(null)
+            }
         }
-    }, [currentData, searchQuery])
+        if (activeBrandId) {
+            document.addEventListener('mousedown', handleClickOutside)
+            return () => document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [activeBrandId])
+
+
+    // Derived Data with Custom Processing for Apple/iPhone
+    const activeBrand = useMemo(() => {
+        const brand = brands.find(b => b.id === activeBrandId)
+        if (!brand) return null
+
+        // Clone data to avoid mutation
+        const processed = { ...brand, children: [...brand.children] }
+
+
+        // Helper to consolidate items by name pattern or prefix
+        const consolidate = (
+            brand: BrandCategory,
+            key: string,
+            label: string,
+            filterFn: (c: any) => boolean,
+            sortOthers: string[] = []
+        ) => {
+            const childrenCopy = [...brand.children]
+
+            // 1. Identify Target subcategories and others
+            const targets = childrenCopy.filter(filterFn)
+            const others = childrenCopy.filter(c => !filterFn(c))
+
+            if (targets.length === 0) return { ...brand, children: childrenCopy }
+
+            // 2. Aggregate all models
+            let allModels: PhoneModel[] = []
+            targets.forEach(sub => {
+                allModels.push(...sub.phoneModels)
+            })
+
+            // Deduplicate
+            const seen = new Set()
+            allModels = allModels.filter(m => {
+                const dup = seen.has(m.id)
+                seen.add(m.id)
+                return !dup
+            })
+
+            // 3. Create consolidated category
+            const consolidated = {
+                id: `${key}-main-consolidated`,
+                name: label,
+                slug: key,
+                phoneModels: allModels
+            }
+
+            // 4. Sort others
+            if (sortOthers.length > 0) {
+                others.sort((a, b) => {
+                    const ia = sortOthers.findIndex(o => a.name.includes(o))
+                    const ib = sortOthers.findIndex(o => b.name.includes(o))
+                    if (ia !== -1 && ib !== -1) return ia - ib
+                    if (ia !== -1) return -1
+                    if (ib !== -1) return 1
+                    return a.name.localeCompare(b.name)
+                })
+            } else {
+                others.sort((a, b) => a.name.localeCompare(b.name))
+            }
+
+            // 5. Final List
+            return {
+                ...brand,
+                children: [consolidated, ...others]
+            }
+        }
+
+        // Apply Logic per Brand
+        if (brand.name === 'Apple') {
+            return consolidate(
+                brand,
+                'iphone',
+                'iPhone',
+                (c) => c.name.toLowerCase().startsWith('iphone'),
+                ['iPad', 'Watch', 'Mac', 'AirPods']
+            )
+        }
+
+        else if (brand.name === 'Samsung') {
+            // Samsung Strategy: Consolidate "Series" mess
+            // Logic: 
+            // - "S Series": Includes "S Series", "S22", "S21", etc.
+            // - "A Series": Includes "A Series", "A50", "A01" etc.
+            // - "Note": Includes "Note"
+            // - "Z": Includes "Z", "Fold", "Flip"
+
+            // We need a multi-pass approach or just simple "Galaxy Phones" consolidation?
+            // User requested "like Apple". Apple has "iPhone" (User clicks iPhone -> sees all).
+            // So for Samsung, user should click "Galaxy Phones" -> sees all S, A, Note, Z models?
+            // Or "S Series" -> sees all S models.
+            // Given the screenshot showed "A01" separately, let's try broadly consolidating common patterns first.
+            // Actually, if we just want "like Apple", let's consolidate ALL phones into "Samsung Phones"? 
+            // But Tablets/Watches should be separate.
+
+            // Let's try 3 main Buckets for Samsung:
+            // 1. Galaxy Phones (S, A, Note, Z, J, M, etc.)
+            // 2. Tablets (Tab)
+            // 3. Wearables (Watch, Gear)
+
+            const isTablet = (name: string) => name.toLowerCase().includes('tab')
+            const isWearable = (name: string) => name.toLowerCase().includes('watch') || name.toLowerCase().includes('gear')
+            const isPhone = (name: string) => !isTablet(name) && !isWearable(name)
+
+            return consolidate(
+                brand,
+                'samsung-phones',
+                'Galaxy Phones',
+                (c) => isPhone(c.name),
+                ['Tab', 'Watch', 'Gear']
+            )
+        }
+
+        else if (brand.name === 'Google') {
+            return consolidate(
+                brand,
+                'pixel',
+                'Pixel Phones',
+                (c) => c.name.toLowerCase().includes('pixel') && !c.name.toLowerCase().includes('watch') && !c.name.toLowerCase().includes('tablet') && !c.name.toLowerCase().includes('buds'),
+                ['Tablet', 'Watch', 'Buds']
+            )
+        }
+
+        else if (brand.name === 'Motorola') {
+            return consolidate(
+                brand,
+                'moto',
+                'Moto Phones',
+                (c) => true, // Consolidate everything for Motorola usually
+                []
+            )
+        }
+
+
+        return processed
+    }, [brands, activeBrandId])
+
+    const currentSubcatId = pinnedSubcatId || activeSubcatId
+    const activeSubcat = useMemo(() => activeBrand?.children.find(c => c.id === currentSubcatId), [activeBrand, currentSubcatId])
+
+    // Helper: Sort Models by Generation and Tier
+    const compareModels = (aName: string, bName: string) => {
+        // Extract Generation Number (e.g. 16 from "iPhone 16 Pro")
+        const getGen = (name: string) => {
+            const match = name.match(/iPhone\s+(\d+)/i)
+            return match ? parseInt(match[1]) : -1
+        }
+
+        const genA = getGen(aName)
+        const genB = getGen(bName)
+
+        // 1. Sort by Generation (Descending: 16 -> 15)
+        if (genA !== genB) {
+            // If one is numbered and other isn't (e.g. "iPhone X"), numbered usually comes first if > 8
+            if (genA === -1 && genB !== -1) return genB > 8 ? 1 : -1
+            if (genB === -1 && genA !== -1) return genA > 8 ? -1 : 1
+            return genB - genA
+        }
+
+        // 2. If Same Generation, sort by Tier
+        // Order: Pro Max > Pro > Plus > (Base) > Mini
+        const getTierScore = (name: string) => {
+            if (name.includes('Pro Max')) return 4
+            if (name.includes('Pro')) return 3
+            if (name.includes('Plus')) return 2
+            if (name.includes('Mini')) return 0
+            return 1 // Base model
+        }
+
+        const tierA = getTierScore(aName)
+        const tierB = getTierScore(bName)
+
+        if (tierA !== tierB) return tierB - tierA // Higher score first
+
+        // 3. Fallback to name
+        return aName.localeCompare(bName)
+    }
+
+    // Filtered Content (Search)
+    const filteredModels = useMemo(() => {
+        if (!activeSubcat) return []
+        let models = activeSubcat.phoneModels
+        const q = searchQuery.toLowerCase().trim()
+
+        if (q) {
+            models = models.filter(m => m.modelName.toLowerCase().includes(q))
+        }
+
+        // Apply Sorting for iPhone category specifically, or globally if desired
+        // The user specifically asked for iPhone sorting, but good to apply generally
+        return [...models].sort((a, b) => compareModels(a.modelName, b.modelName))
+    }, [activeSubcat, searchQuery])
+
+    // Split models into columns (3 columns)
+    // We want the sort order to flow down column 1, then column 2... 
+    // BUT the grid is rendered row-by-row in CSS grid usually or mapped col-by-col?
+    // Current implementation maps columns: `col.map(model => ...)`
+    // So if we push to cols[i%3], it fills row 1 (1,2,3), row 2 (4,5,6).
+    // This reads Left-to-Right. The user might want Top-to-Bottom per column?
+    // "like iPhone 16 Pro Max, iPhone 16 Pro, iPhone 16..." usually implies a list.
+    // L-R flow is standard for web grids.
+    const modelColumns = useMemo(() => {
+        const cols: PhoneModel[][] = [[], [], []]
+        filteredModels.forEach((model, i) => {
+            cols[i % 3].push(model)
+        })
+        return cols
+    }, [filteredModels])
 
     return (
-        <div className="bg-white dark:bg-neutral-900 relative" data-category-section>
-            {/* Brand Tabs with Horizontal Scroll */}
-            <div className="border-b border-neutral-200 dark:border-neutral-800">
+        <div className="bg-white dark:bg-neutral-900 relative z-40" data-category-section>
+            {/* Top Bar - Brand Scroll */}
+            <div className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950">
                 <div className="container mx-auto px-4">
                     <div className="relative group">
-                        {/* Left Scroll Button */}
+                        {/* Controls */}
                         {canScrollLeft && (
-                            <button
-                                onClick={() => scroll('left')}
-                                className="absolute left-0 top-0 bottom-0 z-10 w-12 bg-gradient-to-r from-white dark:from-neutral-900 to-transparent flex items-center justify-start pl-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                                <div className="bg-white dark:bg-neutral-800 rounded-full p-1.5 shadow-lg border border-neutral-200 dark:border-neutral-700">
-                                    <ChevronLeft className="h-4 w-4 text-neutral-700 dark:text-neutral-300" />
-                                </div>
+                            <button onClick={() => scroll('left')} className="absolute left-0 top-0 bottom-0 z-10 w-6 bg-gradient-to-r from-neutral-100 dark:from-neutral-950 via-neutral-100/80 to-transparent flex items-center justify-center">
+                                <ChevronLeft className="h-3 w-3 text-black dark:text-white" />
+                            </button>
+                        )}
+                        {canScrollRight && (
+                            <button onClick={() => scroll('right')} className="absolute right-0 top-0 bottom-0 z-10 w-6 bg-gradient-to-l from-neutral-100 dark:from-neutral-950 via-neutral-100/80 to-transparent flex items-center justify-center">
+                                <ChevronRight className="h-3 w-3 text-black dark:text-white" />
                             </button>
                         )}
 
-                        {/* Scrollable Categories */}
                         <div
                             ref={scrollContainerRef}
                             onScroll={checkScrollButtons}
-                            className="flex items-center gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
-                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                            className="flex items-center gap-4 overflow-x-auto scrollbar-hide py-0"
+                            style={{ scrollbarWidth: 'none' }}
                         >
-                            {brands.map(brand => {
-                                const isActive = activeBrand === brand
-                                const hasDropdown = ['Apple', 'Samsung', 'Motorola', 'Google'].includes(brand)
+                            {loading ? (
+                                // Skeleton Loading
+                                Array.from({ length: 8 }).map((_, i) => (
+                                    <div key={i} className="h-6 w-16 bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded my-1" />
+                                ))
+                            ) : (
+                                <>
+                                    {brands.map(brand => {
+                                        const isActive = activeBrandId === brand.id
+                                        const isNokia = brand.name.toLowerCase() === 'nokia'
 
-                                return (
-                                    <button
-                                        key={brand}
-                                        onClick={() => handleBrandClick(brand)}
-                                        className={`
-                                            relative py-3 px-1 whitespace-nowrap text-sm font-medium transition-all border-b-2 flex-shrink-0
-                                            ${isActive
-                                                ? 'text-red-600 dark:text-red-500 border-red-600 dark:border-red-500'
-                                                : 'text-neutral-600 dark:text-neutral-400 border-transparent hover:text-black dark:hover:text-white hover:border-neutral-300 dark:hover:border-neutral-600'
-                                            }
-                                        `}
-                                    >
-                                        {brand}
-                                        {hasDropdown && (
-                                            <span className={`ml-1 inline-block transition-transform ${isActive ? 'rotate-180' : ''}`}>
-                                                ▼
-                                            </span>
-                                        )}
-                                    </button>
-                                )
-                            })}
+                                        const brandButton = (
+                                            <Link
+                                                key={brand.id}
+                                                href={`/shop?brand=${brand.slug}`}
+                                                onMouseEnter={() => { setActiveBrandId(brand.id); setPinnedSubcatId(brand.children[0]?.id || null); setActiveSubcatId(brand.children[0]?.id || null); }}
+                                                className={`
+                                                    relative py-2 px-4 whitespace-nowrap text-[13px] font-bold transition-all flex-shrink-0 flex items-center gap-1 uppercase tracking-wider
+                                                    ${isActive
+                                                        ? 'text-red-600 bg-white dark:bg-neutral-900 border-t-2 border-r border-l border-neutral-200 dark:border-neutral-800 border-b-white dark:border-b-neutral-900 -mb-[1px] z-10 rounded-t-md'
+                                                        : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+                                                    }
+                                                `}
+                                            >
+                                                {brand.name} {isActive && <span className="text-[10px]">▼</span>}
+                                            </Link>
+                                        )
 
-                            <Link href="/shop" className="flex-shrink-0">
-                                <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium hover:text-black dark:hover:text-white whitespace-nowrap">
-                                    Shop
-                                </span>
-                            </Link>
-                            <Link href="/wholesale/apply" className="flex-shrink-0">
-                                <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium hover:text-black dark:hover:text-white whitespace-nowrap">
-                                    Wholesale Apply
-                                </span>
-                            </Link>
-                            <Link href="/wholesale" className="flex-shrink-0">
-                                <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium hover:text-black dark:hover:text-white whitespace-nowrap">
-                                    Wholesale Portal
-                                </span>
-                            </Link>
-                            <Link href="/repairs" className="flex-shrink-0">
-                                <span className="text-neutral-600 dark:text-neutral-400 relative py-3 px-1 text-sm font-medium hover:text-black dark:hover:text-white whitespace-nowrap">
-                                    Repair
-                                </span>
-                            </Link>
+                                        if (isNokia) {
+                                            return (
+                                                <div key="injector" className="flex items-center gap-4">
+                                                    {['Accessories', 'Tools & Supplies', 'Wholesale Apply', 'Wholesale Portal', 'Repair'].map(item => (
+                                                        <Link
+                                                            key={item}
+                                                            href={`/${item.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
+                                                            onMouseEnter={() => setActiveBrandId(null)}
+                                                            className="text-neutral-600 dark:text-neutral-400 text-[13px] font-bold hover:text-black dark:hover:text-white whitespace-nowrap py-2 px-1 uppercase tracking-wider"
+                                                        >
+                                                            {item}
+                                                        </Link>
+                                                    ))}
+                                                    {brandButton}
+                                                </div>
+                                            )
+                                        }
+
+                                        return brandButton
+                                    })}
+                                </>
+                            )}
                         </div>
-
-                        {/* Right Scroll Button */}
-                        {canScrollRight && (
-                            <button
-                                onClick={() => scroll('right')}
-                                className="absolute right-0 top-0 bottom-0 z-10 w-12 bg-gradient-to-l from-white dark:from-neutral-900 to-transparent flex items-center justify-end pr-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                                <div className="bg-white dark:bg-neutral-800 rounded-full p-1.5 shadow-lg border border-neutral-200 dark:border-neutral-700">
-                                    <ChevronRight className="h-4 w-4 text-neutral-700 dark:text-neutral-300" />
-                                </div>
-                            </button>
-                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Dropdown Content - Only shows on CLICK */}
-            {activeBrand && ['Apple', 'Samsung', 'Motorola', 'Google'].includes(activeBrand) && (
-                <div className="absolute left-0 right-0 top-full border-b border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm shadow-2xl">
-                    <div className="container mx-auto px-4">
-                        {/* Compact dropdown with max width */}
-                        <div className="max-w-6xl mx-auto">
-                            {/* Close Button - Compact */}
-                            <div className="flex items-center justify-between pt-2 pb-2">
-                                <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">
-                                    {activeBrand} Products
-                                </h2>
-                                <button
-                                    onClick={() => setActiveBrand(null)}
-                                    className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
-                                >
-                                    <X className="h-4 w-4 text-neutral-500" />
-                                </button>
-                            </div>
+            {/* Mega Menu Dropdown */}
+            {activeBrand && (
+                <div
+                    onMouseLeave={() => setActiveBrandId(null)}
+                    className="absolute left-0 right-0 mx-auto max-w-[1400px] top-full mt-0 bg-white dark:bg-neutral-900 border-b border-x border-neutral-200 dark:border-neutral-800 shadow-xl rounded-b-md z-50 animate-in fade-in zoom-in-95 duration-100 origin-top"
+                >
+                    <div className="px-4">
+                        <div className="flex h-[350px]">
 
-                            {/* Search Bar - Compact */}
-                            <div className="border-b border-neutral-200 dark:border-neutral-800 pb-2">
-                                <div className="max-w-sm">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="What are you looking for?"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-9 pr-8 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        />
-                                        {searchQuery && (
-                                            <button
-                                                onClick={() => setSearchQuery('')}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-                                            >
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        )}
-                                    </div>
+                            {/* Left Sidebar: Subcategories (Vertical Tabs) */}
+                            <div className="w-48 flex-shrink-0 border-r border-neutral-200 dark:border-neutral-800 flex flex-col gap-0.5 py-2 overflow-y-auto bg-neutral-50/50 dark:bg-neutral-900">
+                                <div className="px-3 text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">
+                                    {activeBrand.name} Series
                                 </div>
+                                {activeBrand.children.map(sub => {
+                                    const isPinned = pinnedSubcatId === sub.id
+                                    return (
+                                        <button
+                                            key={sub.id}
+                                            onClick={() => handleSubcatClick(sub.id)}
+                                            className={`
+                                            w-full text-left px-3 py-1.5 text-xs transition-all flex items-center justify-between group relative
+                                            ${isPinned
+                                                    ? 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-500 font-bold border-r-2 border-red-600'
+                                                    : 'text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                                }
+                                        `}
+                                        >
+                                            {isPinned && <Pin className="h-3 w-3 absolute left-1 top-1/2 -translate-y-1/2 text-red-600 opacity-50" />}
+                                            <span className={isPinned ? 'pl-2' : ''}>{sub.name}</span>
+                                            {isPinned && <X className="h-3 w-3 hover:text-red-800 cursor-pointer text-neutral-400" onClick={(e) => { e.stopPropagation(); setPinnedSubcatId(null); setActiveSubcatId(activeBrand.children[0].id); }} />}
+                                        </button>
+                                    )
+                                })}
                             </div>
 
-                            {/* Content Area - Much Smaller and Compact */}
-                            <div className="max-h-[320px] overflow-y-auto py-3">
-                                <div className="grid grid-cols-[180px_1fr_220px] gap-4">
-
-                                {/* Left Sidebar - Compact */}
-                                <div className="space-y-1">
-                                    <h3 className="text-[9px] font-semibold text-neutral-400 dark:text-neutral-500 mb-2 uppercase tracking-wide">
-                                        {activeBrand} Parts
+                            {/* Center: Model Grid */}
+                            <div className="flex-1 px-6 py-4 overflow-y-auto">
+                                <div className="flex items-center justify-between mb-4 sticky top-0 bg-white dark:bg-neutral-900 z-10 py-1 border-b border-neutral-100 dark:border-neutral-800">
+                                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+                                        {activeSubcat?.name} <span className="text-neutral-400 font-normal">Models</span>
                                     </h3>
 
-                                    {pinnedSubcategory[activeBrand] && (
-                                        <div className="mb-2">
-                                            <button
-                                                onClick={() => togglePinSubcategory(activeBrand, pinnedSubcategory[activeBrand]!)}
-                                                className="w-full flex items-center gap-1.5 px-2 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-xs hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                                            >
-                                                <Pin className="h-2.5 w-2.5 fill-red-500 flex-shrink-0" />
-                                                <span className="flex-1 text-left font-medium">{pinnedSubcategory[activeBrand]}</span>
-                                                <X className="h-2.5 w-2.5 opacity-60 hover:opacity-100" />
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-0.5">
-                                        {(brandsData[activeBrand]?.subcategories || []).map((subcat) => {
-                                            const isPinned = pinnedSubcategory[activeBrand] === subcat
-                                            if (isPinned) return null
-                                            const isActive = activeSubcategory[activeBrand] === subcat
-
-                                            return (
-                                                <div key={subcat}>
-                                                    <button
-                                                        onClick={() => togglePinSubcategory(activeBrand, subcat)}
-                                                        className={`
-                                                            w-full text-left px-2 py-1.5 rounded text-xs transition-colors flex items-center justify-between group
-                                                            ${isActive
-                                                                ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium'
-                                                                : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                                                            }
-                                                        `}
-                                                    >
-                                                        <span>{subcat}</span>
-                                                        <Pin className={`h-2.5 w-2.5 ${isActive ? 'opacity-50' : 'opacity-0 group-hover:opacity-100'} transition-opacity`} />
-                                                    </button>
-                                                </div>
-                                            )
-                                        })}
-
-                                        {loading && (
-                                            <div className="text-[10px] text-neutral-400 px-2 py-1">Loading...</div>
-                                        )}
+                                    {/* Search */}
+                                    <div className="relative w-48">
+                                        <input
+                                            type="text"
+                                            placeholder="Search..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full pl-2 pr-6 py-1 bg-neutral-100 dark:bg-neutral-800 rounded text-xs focus:outline-none focus:ring-1 focus:ring-red-500 transition-all border border-transparent focus:border-red-500"
+                                        />
+                                        <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-neutral-400" />
                                     </div>
                                 </div>
 
-                                {/* Middle Content Area - Compact */}
-                                <div className="grid grid-cols-3 gap-3">
-                                    {filteredData?.columns?.map((column, index) => (
-                                        <div key={index}>
-                                            {column.title && (
-                                                <h3 className="text-[10px] font-semibold bg-neutral-100 dark:bg-neutral-800 px-2 py-1 mb-1.5 rounded">
-                                                    {column.title}
-                                                </h3>
-                                            )}
-                                            <ul className="space-y-0.5">
-                                                {column.items.map((item) => (
-                                                    <li
-                                                        key={item.name}
-                                                        onMouseEnter={() => setHoveredModel(item.name)}
-                                                        onMouseLeave={() => setHoveredModel(null)}
-                                                    >
-                                                        <Link
-                                                            href={item.link}
-                                                            className={`
-                                                                flex items-center gap-1.5 py-1 px-1.5 rounded text-xs transition-all
-                                                                ${hoveredModel === item.name
-                                                                    ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                                                                    : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                                                                }
-                                                            `}
-                                                        >
-                                                            <span className="text-[11px]">{item.name}</span>
-                                                            {item.new && (
-                                                                <span className="bg-green-500 text-white text-[8px] px-1 py-0.5 rounded font-bold uppercase">
-                                                                    new
-                                                                </span>
-                                                            )}
-                                                        </Link>
-                                                    </li>
-                                                ))}
-                                                {column.viewAll && (
-                                                    <li className="pt-0.5">
-                                                        <Link
-                                                            href={column.viewAll}
-                                                            className="block py-0.5 px-1.5 text-[10px] font-semibold text-black dark:text-white underline hover:no-underline"
-                                                        >
-                                                            View all →
-                                                        </Link>
-                                                    </li>
-                                                )}
-                                            </ul>
+                                <div className="grid grid-cols-3 gap-x-8 gap-y-1.5 pb-4">
+                                    {modelColumns.map((col, i) => (
+                                        <div key={i} className="space-y-1">
+                                            {col.map(model => (
+                                                <Link
+                                                    key={model.id}
+                                                    href={`/shop?device=${model.modelSlug || encodeURIComponent(model.modelName)}`}
+                                                    onMouseEnter={() => setHoveredModel(model)}
+                                                    onMouseLeave={() => setHoveredModel(null)}
+                                                    className="group block flex items-center justify-between py-0.5"
+                                                >
+                                                    <span className="text-[12px] text-neutral-600 dark:text-neutral-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors truncate">
+                                                        {model.modelName}
+                                                    </span>
+                                                    {/* New Tag simulation */}
+                                                    {(model.modelName.includes('15') || model.modelName.includes('14')) && <span className="text-[9px] bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-1 rounded font-bold">NEW</span>}
+                                                </Link>
+                                            ))}
                                         </div>
                                     ))}
                                 </div>
-
-                                {/* Right Side - Compatibility - Compact */}
-                                <div className="border-l border-neutral-200 dark:border-neutral-700 pl-3">
-                                    {hoveredModel && COMPATIBILITY_DATA[hoveredModel] ? (
-                                        <div>
-                                            <h3 className="text-[10px] font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                                                Compatibility:
-                                            </h3>
-                                            <div className="space-y-1">
-                                                {COMPATIBILITY_DATA[hoveredModel].map(model => (
-                                                    <div
-                                                        key={model}
-                                                        className="px-2 py-1 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-[10px] text-neutral-700 dark:text-neutral-300 font-mono"
-                                                    >
-                                                        {model}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="text-[10px] text-neutral-400 dark:text-neutral-500 italic">
-                                            Hover over a model
-                                        </div>
-                                    )}
-                                </div>
-
-                                </div>
                             </div>
+
+                            {/* Right Panel: Compatibility / Preview */}
+                            <div className="w-56 border-l border-neutral-200 dark:border-neutral-800 pl-4 py-4 pr-4 hidden xl:block bg-neutral-50/30 dark:bg-neutral-900">
+                                <h4 className="text-[10px] font-bold text-neutral-400 uppercase mb-3">Compatibility Check</h4>
+                                {hoveredModel ? (
+                                    <div className="animate-in fade-in duration-200">
+                                        <h5 className="font-bold text-sm text-neutral-900 dark:text-white mb-1">{hoveredModel.modelName}</h5>
+                                        <div className="flex flex-wrap gap-1 mb-3">
+                                            {/* Simulated Series Numbers */}
+                                            <span className="text-[9px] bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-500 font-mono">A2633</span>
+                                            <span className="text-[9px] bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-500 font-mono">A2634</span>
+                                        </div>
+                                        <div className="text-[10px] text-neutral-500 space-y-1">
+                                            <p>✅ LCD Screens</p>
+                                            <p>✅ Batteries</p>
+                                            <p>✅ Charging Ports</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-neutral-300 mt-8">
+                                        <span className="text-4xl block mb-2 opacity-20">📱</span>
+                                        <p className="text-xs">Hover over a model</p>
+                                    </div>
+                                )}
+                            </div>
+
                         </div>
                     </div>
                 </div>
             )}
-
-            {/* Add CSS to hide scrollbar */}
-            <style jsx>{`
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
-            `}</style>
         </div>
     )
 }

@@ -1,46 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, MapPin, Navigation, ChevronDown, ChevronUp } from 'lucide-react'
-import Image from 'next/image'
 import Link from 'next/link'
-
-// Store locations data
-const STORES = [
-    {
-        id: 1,
-        name: 'Santa Barbara Store',
-        address: '110 S Hope Ave Suite H 123',
-        city: 'Santa Barbara',
-        state: 'CA',
-        zip: '93105',
-        distance: '0.5 mi away',
-        coordinates: { lat: 34.4208, lng: -119.6982 },
-        phone: '(805) 555-0123'
-    },
-    {
-        id: 2,
-        name: 'Sports Basement - Campbell',
-        address: '1875 South Bascom Ave Suite 240',
-        city: 'Campbell',
-        state: 'CA',
-        zip: '95008',
-        distance: '252.83 mi away',
-        coordinates: { lat: 37.2872, lng: -121.9316 },
-        phone: '(408) 555-0124'
-    },
-    {
-        id: 3,
-        name: 'Therapy Stores',
-        address: '2145 Market Street',
-        city: 'San Francisco',
-        state: 'CA',
-        zip: '94114',
-        distance: '251.49 mi away',
-        coordinates: { lat: 37.7749, lng: -122.4194 },
-        phone: '(415) 555-0125'
-    }
-]
 
 // As Seen In logos
 const AS_SEEN_IN = [
@@ -117,9 +79,82 @@ const REGIONAL_PARTNERS = [
 ]
 
 export default function StoreLocatorPage() {
-    const [searchQuery, setSearchQuery] = useState('CA, US')
+    const [searchQuery, setSearchQuery] = useState('')
     const [expandedRegion, setExpandedRegion] = useState<number | null>(null)
-    const [selectedStore, setSelectedStore] = useState(STORES[0])
+    const [selectedStore, setSelectedStore] = useState<any>(null)
+
+    // Dynamic Data States
+    const [stores, setStores] = useState([])
+    const [page, setPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [loading, setLoading] = useState(true)
+
+    // Fetch stores
+
+    // Helper to format time (09:00 -> 9:00 AM)
+    const formatTime = (time: string) => {
+        if (!time) return '';
+        const [hours, minutes] = time.split(':');
+        const h = parseInt(hours);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${minutes} ${ampm}`;
+    };
+
+    const formatHours = (hours: any) => {
+        if (!hours) return {
+            weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
+            saturday: 'Saturday: 10:00 AM - 6:00 PM',
+            sunday: 'Sunday: 11:00 AM - 5:00 PM',
+        };
+
+        // DB Format
+        const mon = hours.monday || {};
+        const sat = hours.saturday || {};
+        const sun = hours.sunday || {};
+
+        return {
+            weekday: mon.open ? `Mon-Fri: ${formatTime(mon.open)} - ${formatTime(mon.close)}` : 'Mon-Fri: Closed',
+            saturday: sat.open ? `Saturday: ${formatTime(sat.open)} - ${formatTime(sat.close)}` : 'Saturday: Closed',
+            sunday: sun.open ? `Sunday: ${formatTime(sun.open)} - ${formatTime(sun.close)}` : 'Sunday: Closed',
+        };
+    };
+
+    // Fetch stores
+    useEffect(() => {
+        const fetchStores = async () => {
+            setLoading(true)
+            try {
+                const res = await fetch(`/api/stores?page=${page}&limit=10&query=${encodeURIComponent(searchQuery)}`)
+                const data = await res.json()
+                if (data.success) {
+                    const mappedStores = data.data.map((s: any) => ({
+                        ...s,
+                        zip: s.zipCode,
+                        distance: 'Calculating...',
+                        coordinates: { lat: 34.0522, lng: -118.2437 }, // Mock coordinates for now
+                        hours: formatHours(s.operatingHours)
+                    }))
+                    setStores(mappedStores)
+                    setTotalPages(data.pagination.totalPages)
+
+                    // Set selected store if none selected or not in list (optional)
+                    if (mappedStores.length > 0 && !selectedStore) {
+                        setSelectedStore(mappedStores[0])
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch stores", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        const timeoutId = setTimeout(() => {
+            fetchStores()
+        }, 500)
+        return () => clearTimeout(timeoutId)
+    }, [page, searchQuery]) // Re-fetch on page or query change
 
     const toggleRegion = (index: number) => {
         setExpandedRegion(expandedRegion === index ? null : index)
@@ -146,7 +181,7 @@ export default function StoreLocatorPage() {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search location..."
+                                    placeholder="Search location (e.g. Santa Barbara)"
                                     className="w-full px-4 py-3 pr-10 border-2 border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:border-neutral-900 dark:focus:border-neutral-500 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white"
                                 />
                                 <button className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -161,59 +196,93 @@ export default function StoreLocatorPage() {
 
                             {/* Store List */}
                             <div className="space-y-4">
-                                {STORES.map((store) => (
-                                    <button
-                                        key={store.id}
-                                        onClick={() => setSelectedStore(store)}
-                                        className={`
+                                {loading ? (
+                                    <div className="text-center py-8 text-neutral-500">Loading stores...</div>
+                                ) : stores.length === 0 ? (
+                                    <div className="text-center py-8 text-neutral-500">No stores found.</div>
+                                ) : (
+                                    stores.map((store: any) => (
+                                        <button
+                                            key={store.id}
+                                            onClick={() => setSelectedStore(store)}
+                                            className={`
                       w-full text-left p-4 rounded-lg border-2 transition-all
-                      ${selectedStore.id === store.id
-                                            ? 'border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-800'
-                                            : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'
-                                        }
+                      ${selectedStore?.id === store.id
+                                                    ? 'border-neutral-900 dark:border-white bg-neutral-50 dark:bg-neutral-800'
+                                                    : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'
+                                                }
                     `}
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <MapPin className="h-5 w-5 text-neutral-900 dark:text-white flex-shrink-0 mt-1" />
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-neutral-900 dark:text-white mb-1">
-                                                    {store.name}
-                                                </h3>
-                                                <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">
-                                                    {store.distance}
-                                                </p>
-                                                <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                                                    {store.address}<br />
-                                                    {store.city}, {store.state} {store.zip}
-                                                </p>
-                                                <a
-                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${store.address} ${store.city} ${store.state} ${store.zip}`)}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 mt-2"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    <Navigation className="h-3 w-3" />
-                                                    Get directions
-                                                </a>
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <MapPin className="h-5 w-5 text-neutral-900 dark:text-white flex-shrink-0 mt-1" />
+                                                <div className="flex-1">
+                                                    <h3 className="font-semibold text-neutral-900 dark:text-white mb-1">
+                                                        {store.name}
+                                                    </h3>
+                                                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">
+                                                        {store.distance}
+                                                    </p>
+                                                    <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                                                        {store.address}<br />
+                                                        {store.city}, {store.state} {store.zip}
+                                                    </p>
+                                                    <a
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${store.address} ${store.city} ${store.state} ${store.zip}`)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 mt-2"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <Navigation className="h-3 w-3" />
+                                                        Get directions
+                                                    </a>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </button>
-                                ))}
+                                        </button>
+                                    )))}
                             </div>
+
+                            {/* Pagination */}
+                            {!loading && totalPages > 1 && (
+                                <div className="flex justify-center items-center gap-2 mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                                    <button
+                                        disabled={page === 1}
+                                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                                        className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-600 rounded text-sm disabled:opacity-50 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                    >
+                                        Prev
+                                    </button>
+                                    <span className="text-sm px-2 text-neutral-600 dark:text-neutral-400">
+                                        Page {page} of {totalPages}
+                                    </span>
+                                    <button
+                                        disabled={page >= totalPages}
+                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                        className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-600 rounded text-sm disabled:opacity-50 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Right Side - Map */}
-                        <div className="h-[500px] bg-neutral-100 dark:bg-neutral-800 rounded-lg overflow-hidden">
-                            <iframe
-                                src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3304.8!2d${selectedStore.coordinates.lng}!3d${selectedStore.coordinates.lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zM!5e0!3m2!1sen!2sus!4v1234567890`}
-                                width="100%"
-                                height="100%"
-                                style={{ border: 0 }}
-                                allowFullScreen
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                            />
+                        <div className="h-[500px] bg-neutral-100 dark:bg-neutral-800 rounded-lg overflow-hidden relative">
+                            {selectedStore ? (
+                                <iframe
+                                    src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3304.8!2d${selectedStore.coordinates.lng}!3d${selectedStore.coordinates.lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zM!5e0!3m2!1sen!2sus!4v1234567890`}
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: 0 }}
+                                    allowFullScreen
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-neutral-500">
+                                    Select a store to view on map
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -258,9 +327,9 @@ export default function StoreLocatorPage() {
                                     onClick={() => toggleRegion(index)}
                                     className="w-full flex items-center justify-between p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                                 >
-                  <span className="font-medium text-neutral-900 dark:text-white">
-                    {regional.region}
-                  </span>
+                                    <span className="font-medium text-neutral-900 dark:text-white">
+                                        {regional.region}
+                                    </span>
                                     {expandedRegion === index ? (
                                         <ChevronUp className="h-5 w-5 text-neutral-500" />
                                     ) : (

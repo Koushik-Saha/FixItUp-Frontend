@@ -57,7 +57,7 @@ export async function getCart(): Promise<CartResponse> {
 }
 
 // Add item to cart
-export async function addToCart(productId: string, quantity: number = 1): Promise<{ message: string; data: any }> {
+export async function addToCart(productId: string, quantity: number = 1): Promise<{ message: string; data: unknown }> {
     const response = await fetch('/api/cart', {
         method: 'POST',
         headers: {
@@ -78,7 +78,7 @@ export async function addToCart(productId: string, quantity: number = 1): Promis
 }
 
 // Update cart item quantity
-export async function updateCartItem(itemId: string, quantity: number): Promise<{ message: string; data: any }> {
+export async function updateCartItem(itemId: string, quantity: number): Promise<{ message: string; data: unknown }> {
     const response = await fetch(`/api/cart/${itemId}`, {
         method: 'PATCH',
         headers: {

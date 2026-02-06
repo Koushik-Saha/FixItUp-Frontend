@@ -2,7 +2,7 @@
 // Get available part types for a specific brand + device model
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
     try {
@@ -17,24 +17,26 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        const supabase = await createClient()
-
-        // Query products filtered by brand and device_model
-        // Group by product_type to get unique part categories
-        const { data: products, error } = await (supabase
-            .from('products') as any)
-            .select('product_type, thumbnail, images, id')
-            .eq('is_active', true)
-            .ilike('brand', brand)
-            .ilike('device_model', `%${device}%`)
-
-        if (error) {
-            console.error('Failed to fetch products:', error)
-            return NextResponse.json(
-                { error: 'Failed to fetch product types' },
-                { status: 500 }
-            )
-        }
+        // Query products filtered by brand and device_model using Prisma
+        const products = await prisma.product.findMany({
+            where: {
+                isActive: true,
+                brand: {
+                    equals: brand,
+                    mode: 'insensitive'
+                },
+                deviceModel: {
+                    contains: device,
+                    mode: 'insensitive'
+                }
+            },
+            select: {
+                productType: true,
+                thumbnail: true,
+                images: true,
+                id: true
+            }
+        })
 
         if (!products || products.length === 0) {
             return NextResponse.json({
@@ -46,8 +48,8 @@ export async function GET(request: NextRequest) {
         // Group by product_type and count
         const partTypesMap = new Map<string, { type: string; count: number; sample_image: string | null }>()
 
-        products.forEach((product: any) => {
-            const type = product.product_type || 'Other'
+        products.forEach((product) => {
+            const type = product.productType || 'Other'
             const existing = partTypesMap.get(type)
 
             if (existing) {
@@ -56,7 +58,7 @@ export async function GET(request: NextRequest) {
                 partTypesMap.set(type, {
                     type,
                     count: 1,
-                    sample_image: product.thumbnail || product.images?.[0] || null
+                    sample_image: product.thumbnail || (product.images && product.images.length > 0 ? product.images[0] : null)
                 })
             }
         })

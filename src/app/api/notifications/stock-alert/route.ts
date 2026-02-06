@@ -2,7 +2,8 @@
 // Subscribe to back-in-stock notifications
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
+import { errorResponse } from '@/lib/utils/errors'
 
 export async function POST(request: NextRequest) {
     try {
@@ -25,16 +26,12 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const supabase = await createClient()
-
         // Check if product exists
-        const { data: product, error: productError } = await (supabase
-            .from('products') as any)
-            .select('id, name')
-            .eq('id', product_id)
-            .single()
+        const product = await prisma.product.findUnique({
+            where: { id: product_id }
+        });
 
-        if (productError || !product) {
+        if (!product) {
             return NextResponse.json(
                 { error: 'Product not found' },
                 { status: 404 }
@@ -42,13 +39,13 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if already subscribed
-        const { data: existing } = await (supabase
-            .from('stock_alerts') as any)
-            .select('id')
-            .eq('product_id', product_id)
-            .eq('email', email.toLowerCase())
-            .eq('notified', false)
-            .single()
+        const existing = await prisma.stockAlert.findFirst({
+            where: {
+                productId: product_id,
+                userEmail: email.toLowerCase(),
+                notifiedAt: null // Only check for active alerts
+            }
+        });
 
         if (existing) {
             return NextResponse.json({
@@ -58,22 +55,13 @@ export async function POST(request: NextRequest) {
         }
 
         // Create stock alert subscription
-        const { error: insertError } = await (supabase
-            .from('stock_alerts') as any)
-            .insert({
-                product_id,
-                email: email.toLowerCase(),
-                notified: false,
-                created_at: new Date().toISOString()
-            })
-
-        if (insertError) {
-            console.error('Failed to create stock alert:', insertError)
-            return NextResponse.json(
-                { error: 'Failed to subscribe to notifications' },
-                { status: 500 }
-            )
-        }
+        await prisma.stockAlert.create({
+            data: {
+                productId: product_id, // Map snake_case input to camelCase model field if needed, but here variable is product_id
+                userEmail: email.toLowerCase(),
+                // notifiedAt default is null which means not notified
+            }
+        });
 
         return NextResponse.json({
             success: true,
@@ -82,9 +70,6 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
         console.error('Stock alert API error:', error)
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        )
+        return errorResponse(error);
     }
 }

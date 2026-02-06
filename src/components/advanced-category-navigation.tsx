@@ -8,13 +8,11 @@ import {
     X,
     Pin,
     ChevronRight,
-    Star,
     Smartphone,
     Filter,
     SortAsc,
     Heart,
-    TrendingUp,
-    Clock
+    TrendingUp
 } from 'lucide-react'
 
 /**
@@ -53,8 +51,22 @@ import {
  *    - LocalStorage for user preferences
  */
 
+// Category Item Interface
+interface CategoryItem {
+    id: string
+    name: string
+    count?: number
+    new?: boolean
+    trending?: boolean
+    popular?: boolean
+    link?: boolean
+    special?: boolean
+    categoryKey?: string
+    categoryTitle?: string
+}
+
 // Category Data
-const CATEGORIES = {
+const CATEGORIES: Record<string, { title: string; icon?: React.ElementType; items: CategoryItem[] }> = {
     popular: {
         title: 'POPULAR',
         icon: TrendingUp,
@@ -69,6 +81,7 @@ const CATEGORIES = {
             { id: 'airpods', name: 'AirPods', count: 234 },
         ]
     },
+    // ... (other categories inferred to have same structure)
     apple: {
         title: 'APPLE',
         icon: Smartphone,
@@ -195,7 +208,7 @@ export function AdvancedCategoryNavigation() {
     const [showFilters, setShowFilters] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
     const [activeFilters, setActiveFilters] = useState<string[]>([])
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    // const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
     // Load user preferences from localStorage
     useEffect(() => {
@@ -233,7 +246,7 @@ export function AdvancedCategoryNavigation() {
         )
     }
 
-    const filterItems = (items: any[]) => {
+    const filterItems = (items: CategoryItem[]) => {
         let filtered = items.filter(item =>
             item.name.toLowerCase().includes(searchQuery.toLowerCase())
         )
@@ -268,7 +281,7 @@ export function AdvancedCategoryNavigation() {
     }
 
     const getPinnedItems = () => {
-        const allItems: any[] = []
+        const allItems: CategoryItem[] = []
         Object.entries(CATEGORIES).forEach(([key, category]) => {
             category.items.forEach(item => {
                 if (pinnedItems.includes(item.id)) {
@@ -278,6 +291,7 @@ export function AdvancedCategoryNavigation() {
         })
         return allItems
     }
+
 
     const toggleFilter = (filter: string) => {
         setActiveFilters(prev =>
@@ -360,8 +374,8 @@ export function AdvancedCategoryNavigation() {
                         >
                             <SortAsc className="h-5 w-5" />
                             <span className="hidden md:inline">
-                {sortBy === 'name' ? 'Name' : sortBy === 'count' ? 'Popular' : 'Recent'}
-              </span>
+                                {sortBy === 'name' ? 'Name' : sortBy === 'count' ? 'Popular' : 'Recent'}
+                            </span>
                         </motion.button>
                     </div>
 
@@ -383,9 +397,9 @@ export function AdvancedCategoryNavigation() {
                                         className={`
                       px-4 py-2 rounded-full text-sm font-medium transition-colors
                       ${activeFilters.includes(tag)
-                                            ? 'bg-yellow-400 text-black'
-                                            : 'bg-neutral-800 hover:bg-neutral-700 text-white'
-                                        }
+                                                ? 'bg-yellow-400 text-black'
+                                                : 'bg-neutral-800 hover:bg-neutral-700 text-white'
+                                            }
                     `}
                                     >
                                         {tag}
@@ -487,9 +501,9 @@ export function AdvancedCategoryNavigation() {
                                         className={`
                       block py-2.5 px-3 rounded-lg transition-all duration-150
                       ${item.link
-                                            ? 'text-yellow-400 font-semibold hover:bg-yellow-400/10'
-                                            : 'text-neutral-300 hover:text-white'
-                                        }
+                                                ? 'text-yellow-400 font-semibold hover:bg-yellow-400/10'
+                                                : 'text-neutral-300 hover:text-white'
+                                            }
                       ${hoveredItem === item.id ? 'bg-neutral-800 pl-5 shadow-lg' : 'hover:bg-neutral-900'}
                       ${item.special ? 'border border-neutral-700 hover:border-neutral-600' : ''}
                     `}
@@ -520,8 +534,8 @@ export function AdvancedCategoryNavigation() {
                                             <div className="flex items-center gap-2 shrink-0">
                                                 {item.count && (
                                                     <span className="text-xs text-neutral-500">
-                            {item.count}
-                          </span>
+                                                        {item.count}
+                                                    </span>
                                                 )}
                                                 {!item.link && (
                                                     <div className="flex gap-1">
@@ -611,7 +625,7 @@ export function AdvancedCategoryNavigation() {
                 transition={{ delay: 0.8 }}
                 className="text-center mt-16 mb-8 text-neutral-500 text-sm tracking-[0.3em] font-mono"
             >
-                I DON'T CARE
+                I DON&apos;T CARE
             </motion.div>
 
             {/* Search Results Count */}

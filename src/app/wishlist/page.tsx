@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Heart, ShoppingCart, X, TrendingDown, Bell, BellOff, Trash2, Share2 } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { WishlistItemSkeleton } from '@/components/skeleton'
@@ -25,51 +24,53 @@ interface WishlistItem {
     added_at: string
 }
 
+// Sample data moved outside to avoid dependency issues
+const sampleItems: WishlistItem[] = [
+    {
+        id: '1',
+        product_id: '1',
+        product_name: 'iPhone 15 Pro Max OLED Display Assembly',
+        product_image: '/placeholder-product.jpg',
+        brand: 'Apple',
+        device_model: 'iPhone 15 Pro Max',
+        current_price: 89.99,
+        original_price: 99.99,
+        stock: 50,
+        price_drop_alert: true,
+        alert_price: 80.00,
+        lowest_price_30days: 85.99,
+        added_at: '2024-01-10'
+    },
+    {
+        id: '2',
+        product_id: '2',
+        product_name: 'iPhone 15 Pro Battery Replacement',
+        product_image: '/placeholder-product.jpg',
+        brand: 'Apple',
+        device_model: 'iPhone 15 Pro',
+        current_price: 44.99,
+        original_price: 44.99,
+        stock: 0,
+        price_drop_alert: false,
+        lowest_price_30days: 42.99,
+        added_at: '2024-01-08'
+    }
+]
+
 export default function WishlistPage() {
     const router = useRouter()
     const [items, setItems] = useState<WishlistItem[]>([])
     const [loading, setLoading] = useState(true)
     const [removingId, setRemovingId] = useState<string | null>(null)
 
-    // Sample data
-    const sampleItems: WishlistItem[] = [
-        {
-            id: '1',
-            product_id: '1',
-            product_name: 'iPhone 15 Pro Max OLED Display Assembly',
-            product_image: '/placeholder-product.jpg',
-            brand: 'Apple',
-            device_model: 'iPhone 15 Pro Max',
-            current_price: 89.99,
-            original_price: 99.99,
-            stock: 50,
-            price_drop_alert: true,
-            alert_price: 80.00,
-            lowest_price_30days: 85.99,
-            added_at: '2024-01-10'
-        },
-        {
-            id: '2',
-            product_id: '2',
-            product_name: 'iPhone 15 Pro Battery Replacement',
-            product_image: '/placeholder-product.jpg',
-            brand: 'Apple',
-            device_model: 'iPhone 15 Pro',
-            current_price: 44.99,
-            original_price: 44.99,
-            stock: 0,
-            price_drop_alert: false,
-            lowest_price_30days: 42.99,
-            added_at: '2024-01-08'
-        }
-    ]
-
     useEffect(() => {
         // Simulate loading
-        setTimeout(() => {
+        // In real app, fetch from API here
+        const timer = setTimeout(() => {
             setItems(sampleItems)
             setLoading(false)
         }, 1000)
+        return () => clearTimeout(timer)
     }, [])
 
     const removeItem = async (itemId: string) => {
@@ -79,7 +80,7 @@ export default function WishlistPage() {
             await new Promise(resolve => setTimeout(resolve, 500))
             setItems(items.filter(item => item.id !== itemId))
             toast.success('Removed from wishlist')
-        } catch (error) {
+        } catch {
             toast.error('Failed to remove item')
         } finally {
             setRemovingId(null)
@@ -99,7 +100,7 @@ export default function WishlistPage() {
                     ? 'Price alert disabled'
                     : 'Price alert enabled! We\'ll notify you when price drops.'
             )
-        } catch (error) {
+        } catch {
             toast.error('Failed to update price alert')
         }
     }
@@ -112,17 +113,17 @@ export default function WishlistPage() {
                     : item
             ))
             toast.success('Alert price updated')
-        } catch (error) {
+        } catch {
             toast.error('Failed to update alert price')
         }
     }
 
-    const addToCart = async (productId: string) => {
+    const addToCart = async () => {
         try {
             // API call to add to cart
             await new Promise(resolve => setTimeout(resolve, 500))
             toast.success('Added to cart')
-        } catch (error) {
+        } catch {
             toast.error('Failed to add to cart')
         }
     }
@@ -134,7 +135,7 @@ export default function WishlistPage() {
             await new Promise(resolve => setTimeout(resolve, 500))
             setItems([])
             toast.success('Wishlist cleared')
-        } catch (error) {
+        } catch {
             toast.error('Failed to clear wishlist')
         }
     }
@@ -312,11 +313,10 @@ export default function WishlistPage() {
                                                     </div>
                                                     <button
                                                         onClick={() => togglePriceAlert(item.id)}
-                                                        className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
-                                                            item.price_drop_alert
-                                                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                                                                : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
-                                                        }`}
+                                                        className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${item.price_drop_alert
+                                                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                                                            : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
+                                                            }`}
                                                     >
                                                         {item.price_drop_alert ? 'Enabled' : 'Disabled'}
                                                     </button>
@@ -342,7 +342,7 @@ export default function WishlistPage() {
                                             {/* Actions */}
                                             <div className="flex flex-wrap gap-2">
                                                 <button
-                                                    onClick={() => addToCart(item.product_id)}
+                                                    onClick={() => addToCart()}
                                                     disabled={item.stock === 0}
                                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-neutral-300 disabled:text-neutral-500 dark:disabled:bg-neutral-700 dark:disabled:text-neutral-400 transition-colors flex items-center gap-2"
                                                 >

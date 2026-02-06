@@ -3,9 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import {Button} from "@/components/ui/button";
-import {Badge} from "@/components/ui/badge";
-import {Heart, ShoppingCart, Star} from "lucide-react";
+// Imports removed
 
 type BrandType = {
     logo: string
@@ -33,11 +31,20 @@ export default function TopBrand({ topBrands }: BrandProps) {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.3, delay: index * 0.05 }}
                         >
-                            <Link href={`/brand/${brand.name.toLowerCase()}`}>
+                            <Link href={`/shop?brand=${brand.name.toLowerCase()}`}>
                                 <Card className="group bg-white/90 dark:bg-neutral-900/90 border border-neutral-200/70 dark:border-neutral-800/70 hover:shadow-xl transition-all cursor-pointer hover:scale-105">
                                     <CardContent className="p-4 md:p-5 lg:p-6 text-center">
-                                        <div className="text-3xl md:text-4xl lg:text-5xl mb-2 md:mb-3 group-hover:scale-110 transition-transform">
-                                            {brand.logo}
+                                        <div className="h-12 w-12 md:h-14 md:w-14 lg:h-16 lg:w-16 mx-auto mb-2 md:mb-3 group-hover:scale-110 transition-transform flex items-center justify-center">
+                                            {brand.logo && (brand.logo.startsWith('/') || brand.logo.startsWith('http')) ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img
+                                                    src={brand.logo}
+                                                    alt={brand.name}
+                                                    className="w-full h-full object-contain"
+                                                />
+                                            ) : (
+                                                <span className="text-3xl md:text-4xl lg:text-5xl">{brand.logo || '📱'}</span>
+                                            )}
                                         </div>
                                         <h3 className="font-bold text-sm md:text-base lg:text-lg mb-1">
                                             {brand.name}

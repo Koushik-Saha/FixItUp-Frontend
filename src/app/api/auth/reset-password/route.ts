@@ -2,13 +2,13 @@
 // Reset password endpoint
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 import { z } from 'zod'
+import bcrypt from 'bcryptjs'
 
 const resetPasswordSchema = z.object({
     password: z.string().min(6, 'Password must be at least 6 characters'),
-    access_token: z.string(),
-    refresh_token: z.string(),
+    token: z.string().min(1, 'Token is required'),
 })
 
 // POST /api/auth/reset-password - Reset user password
@@ -28,34 +28,37 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const { password, access_token, refresh_token } = validation.data
+        const { password, token } = validation.data
 
-        const supabase = await createClient()
-
-        // Set the session with the tokens from the email link
-        const { error: sessionError } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
+        // Find user by token and verify expiry
+        const user = await prisma.user.findFirst({
+            where: {
+                resetToken: token,
+                resetTokenExpiry: {
+                    gt: new Date() // Expiry must be in the future
+                }
+            }
         })
 
-        if (sessionError) {
+        if (!user) {
             return NextResponse.json(
-                { error: 'Invalid or expired reset link' },
+                { error: 'Invalid or expired reset token' },
                 { status: 400 }
             )
         }
 
-        // Update the password
-        const { error } = await supabase.auth.updateUser({
-            password: password,
-        })
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(password, 10)
 
-        if (error) {
-            return NextResponse.json(
-                { error: error.message },
-                { status: 400 }
-            )
-        }
+        // Update password and clear token
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetToken: null,
+                resetTokenExpiry: null
+            }
+        })
 
         return NextResponse.json(
             {

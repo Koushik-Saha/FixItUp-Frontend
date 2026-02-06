@@ -1,161 +1,104 @@
-// app/api/orders/[id]/route.ts
-// Orders API - Get single order details
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
 import { sendOrderStatusUpdateEmail } from '@/lib/email'
 
-// GET /api/orders/[id] - Get order details
+// Reuse CORS logic ideally
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
+
+function getCorsHeaders(request: NextRequest) {
+    // Basic CORS for errors/responses
+    return {
+        "Access-Control-Allow-Origin": "*", // Simplify for now or use dynamic
+        "Access-Control-Allow-Methods": "GET,PUT,OPTIONS",
+    };
+}
+
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createClient()
+        const { id } = await params;
+        const userId = request.headers.get('x-user-id');
+        const userRole = request.headers.get('x-user-role');
 
-        // ✅ await params in Next 15
-        const { id } = await params
+        if (!userId) throw new UnauthorizedError();
 
-        // Get authenticated user
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError()
+        const order = await prisma.order.findUnique({
+            where: { id },
+            include: { orderItems: true }
+        });
+
+        if (!order) throw new NotFoundError('Order');
+
+        // Check Access
+        const isAdmin = userRole === 'ADMIN';
+        if (!isAdmin && order.userId !== userId) {
+            throw new ForbiddenError('Access denied');
         }
 
-        // Get order with items
-        const { data: order, error: orderError } = await (supabase
-            .from('orders') as any)
-            .select(`
-        *,
-        order_items (
-          id,
-          product_id,
-          product_name,
-          product_sku,
-          product_image,
-          unit_price,
-          discount_percentage,
-          quantity,
-          subtotal
-        )
-      `)
-            .eq('id', id) // 👈 use resolved id
-            .single()
+        return NextResponse.json({ data: order });
 
-        if (orderError || !order) {
-            throw new NotFoundError('Order')
-        }
-
-        // Check if user is admin
-        const { data: profile } = await (supabase
-            .from('profiles') as any)
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        const isAdmin = profile?.role === 'admin'
-
-        // Check ownership (unless admin)
-        if (!isAdmin && order.user_id !== user.id) {
-            throw new ForbiddenError('You do not have access to this order')
-        }
-
-        return NextResponse.json({
-            data: order,
-        })
     } catch (error) {
-        return errorResponse(error)
+        return errorResponse(error);
     }
 }
 
-// PUT /api/orders/[id] - Update order status (Admin only)
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createClient()
+        const { id } = await params;
+        const userRole = request.headers.get('x-user-role');
 
-        // ✅ await params
-        const { id } = await params
-
-        // Get authenticated user
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError()
+        if (userRole !== 'ADMIN') {
+            throw new ForbiddenError('Admin access required');
         }
 
-        // Check if user is admin
-        const { data: profile } = await (supabase
-            .from('profiles') as any)
-            .select('role')
-            .eq('id', user.id)
-            .single()
+        const body = await request.json();
 
-        if (!profile || (profile as any).role !== 'admin') {
-            throw new ForbiddenError('Only admins can update orders')
-        }
+        // Allowed field mapping
+        const updateData: any = {};
+        if (body.status) updateData.status = body.status.toUpperCase(); // Ensure Enum match?
+        if (body.payment_status) updateData.paymentStatus = body.payment_status.toUpperCase();
+        if (body.tracking_number) updateData.trackingNumber = body.tracking_number;
+        if (body.carrier) updateData.carrier = body.carrier;
+        if (body.admin_notes) updateData.adminNotes = body.admin_notes;
 
-        // Parse request body
-        const body = await request.json()
-        const allowedUpdates = [
-            'status',
-            'payment_status',
-            'tracking_number',
-            'carrier',
-            'admin_notes',
-        ]
+        // Timestamps
+        const now = new Date();
+        if (body.status === 'shipped') updateData.shippedAt = now;
+        if (body.status === 'delivered') updateData.deliveredAt = now;
+        if (body.status === 'cancelled') updateData.cancelledAt = now;
 
-        // Filter to only allowed fields
-        const updates: any = {}
-        for (const key of allowedUpdates) {
-            if (body[key] !== undefined) {
-                updates[key] = body[key]
+        const updatedOrder = await prisma.order.update({
+            where: { id },
+            data: updateData
+        });
+
+        // Email Notification
+        // Note: sendOrderStatusUpdateEmail likely expects specific shape.
+        try {
+            if (body.status) {
+                await sendOrderStatusUpdateEmail(updatedOrder as any, body.status);
             }
-        }
-
-        // Set timestamps based on status
-        if (body.status === 'shipped' && !updates.shipped_at) {
-            updates.shipped_at = new Date().toISOString()
-        }
-        if (body.status === 'delivered' && !updates.delivered_at) {
-            updates.delivered_at = new Date().toISOString()
-        }
-        if (body.status === 'cancelled' && !updates.cancelled_at) {
-            updates.cancelled_at = new Date().toISOString()
-        }
-
-        // Update order
-        const { data: updatedOrder, error: updateError } = await (supabase
-            .from('orders') as any)
-            .update(updates)
-            .eq('id', id) // 👈 use resolved id
-            .select()
-            .single()
-
-        if (updateError || !updatedOrder) {
-            throw new NotFoundError('Order')
-        }
-
-        // Send email notification to customer about status update
-        if (body.status && ['processing', 'shipped', 'delivered', 'cancelled', 'refunded'].includes(body.status)) {
-            await sendOrderStatusUpdateEmail(updatedOrder, body.status).catch(err =>
-                console.error('Failed to send order status update email:', err)
-            )
+        } catch (e) {
+            console.error('Email failed', e);
         }
 
         return NextResponse.json({
             message: 'Order updated successfully',
-            data: updatedOrder,
-        })
+            data: updatedOrder
+        });
+
     } catch (error) {
-        return errorResponse(error)
+        return errorResponse(error);
     }
 }

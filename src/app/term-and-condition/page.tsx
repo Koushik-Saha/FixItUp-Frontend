@@ -35,17 +35,13 @@ export default function TermsOfServicePage() {
                             </div>
 
                             <div className="space-y-4 text-neutral-700 dark:text-neutral-300">
-                                <p>
-                                    These Terms of Service constitute a legally binding agreement between you and Max Fit IT ("Company," "we," "us," or "our") concerning your access to and use of the maxfitit.com website and any related services (collectively, the "Services").
-                                </p>
+                                These Terms of Service constitute a legally binding agreement between you and Max Fit IT (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) concerning your access to and use of the maxfitit.com website and any related services (collectively, the &quot;Services&quot;).
 
                                 <p>
                                     You agree that by accessing the Services, you have read, understood, and agree to be bound by all of these Terms. If you do not agree with all of these Terms, you are expressly prohibited from using the Services.
                                 </p>
 
-                                <p>
-                                    We reserve the right to change or modify these Terms at any time. We will notify you of any changes by updating the "Last Updated" date. Your continued use of the Services after such changes constitutes your acceptance of the new Terms.
-                                </p>
+                                We reserve the right to change or modify these Terms at any time. We will notify you of any changes by updating the &quot;Last Updated&quot; date. Your continued use of the Services after such changes constitutes your acceptance of the new Terms.
                             </div>
                         </section>
 
@@ -232,7 +228,7 @@ export default function TermsOfServicePage() {
                                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                                     <h3 className="text-xl font-bold text-yellow-900 dark:text-yellow-200 mb-3">DISCLAIMER OF WARRANTIES</h3>
                                     <p className="text-yellow-800 dark:text-yellow-300">
-                                        THE SERVICES AND ALL PRODUCTS ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT ANY WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+                                        THE SERVICES AND ALL PRODUCTS ARE PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT ANY WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
                                     </p>
                                     <p className="mt-3 text-yellow-800 dark:text-yellow-300">
                                         WE DO NOT WARRANT THAT THE SERVICES WILL BE UNINTERRUPTED, ERROR-FREE, OR SECURE, OR THAT DEFECTS WILL BE CORRECTED.
@@ -307,7 +303,7 @@ export default function TermsOfServicePage() {
                                     </p>
                                     <ul className="list-disc pl-6 space-y-2 mt-3">
                                         <li>Arbitration will be conducted by the American Arbitration Association (AAA)</li>
-                                        <li>The arbitrator's decision is final and binding</li>
+                                        <li>The arbitrator&apos;s decision is final and binding</li>
                                         <li>You waive your right to a jury trial</li>
                                         <li>You waive your right to participate in a class action</li>
                                     </ul>

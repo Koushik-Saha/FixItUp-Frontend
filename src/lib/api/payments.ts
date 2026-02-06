@@ -27,15 +27,15 @@ export async function createPaymentIntent(orderId: string): Promise<PaymentInten
 }
 
 // Process refund
-export async function processRefund(paymentIntentId: string, amount?: number): Promise<{ message: string; data: any }> {
+export async function processRefund(paymentIntentId: string, amount?: number): Promise<{ message: string; data: unknown }> {
     const response = await fetch('/api/payments/refund', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
             payment_intent_id: paymentIntentId,
-            amount 
+            amount
         }),
     })
 

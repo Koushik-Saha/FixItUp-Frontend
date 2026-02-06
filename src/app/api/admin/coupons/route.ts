@@ -1,228 +1,139 @@
-// app/api/admin/coupons/route.ts
-// Admin Coupons API - List and Create coupons
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
-import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
+import prisma from '@/lib/prisma'
+import { errorResponse, ForbiddenError } from '@/lib/utils/errors'
+import { Prisma } from '@prisma/client'
 
-// Helper to check if user is admin
-async function checkAdmin(supabase: any, userId: string) {
-    const { data: profile } = await (supabase
-        .from('profiles') as any)
-        .select('role')
-        .eq('id', userId)
-        .single()
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
 
-    if (!profile || profile.role !== 'admin') {
-        throw new UnauthorizedError('Admin access required')
-    }
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
 }
 
-// OPTIONS /api/admin/coupons - Handle preflight request
 export async function OPTIONS(request: NextRequest) {
-    return handleCorsPreflightRequest(request)
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
-// GET /api/admin/coupons - List coupons with filters
 export async function GET(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const origin = request.headers.get('origin')
-        const supabase = await createClient()
-        const { searchParams } = new URL(request.url)
+        const userRole = request.headers.get('x-user-role');
+        if (userRole !== 'ADMIN') throw new ForbiddenError('Admin access required');
 
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to access this resource')
-        }
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const type = searchParams.get('type');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '50');
+        const skip = (page - 1) * limit;
 
-        // Check admin role
-        await checkAdmin(supabase, user.id)
+        const where: Prisma.CouponWhereInput = {};
 
-        // Get query parameters
-        const status = searchParams.get('status')
-        const type = searchParams.get('type')
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '50')
+        if (type) where.discountType = type;
 
-        // Build query
-        let query = (supabase
-            .from('coupons') as any)
-            .select('*', { count: 'exact' })
-
-        // Apply type filter
-        if (type) {
-            query = query.eq('discount_type', type)
-        }
-
-        // Apply status filter
-        const now = new Date().toISOString()
+        const now = new Date();
         if (status === 'active') {
-            query = query
-                .eq('is_active', true)
-                .lte('start_date', now)
-                .or(`end_date.is.null,end_date.gte.${now}`)
+            where.isActive = true;
+            where.startDate = { lte: now };
+            where.OR = [
+                { endDate: null },
+                { endDate: { gte: now } }
+            ];
         } else if (status === 'inactive') {
-            query = query.eq('is_active', false)
+            where.isActive = false;
         } else if (status === 'expired') {
-            query = query
-                .eq('is_active', true)
-                .lt('end_date', now)
+            where.isActive = true;
+            where.endDate = { lt: now };
         }
 
-        // Apply sorting
-        query = query.order('created_at', { ascending: false })
-
-        // Apply pagination
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-        query = query.range(from, to)
-
-        const { data: coupons, error, count } = await query
-
-        if (error) {
-            console.error('Failed to fetch coupons:', error)
-            throw new Error('Failed to fetch coupons')
-        }
+        const [coupons, count] = await Promise.all([
+            prisma.coupon.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit
+            }),
+            prisma.coupon.count({ where })
+        ]);
 
         return NextResponse.json({
             data: coupons,
             pagination: {
-                page,
-                limit,
-                total: count || 0,
-                totalPages: Math.ceil((count || 0) / limit),
-            },
-        }, {
-            headers: getCorsHeaders(origin)
-        })
+                page, limit, total: count, totalPages: Math.ceil(count / limit)
+            }
+        }, { headers: corsHeaders });
 
     } catch (error) {
-        const errorRes = errorResponse(error)
-        const headers = new Headers(errorRes.headers)
-        const origin = request.headers.get('origin')
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// POST /api/admin/coupons - Create new coupon
 export async function POST(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const origin = request.headers.get('origin')
-        const supabase = await createClient()
-        const body = await request.json()
+        const userRole = request.headers.get('x-user-role');
+        if (userRole !== 'ADMIN') throw new ForbiddenError('Admin access required');
 
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to access this resource')
-        }
+        const body = await request.json();
 
-        // Check admin role
-        await checkAdmin(supabase, user.id)
-
+        // Basic validation manually or use Zod schema if available
         const {
-            code,
-            description,
-            discount_type,
-            discount_value,
-            minimum_purchase,
-            maximum_discount,
-            max_uses,
-            max_uses_per_user,
-            applies_to,
-            product_ids,
-            category_ids,
-            user_restrictions,
-            start_date,
-            end_date,
-            is_active,
-        } = body
+            code, description, discount_type, discount_value,
+            minimum_purchase, maximum_discount, max_uses, max_uses_per_user,
+            applies_to, product_ids, category_ids, user_restrictions,
+            start_date, end_date, is_active
+        } = body;
 
-        // Validate required fields
         if (!code || !discount_type || discount_value === undefined) {
-            return NextResponse.json(
-                { error: 'Missing required fields: code, discount_type, discount_value' },
-                { status: 400, headers: getCorsHeaders(origin) }
-            )
+            return NextResponse.json({ error: 'Missing fields' }, { status: 400, headers: corsHeaders });
         }
 
-        // Validate discount type
-        if (!['percentage', 'fixed'].includes(discount_type)) {
-            return NextResponse.json(
-                { error: 'Discount type must be either "percentage" or "fixed"' },
-                { status: 400, headers: getCorsHeaders(origin) }
-            )
-        }
+        const existing = await prisma.coupon.findUnique({ where: { code: code.toUpperCase() } });
+        if (existing) return NextResponse.json({ error: 'Code exists' }, { status: 400, headers: corsHeaders });
 
-        // Check if coupon code already exists
-        const { data: existingCoupon } = await (supabase
-            .from('coupons') as any)
-            .select('id')
-            .eq('code', code.toUpperCase())
-            .single()
-
-        if (existingCoupon) {
-            return NextResponse.json(
-                { error: 'Coupon code already exists' },
-                { status: 400, headers: getCorsHeaders(origin) }
-            )
-        }
-
-        // Create coupon
-        const { data: coupon, error: createError } = await (supabase
-            .from('coupons') as any)
-            .insert({
+        const coupon = await prisma.coupon.create({
+            data: {
                 code: code.toUpperCase(),
                 description,
-                discount_type,
-                discount_value,
-                minimum_purchase: minimum_purchase || null,
-                maximum_discount: maximum_discount || null,
-                max_uses: max_uses || null,
-                max_uses_per_user: max_uses_per_user || null,
-                times_used: 0,
-                applies_to: applies_to || 'all',
-                product_ids: product_ids || [],
-                category_ids: category_ids || [],
-                user_restrictions: user_restrictions || 'all',
-                start_date: start_date || new Date().toISOString(),
-                end_date: end_date || null,
-                is_active: is_active !== false,
-            })
-            .select()
-            .single()
+                discountType: discount_type,
+                discountValue: discount_value,
+                minPurchase: minimum_purchase,
+                maxDiscount: maximum_discount,
+                maxUses: max_uses,
+                maxUsesPerUser: max_uses_per_user,
+                appliesTo: applies_to || 'all',
+                productIds: product_ids || [],
+                categoryIds: category_ids || [],
+                userRestrictions: user_restrictions || 'all',
+                startDate: start_date ? new Date(start_date) : new Date(),
+                endDate: end_date ? new Date(end_date) : null,
+                isActive: is_active !== false
+            }
+        });
 
-        if (createError) {
-            console.error('Failed to create coupon:', createError)
-            throw new Error('Failed to create coupon')
-        }
-
-        return NextResponse.json(
-            {
-                message: 'Coupon created successfully',
-                data: coupon,
-            },
-            { status: 201, headers: getCorsHeaders(origin) }
-        )
+        return NextResponse.json({
+            message: 'Coupon created',
+            data: coupon
+        }, { status: 201, headers: corsHeaders });
 
     } catch (error) {
-        const errorRes = errorResponse(error)
-        const headers = new Headers(errorRes.headers)
-        const origin = request.headers.get('origin')
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

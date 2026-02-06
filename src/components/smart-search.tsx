@@ -118,6 +118,11 @@ export default function SmartSearch() {
         router.push(`/shop?search=${encodeURIComponent(searchQuery)}`)
     }, [router, saveRecentSearch])
 
+    type SelectedItem =
+        | { type: 'product'; id: string }
+        | { type: 'brand'; value: string }
+        | { type: 'model'; value: string; brand: string }
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
         const totalItems = (results?.suggestions.length || 0) + (results?.brands.length || 0) + (results?.models.length || 0)
 
@@ -133,21 +138,21 @@ export default function SmartSearch() {
                 handleSearch(query)
             } else if (results) {
                 // Navigate to selected item
-                const allItems = [
-                    ...results.suggestions.map(s => ({ type: 'product', id: s.id })),
-                    ...results.brands.map(b => ({ type: 'brand', value: b })),
-                    ...results.models.map(m => ({ type: 'model', value: m.model, brand: m.brand }))
+                const allItems: SelectedItem[] = [
+                    ...results.suggestions.map(s => ({ type: 'product' as const, id: s.id })),
+                    ...results.brands.map(b => ({ type: 'brand' as const, value: b })),
+                    ...results.models.map(m => ({ type: 'model' as const, value: m.model, brand: m.brand }))
                 ]
                 const selected = allItems[selectedIndex]
 
-                if (selected.type === 'product' && 'id' in selected) {
-                    router.push(`/products/${(selected as any).id}`)
+                if (selected.type === 'product') {
+                    router.push(`/products/${selected.id}`)
                     setIsOpen(false)
-                } else if (selected.type === 'brand' && 'value' in selected) {
-                    router.push(`/shop?brand=${encodeURIComponent((selected as any).value)}`)
+                } else if (selected.type === 'brand') {
+                    router.push(`/shop?brand=${encodeURIComponent(selected.value)}`)
                     setIsOpen(false)
-                } else if (selected.type === 'model' && 'value' in selected && 'brand' in selected) {
-                    router.push(`/shop?brand=${encodeURIComponent((selected as any).brand)}&device=${encodeURIComponent((selected as any).value)}`)
+                } else if (selected.type === 'model') {
+                    router.push(`/shop?brand=${encodeURIComponent(selected.brand)}&device=${encodeURIComponent(selected.value)}`)
                     setIsOpen(false)
                 }
             }
@@ -238,7 +243,7 @@ export default function SmartSearch() {
                     {!loading && query && !hasResults && (
                         <div className="p-8 text-center text-neutral-500">
                             <Package className="h-12 w-12 mx-auto mb-3 text-neutral-400" />
-                            <p className="text-sm">No results found for "{query}"</p>
+                            <p className="text-sm">No results found for &quot;{query}&quot;</p>
                             <p className="text-xs mt-1">Try different keywords or check spelling</p>
                         </div>
                     )}
@@ -257,9 +262,8 @@ export default function SmartSearch() {
                                                 key={product.id}
                                                 href={`/products/${product.id}`}
                                                 onClick={() => setIsOpen(false)}
-                                                className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors ${
-                                                    selectedIndex === index ? 'bg-neutral-100 dark:bg-neutral-700' : ''
-                                                }`}
+                                                className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors ${selectedIndex === index ? 'bg-neutral-100 dark:bg-neutral-700' : ''
+                                                    }`}
                                             >
                                                 <div className="flex-shrink-0 w-12 h-12 bg-neutral-100 dark:bg-neutral-700 rounded-md overflow-hidden">
                                                     {product.thumbnail ? (
@@ -312,9 +316,8 @@ export default function SmartSearch() {
                                                     key={brand}
                                                     href={`/shop?brand=${encodeURIComponent(brand)}`}
                                                     onClick={() => setIsOpen(false)}
-                                                    className={`flex items-center justify-between px-3 py-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors ${
-                                                        selectedIndex === itemIndex ? 'bg-neutral-100 dark:bg-neutral-700' : ''
-                                                    }`}
+                                                    className={`flex items-center justify-between px-3 py-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors ${selectedIndex === itemIndex ? 'bg-neutral-100 dark:bg-neutral-700' : ''
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         <TrendingUp className="h-4 w-4 text-neutral-400" />
@@ -344,9 +347,8 @@ export default function SmartSearch() {
                                                     key={`${modelObj.brand}-${modelObj.model}`}
                                                     href={`/shop?brand=${encodeURIComponent(modelObj.brand)}&device=${encodeURIComponent(modelObj.model)}`}
                                                     onClick={() => setIsOpen(false)}
-                                                    className={`flex items-center justify-between px-3 py-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors ${
-                                                        selectedIndex === itemIndex ? 'bg-neutral-100 dark:bg-neutral-700' : ''
-                                                    }`}
+                                                    className={`flex items-center justify-between px-3 py-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors ${selectedIndex === itemIndex ? 'bg-neutral-100 dark:bg-neutral-700' : ''
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         <Package className="h-4 w-4 text-neutral-400" />
@@ -373,7 +375,7 @@ export default function SmartSearch() {
                                     onClick={() => handleSearch(query)}
                                     className="w-full px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md flex items-center justify-center gap-2"
                                 >
-                                    View all results for "{query}"
+                                    View all results for &quot;{query}&quot;
                                     <ArrowRight className="h-4 w-4" />
                                 </button>
                             </div>

@@ -4,11 +4,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {useAuth} from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
     const router = useRouter();
-    const { user, login, isLoading, error, init } = useAuth();
+    const { user, login, isLoading, init } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -26,8 +29,10 @@ export default function LoginPage() {
         e.preventDefault();
         try {
             await login({ email, password });
-        } catch {
-            // error already in store
+            toast.success("Welcome back!");
+        } catch (err: any) {
+            // error already in store, but we can toast it too
+            toast.error(err.message || "Invalid credentials. Please try again.");
         }
     };
 
@@ -41,20 +46,13 @@ export default function LoginPage() {
                     Enter your email and password to access your dashboard.
                 </p>
 
-                {error && (
-                    <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-3 py-2 text-sm">
-                        {error}
-                    </div>
-                )}
-
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Email
                         </label>
-                        <input
+                        <Input
                             type="email"
-                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -67,16 +65,15 @@ export default function LoginPage() {
                             <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300">
                                 Password
                             </label>
-                            <Link 
+                            <Link
                                 href="/auth/forgot-password"
                                 className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
                             >
                                 Forgot password?
                             </Link>
                         </div>
-                        <input
+                        <Input
                             type="password"
-                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -84,13 +81,14 @@ export default function LoginPage() {
                         />
                     </div>
 
-                    <button
+                    <Button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full inline-flex items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2.5 hover:bg-blue-700 disabled:opacity-60"
+                        loading={isLoading}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                        {isLoading ? "Signing in..." : "Sign In"}
-                    </button>
+                        Sign In
+                    </Button>
                 </form>
 
                 <p className="mt-6 text-sm text-center text-slate-500 dark:text-neutral-400">

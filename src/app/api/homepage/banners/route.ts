@@ -1,119 +1,107 @@
-// app/api/homepage/banners/route.ts
-// Manage homepage banners/carousel
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 import { errorResponse, UnauthorizedError, ForbiddenError } from '@/lib/utils/errors'
 import { z } from 'zod'
 
 const bannerSchema = z.object({
     title: z.string().min(1, 'Title is required'),
-    subtitle: z.string().optional(),
-    image_url: z.string().url('Invalid image URL'),
+    subtitle: z.string().optional(), // Description in model
+    image_url: z.string().url('Invalid image URL'), // Image in model
     link_url: z.string().url('Invalid link URL').optional(),
     button_text: z.string().optional(),
     text_color: z.string().default('#FFFFFF'),
     is_active: z.boolean().default(true),
     sort_order: z.number().default(0),
+    // Map these to model fields
 })
 
-// GET /api/homepage/banners - Get all banners (admin only)
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
+
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
+}
+
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
+
 export async function GET(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
+        const userRole = request.headers.get('x-user-role');
+        if (userRole !== 'ADMIN') throw new ForbiddenError('Admin access required');
 
-        // Check admin
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError()
-        }
+        const banners = await prisma.heroSlide.findMany({
+            orderBy: { sortOrder: 'asc' }
+        });
 
-        const { data: profile } = await (supabase as any)
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        if (!profile || (profile as any).role !== 'admin') {
-            throw new ForbiddenError('Only admins can manage banners')
-        }
-
-        // Get all banners
-        const { data: banners, error } = await (supabase as any)
-            .from('homepage_banners')
-            .select('*')
-            .order('sort_order', { ascending: true })
-
-        if (error) {
-            throw new Error('Failed to fetch banners')
-        }
-
-        return NextResponse.json({
-            data: banners,
-        })
+        return NextResponse.json({ data: banners }, { headers: corsHeaders });
 
     } catch (error) {
-        return errorResponse(error)
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// POST /api/homepage/banners - Create banner (admin only)
 export async function POST(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
+        const userRole = request.headers.get('x-user-role');
+        if (userRole !== 'ADMIN') throw new ForbiddenError('Admin access required');
 
-        // Check admin
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError()
-        }
+        const body = await request.json();
+        const validation = bannerSchema.safeParse(body);
 
-        const { data: profile } = await (supabase as any)
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        if (!profile || (profile as any).role !== 'admin') {
-            throw new ForbiddenError('Only admins can create banners')
-        }
-
-        const body = await request.json()
-
-        // Validate
-        const validation = bannerSchema.safeParse(body)
         if (!validation.success) {
-            return NextResponse.json(
-                {
-                    error: 'Validation failed',
-                    errors: validation.error.flatten().fieldErrors,
-                },
-                { status: 400 }
-            )
+            return NextResponse.json({
+                error: 'Validation failed',
+                errors: validation.error.flatten().fieldErrors
+            }, { status: 400, headers: corsHeaders });
         }
 
-        const bannerData = validation.data
+        const data = validation.data;
 
-        // Create banner
-        const { data: banner, error } = await (supabase as any)
-            .from('homepage_banners')
-            .insert(bannerData)
-            .select()
-            .single()
+        // Map simplified frontend fields to complex HeroSlide model
+        // Frontend sends simple banner, Backend expects HeroSlide?
+        // Let's adapt as best as possible.
+        const slide = await prisma.heroSlide.create({
+            data: {
+                title: data.title,
+                description: data.subtitle,
+                image: data.image_url,
+                ctaPrimary: data.link_url ? { text: data.button_text || 'Learn More', link: data.link_url } : undefined,
+                isActive: data.is_active,
+                sortOrder: data.sort_order,
+                // Defaults
+                badge: "Featured",
+                badgeColor: "bg-blue-600",
+                gradient: "from-blue-600 to-purple-600"
+            }
+        });
 
-        if (error) {
-            throw new Error('Failed to create banner')
-        }
-
-        return NextResponse.json(
-            {
-                message: 'Banner created successfully',
-                data: banner,
-            },
-            { status: 201 }
-        )
+        return NextResponse.json({
+            message: 'Banner created successfully',
+            data: slide
+        }, { status: 201, headers: corsHeaders });
 
     } catch (error) {
-        return errorResponse(error)
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

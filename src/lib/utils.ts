@@ -43,7 +43,7 @@ export function formatDate(date: Date | string): string {
 /**
  * Debounce function
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -74,6 +74,8 @@ export function truncate(str: string, length: number): string {
  */
 export function slugify(str: string): string {
   return str
+    .normalize('NFKD') // Normalize to NFD form (decomposes accents)
+    .replace(/[\u0300-\u036f]/g, '') // Remove accent characters
     .toLowerCase()
     .trim()
     .replace(/[^\w\s-]/g, '')
@@ -165,11 +167,11 @@ export function calculateBulkPrice(
 export function formatPhoneNumber(phone: string): string {
   const cleaned = phone.replace(/\D/g, '')
   const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/)
-  
+
   if (match) {
     return `(${match[1]}) ${match[2]}-${match[3]}`
   }
-  
+
   return phone
 }
 

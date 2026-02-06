@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Search, ChevronRight, Smartphone, Package, ArrowRight, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import Image from 'next/image'
+// Image import removed
 
 type Brand = {
     name: string
@@ -26,6 +26,19 @@ type PartType = {
 }
 
 type Step = 'brand' | 'model' | 'part'
+
+interface NavItem {
+    name: string;
+    new?: boolean;
+}
+
+interface NavColumn {
+    items?: NavItem[];
+}
+
+interface NavSubcategory {
+    columns?: NavColumn[];
+}
 
 export default function DeviceFinder() {
     const router = useRouter()
@@ -56,8 +69,60 @@ export default function DeviceFinder() {
 
     // Load models when brand is selected
     useEffect(() => {
+        const loadModels = async () => {
+            if (!selectedBrand) return;
+
+            try {
+                setLoadingModels(true)
+
+                const res = await fetch('/api/nav/phone-models')
+                const json = await res.json()
+
+                // ✅ your API response has { success, data }
+                const brandsMap = json?.data
+                const brandData = brandsMap?.[selectedBrand.name]
+
+                if (!brandData?.bySubcategory) {
+                    setModels([]) // clear list if brand not found / no models
+                    return
+                }
+
+                const modelList: PhoneModel[] = []
+                const seen = new Set<string>()
+
+                const subcategories = brandData.bySubcategory as Record<string, NavSubcategory>;
+
+                Object.values(subcategories).forEach((subcat) => {
+                    subcat?.columns?.forEach((col) => {
+                        col?.items?.forEach((item) => {
+                            if (!item?.name) return
+
+                            const model: PhoneModel = {
+                                name: item.name,
+                                slug: slugify(item.name),
+                                year: item.new ? new Date().getFullYear() : undefined
+                            }
+
+                            // ✅ avoid duplicates (since models can appear across columns)
+                            if (!seen.has(model.slug)) {
+                                seen.add(model.slug)
+                                modelList.push(model)
+                            }
+                        })
+                    })
+                })
+
+                setModels(modelList)
+            } catch (error) {
+                console.error('Failed to load models:', error)
+                setModels([])
+            } finally {
+                setLoadingModels(false)
+            }
+        }
+
         if (selectedBrand) {
-            loadModels(selectedBrand.slug)
+            loadModels()
         }
     }, [selectedBrand])
 
@@ -74,16 +139,24 @@ export default function DeviceFinder() {
             const res = await fetch('/api/nav/phone-models')
             const data = await res.json()
 
-            const rowBrandData = Object.keys(data?.data)
-            if (!rowBrandData) return
+            // The API returns a map: { "Apple": { id, slug, icon, subcategories... }, ... }
+            const brandsMap = data?.data
+            if (!brandsMap) return
 
-            // Extract brand names from response
-            const brandNames = rowBrandData
-            const brandList: Brand[] = brandNames.map(name => ({
-                name,
-                slug: name.toLowerCase()
-            }))
+            // Extract brand names and map to Brand objects
+            const brandNames = Object.keys(brandsMap)
+            const brandList: Brand[] = brandNames.map(name => {
+                const info = brandsMap[name]
+                return {
+                    name,
+                    slug: info.slug || name.toLowerCase(),
+                    logo: info.icon // Dynamically fetched icon
+                }
+            })
 
+            // Optional: Sort brands if needed? 
+            // Currently relies on the order keys come back, or we can sort by name/order if API provided it.
+            // For now, this is dynamic enough.
             setBrands(brandList)
         } catch (error) {
             console.error('Failed to load brands:', error)
@@ -100,54 +173,6 @@ export default function DeviceFinder() {
             .replace(/[^a-z0-9]+/g, '-')   // non-alphanum -> dash
             .replace(/-+/g, '-')           // collapse dashes
             .replace(/^-|-$/g, '')         // trim dashes
-
-    const loadModels = async (brandSlug: string) => {
-        try {
-            setLoadingModels(true)
-
-            const res = await fetch('/api/nav/phone-models')
-            const json = await res.json()
-
-            // ✅ your API response has { success, data }
-            const brandsMap = json?.data
-            const brandData = brandsMap?.[selectedBrand!.name]
-
-            if (!brandData?.bySubcategory) {
-                setModels([]) // clear list if brand not found / no models
-                return
-            }
-
-            const modelList: PhoneModel[] = []
-            const seen = new Set<string>()
-
-            Object.values(brandData.bySubcategory).forEach((subcat: any) => {
-                subcat?.columns?.forEach((col: any) => {
-                    col?.items?.forEach((item: any) => {
-                        if (!item?.name) return
-
-                        const model: PhoneModel = {
-                            name: item.name,
-                            slug: slugify(item.name),
-                            year: item.new ? new Date().getFullYear() : undefined
-                        }
-
-                        // ✅ avoid duplicates (since models can appear across columns)
-                        if (!seen.has(model.slug)) {
-                            seen.add(model.slug)
-                            modelList.push(model)
-                        }
-                    })
-                })
-            })
-
-            setModels(modelList)
-        } catch (error) {
-            console.error('Failed to load models:', error)
-            setModels([])
-        } finally {
-            setLoadingModels(false)
-        }
-    }
 
     const loadPartTypes = async (brand: string, model: string) => {
         try {
@@ -281,8 +306,8 @@ export default function DeviceFinder() {
                     type="text"
                     placeholder={
                         currentStep === 'brand' ? 'Search brands...' :
-                        currentStep === 'model' ? 'Search models...' :
-                        'Search parts...'
+                            currentStep === 'model' ? 'Search models...' :
+                                'Search parts...'
                     }
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -391,13 +416,12 @@ function StepIndicator({ label, active, completed }: { label: string; active: bo
     return (
         <div className="flex flex-col items-center gap-1">
             <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
-                    completed
-                        ? 'bg-green-500 text-white'
-                        : active
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${completed
+                    ? 'bg-green-500 text-white'
+                    : active
                         ? 'bg-blue-600 text-white'
                         : 'bg-neutral-800 text-neutral-500'
-                }`}
+                    }`}
             >
                 {completed ? '✓' : active ? '•' : ''}
             </div>
@@ -409,6 +433,7 @@ function StepIndicator({ label, active, completed }: { label: string; active: bo
 }
 
 // Brand Card Component
+// Brand Card Component
 function BrandCard({ brand, onClick }: { brand: Brand; onClick: () => void }) {
     return (
         <button
@@ -416,8 +441,17 @@ function BrandCard({ brand, onClick }: { brand: Brand; onClick: () => void }) {
             className="group relative bg-neutral-900/50 hover:bg-neutral-800/50 border border-neutral-800 hover:border-blue-500/50 rounded-xl p-6 transition-all hover:scale-105"
         >
             <div className="flex flex-col items-center gap-3">
-                <div className="w-16 h-16 bg-neutral-800 rounded-xl flex items-center justify-center group-hover:bg-neutral-700 transition-colors">
-                    <Smartphone className="w-8 h-8 text-blue-400" />
+                <div className="w-16 h-16 bg-neutral-800 rounded-xl flex items-center justify-center group-hover:bg-neutral-700 transition-colors overflow-hidden relative">
+                    {brand.logo ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                            src={brand.logo}
+                            alt={brand.name}
+                            className="w-full h-full object-contain p-2"
+                        />
+                    ) : (
+                        <Smartphone className="w-8 h-8 text-blue-400" />
+                    )}
                 </div>
                 <span className="text-white font-medium text-center">{brand.name}</span>
             </div>

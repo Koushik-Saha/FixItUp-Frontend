@@ -8,9 +8,16 @@ import {
     Wrench,
     Shield,
     Eye,
+    Loader2,
+    AlertCircle
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { DashboardSkeleton } from "@/components/skeletons/dashboard-skeleton";
+import { getOrders, Order } from "@/lib/api/orders";
+import { getRepairs, Repair } from "@/lib/api/repairs";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 const TABS = [
     { id: "profile", label: "Profile", icon: User },
@@ -30,23 +37,6 @@ type Address = {
     state: string;
     zip: string;
     isDefault: boolean;
-};
-
-type Order = {
-    id: string;
-    date: string;
-    items: number;
-    total: number;
-    status: string;
-};
-
-type Repair = {
-    id: string;
-    date: string;
-    device: string;
-    issue: string;
-    status: string;
-    store: string;
 };
 
 const INITIAL_ADDRESSES: Address[] = [
@@ -70,81 +60,77 @@ const INITIAL_ADDRESSES: Address[] = [
     },
 ];
 
-const INITIAL_ORDERS: Order[] = [
-    {
-        id: "ORD-123456",
-        date: "2024-12-05",
-        items: 2,
-        total: 139.98,
-        status: "Delivered",
-    },
-    {
-        id: "ORD-789012",
-        date: "2024-11-28",
-        items: 1,
-        total: 89.99,
-        status: "Shipped",
-    },
-    {
-        id: "ORD-345678",
-        date: "2024-11-15",
-        items: 3,
-        total: 249.97,
-        status: "Delivered",
-    },
-];
-
-const INITIAL_REPAIRS: Repair[] = [
-    {
-        id: "RT-123456",
-        date: "2024-12-01",
-        device: "iPhone 15 Pro Max",
-        issue: "Screen Repair",
-        status: "Completed",
-        store: "Santa Barbara",
-    },
-    {
-        id: "RT-789012",
-        date: "2024-11-20",
-        device: "Samsung S24 Ultra",
-        issue: "Battery Replacement",
-        status: "In Progress",
-        store: "Campbell",
-    },
-];
-
 export default function CustomerDashboard() {
     const router = useRouter();
-    const { user, isLoading, init, applyWholesale, logout } = useAuth();
+    const { user, isLoading: authLoading, init, applyWholesale, logout } = useAuth();
 
-    // ✅ all hooks at the top
     const [activeTab, setActiveTab] = useState<TabId>("profile");
     const [addresses] = useState<Address[]>(INITIAL_ADDRESSES);
-    const [orders] = useState<Order[]>(INITIAL_ORDERS);
-    const [repairs] = useState<Repair[]>(INITIAL_REPAIRS);
+
+    // Data states
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [repairs, setRepairs] = useState<Repair[]>([]);
+    const [dataLoading, setDataLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Only hit Supabase if we DON'T already have a user in the store
+        // Init auth if needed
         if (!user) {
             init();
         }
     }, [user, init]);
 
-    console.log("user", user)
+    // Fetch dashboard data when user is available
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            if (!user) return;
 
-    // useEffect(() => {
-    //     if (!isLoading && !user) {
-    //         // router.push("/auth/login");
-    //     }
-    // }, [isLoading, user, router]);
+            try {
+                setDataLoading(true);
+                setError(null);
 
-    // ✅ safe early return; hooks above have already run
-    if (isLoading || !user) {
+                const [ordersData, repairsData] = await Promise.all([
+                    getOrders({ limit: 5 }).catch(err => {
+                        console.error("Failed to fetch orders:", err);
+                        return { data: [] }; // Fallback to empty array
+                    }),
+                    getRepairs().catch(err => {
+                        console.error("Failed to fetch repairs:", err);
+                        return { repairs: [] }; // Fallback
+                    })
+                ]);
+
+                setOrders(ordersData.data || []);
+                setRepairs(repairsData.repairs || []);
+            } catch (err) {
+                console.error("Error loading dashboard data:", err);
+                setError("Failed to load some dashboard information");
+            } finally {
+                setDataLoading(false);
+            }
+        };
+
+        if (user) {
+            fetchDashboardData();
+        }
+    }, [user]);
+
+    if (authLoading || (!user && dataLoading)) {
+        return <DashboardSkeleton />
+    }
+
+    if (!user) {
+        // Redirection should happen in useAuth or via middleware, but as safety:
         return (
             <div className="min-h-screen flex items-center justify-center bg-neutral-950">
-                <p className="text-lg text-neutral-200">Loading dashboard...</p>
+                <div className="text-center">
+                    <p className="text-lg text-neutral-200">Please log in to view your dashboard.</p>
+                    <Link href="/auth/login" className="mt-4 inline-block text-blue-500 hover:underline">
+                        Go to Login
+                    </Link>
+                </div>
             </div>
-        );
+        )
     }
 
     const fullName = user.full_name || "Customer";
@@ -161,14 +147,15 @@ export default function CustomerDashboard() {
                             Welcome back, {fullName}!
                         </p>
                     </div>
-                    <button
+                    <Button
                         onClick={() =>
                             logout().then(() => router.push("/auth/login"))
                         }
-                        className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-medium transition-colors"
+                        variant="destructive"
+                        className="bg-red-600 hover:bg-red-700 text-white"
                     >
                         Logout
-                    </button>
+                    </Button>
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-[260px,1fr] gap-8">
@@ -178,9 +165,9 @@ export default function CustomerDashboard() {
                             <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
                                 {fullName.charAt(0).toUpperCase()}
                             </div>
-                            <div>
+                            <div className="overflow-hidden">
                                 <p className="text-sm text-neutral-400">Signed in as</p>
-                                <p className="font-medium text-sm">{user.email}</p>
+                                <p className="font-medium text-sm truncate">{user.email}</p>
                             </div>
                         </div>
 
@@ -193,11 +180,10 @@ export default function CustomerDashboard() {
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
-                                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                                            isActive
-                                                ? "bg-blue-600 text-white"
-                                                : "text-neutral-300 hover:bg-neutral-800"
-                                        }`}
+                                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                                            ? "bg-blue-600 text-white"
+                                            : "text-neutral-300 hover:bg-neutral-800"
+                                            }`}
                                     >
                                         <Icon className="h-4 w-4" />
                                         <span>{tab.label}</span>
@@ -209,6 +195,13 @@ export default function CustomerDashboard() {
 
                     {/* Main panel */}
                     <main className="space-y-8">
+                        {error && (
+                            <div className="bg-red-900/20 border border-red-800 text-red-200 p-4 rounded-xl flex items-center gap-3">
+                                <AlertCircle className="h-5 w-5" />
+                                <p>{error}</p>
+                            </div>
+                        )}
+
                         {/* PROFILE TAB */}
                         {activeTab === "profile" && (
                             <section className="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-6 space-y-4">
@@ -248,7 +241,7 @@ export default function CustomerDashboard() {
                                         <p className="text-xs uppercase text-neutral-500">
                                             Role
                                         </p>
-                                        <p className="mt-1 text-sm">{user.role}</p>
+                                        <p className="mt-1 text-sm capitalize">{user.role}</p>
                                     </div>
                                 </div>
 
@@ -258,7 +251,7 @@ export default function CustomerDashboard() {
                                             <p className="text-xs uppercase text-neutral-500">
                                                 Wholesale Status
                                             </p>
-                                            <p className="mt-1 text-sm">
+                                            <p className="mt-1 text-sm capitalize">
                                                 {user.wholesale_status}
                                             </p>
                                         </div>
@@ -299,11 +292,11 @@ export default function CustomerDashboard() {
                                                 </h3>
                                                 {addr.isDefault && (
                                                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-300">
-                            Default
-                          </span>
+                                                        Default
+                                                    </span>
                                                 )}
                                             </div>
-                                            <p className="text-sm">
+                                            <p className="text-sm text-neutral-300">
                                                 {addr.address}
                                                 <br />
                                                 {addr.city}, {addr.state} {addr.zip}
@@ -326,14 +319,60 @@ export default function CustomerDashboard() {
                                     </div>
                                 </div>
 
-                                <div className="overflow-x-auto">
-                                    <button
-                                        onClick={() => router.push('/orders')}
-                                        className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"
-                                    >
-                                        View all orders
-                                    </button>
-                                </div>
+                                {dataLoading ? (
+                                    <div className="flex justify-center py-8">
+                                        <Loader2 className="h-6 w-6 animate-spin text-neutral-500" />
+                                    </div>
+                                ) : orders.length === 0 ? (
+                                    <div className="text-center py-8 text-neutral-500">
+                                        <Package className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                                        <p>No orders found.</p>
+                                        <Link href="/shop" className="text-blue-500 hover:underline mt-2 inline-block">
+                                            Start Shopping
+                                        </Link>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {orders.map((order) => (
+                                            <div key={order.id} className="border border-neutral-800 rounded-xl p-4">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                                                    <div>
+                                                        <span className="text-sm font-medium text-white">#{order.order_number}</span>
+                                                        <span className="text-xs text-neutral-500 ml-2">
+                                                            {new Date(order.created_at).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`text-xs px-2 py-1 rounded-full ${order.status === 'COMPLETED' ? 'bg-green-500/20 text-green-300' :
+                                                            order.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-300' :
+                                                                'bg-neutral-700 text-neutral-300'
+                                                            }`}>
+                                                            {order.status}
+                                                        </span>
+                                                        <span className="font-semibold text-white">
+                                                            ${Number(order.total_amount).toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-end">
+                                                    <Link href={`/orders/${order.id}`} className="text-sm text-blue-400 hover:underline">
+                                                        View Details
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        <div className="pt-4 text-center">
+                                            <Button
+                                                onClick={() => router.push('/orders')}
+                                                variant="secondary"
+                                                className="bg-neutral-800 hover:bg-neutral-700 text-white"
+                                            >
+                                                View all orders
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </section>
                         )}
 
@@ -351,44 +390,55 @@ export default function CustomerDashboard() {
                                     </div>
                                 </div>
 
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    {repairs.map((repair) => (
-                                        <div
-                                            key={repair.id}
-                                            className="border border-neutral-800 rounded-xl p-4 space-y-1"
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <h3 className="font-medium text-sm">
-                                                    {repair.id}
-                                                </h3>
-                                                <span className="text-xs text-neutral-400">
-                          {repair.date}
-                        </span>
+                                {dataLoading ? (
+                                    <div className="flex justify-center py-8">
+                                        <Loader2 className="h-6 w-6 animate-spin text-neutral-500" />
+                                    </div>
+                                ) : repairs.length === 0 ? (
+                                    <div className="text-center py-8 text-neutral-500">
+                                        <Wrench className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                                        <p>No repair tickets found.</p>
+                                        <Link href="/book-repair" className="text-blue-500 hover:underline mt-2 inline-block">
+                                            Book a Repair
+                                        </Link>
+                                    </div>
+                                ) : (
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        {repairs.map((repair) => (
+                                            <div
+                                                key={repair.id}
+                                                className="border border-neutral-800 rounded-xl p-4 space-y-1"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="font-medium text-sm">
+                                                        {repair.id} // Probably ticket number
+                                                    </h3>
+                                                    <span className="text-xs text-neutral-400">
+                                                        {new Date(repair.date).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <span className={`text-xs uppercase px-2 py-0.5 rounded-full inline-block mt-1 ${repair.status === 'Completed' ? 'bg-green-500/20 text-green-300' :
+                                                    repair.status === 'In Progress' ? 'bg-blue-500/20 text-blue-300' :
+                                                        'bg-neutral-700 text-neutral-300'
+                                                    }`}>
+                                                    {repair.status}
+                                                </span>
+                                                <p className="text-sm mt-3">
+                                                    <span className="text-neutral-400">Device:</span>{" "}
+                                                    {repair.device}
+                                                </p>
+                                                <p className="text-sm">
+                                                    <span className="text-neutral-400">Issue:</span>{" "}
+                                                    {repair.issue}
+                                                </p>
+                                                <p className="text-sm">
+                                                    <span className="text-neutral-400">Store:</span>{" "}
+                                                    {repair.store}
+                                                </p>
                                             </div>
-                                            <p className="text-xs uppercase text-neutral-500">
-                                                {repair.status}
-                                            </p>
-                                            <p className="text-sm mt-2">
-                        <span className="text-neutral-400">
-                          Device:
-                        </span>{" "}
-                                                {repair.device}
-                                            </p>
-                                            <p className="text-sm">
-                        <span className="text-neutral-400">
-                          Issue:
-                        </span>{" "}
-                                                {repair.issue}
-                                            </p>
-                                            <p className="text-sm">
-                        <span className="text-neutral-400">
-                          Store:
-                        </span>{" "}
-                                                {repair.store}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                )}
                             </section>
                         )}
 
@@ -398,14 +448,14 @@ export default function CustomerDashboard() {
                                 <h2 className="text-xl font-semibold">Wholesale Status</h2>
 
                                 {user.role === "wholesale" &&
-                                user.wholesale_status === "approved" ? (
+                                    user.wholesale_status === "approved" ? (
                                     <>
                                         <div className="grid md:grid-cols-2 gap-6">
                                             <div>
                                                 <p className="text-xs uppercase text-neutral-500">
                                                     Status
                                                 </p>
-                                                <p className="mt-1 text-sm">
+                                                <p className="mt-1 text-sm capitalize">
                                                     {user.wholesale_status}
                                                 </p>
                                             </div>
@@ -418,9 +468,9 @@ export default function CustomerDashboard() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <button className="mt-4 inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium">
+                                        <Button className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">
                                             Go to Wholesale Portal
-                                        </button>
+                                        </Button>
                                     </>
                                 ) : user.wholesale_status === "pending" ? (
                                     <div className="space-y-2">
@@ -438,12 +488,12 @@ export default function CustomerDashboard() {
                                             Get access to wholesale pricing and exclusive
                                             products for your business.
                                         </p>
-                                        <button
+                                        <Button
                                             onClick={applyWholesale}
-                                            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
                                         >
                                             Apply Now
-                                        </button>
+                                        </Button>
                                     </div>
                                 )}
                             </section>

@@ -53,8 +53,8 @@ export function StripePaymentForm({ amount, onSuccess, onError }: StripePaymentF
                 toast.success('Payment successful!')
                 onSuccess()
             }
-        } catch (err: any) {
-            const message = err.message || 'An error occurred during payment'
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred during payment'
             setErrorMessage(message)
             onError(message)
             toast.error(message)

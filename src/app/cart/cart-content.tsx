@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Trash2, Plus, Minus, Tag, ShoppingCart, ArrowRight, X, Loader2, AlertCircle, Info } from 'lucide-react'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -9,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { getCart, updateCartItem, removeFromCart, CartItem, CartSummary } from '@/lib/api/cart'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Input } from "@/components/ui/input"
 import { useCartStore } from '@/store'
 
 export default function CartContent() {
@@ -29,10 +31,10 @@ export default function CartContent() {
     const [error, setError] = useState<string | null>(null)
     const [updateLoading, setUpdateLoading] = useState<string | null>(null)
     const [removeLoading, setRemoveLoading] = useState<string | null>(null)
-    
+
     // Coupon and shipping states
     const [couponCode, setCouponCode] = useState('')
-    const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null)
+    const [appliedCoupon, setAppliedCoupon] = useState<{ code: string, discount: number } | null>(null)
     const [zipCode, setZipCode] = useState('')
     const [shippingEstimate, setShippingEstimate] = useState<number | null>(null)
 
@@ -41,7 +43,7 @@ export default function CartContent() {
         try {
             setLoading(true)
             setError(null)
-            
+
             const response = await getCart()
             setCartItems(response.data.items)
             setCartSummary(response.data.summary)
@@ -75,7 +77,7 @@ export default function CartContent() {
             await updateCartItem(itemId, newQuantity)
             await loadCart() // Reload to get updated pricing
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update quantity')
+            toast.error(err instanceof Error ? err.message : 'Failed to update quantity')
         } finally {
             setUpdateLoading(null)
         }
@@ -96,7 +98,7 @@ export default function CartContent() {
             await removeFromCart(itemId)
             await loadCart() // Reload cart
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to remove item')
+            toast.error(err instanceof Error ? err.message : 'Failed to remove item')
         } finally {
             setRemoveLoading(null)
         }
@@ -104,22 +106,22 @@ export default function CartContent() {
 
     // Apply coupon (mock functionality)
     const applyCoupon = () => {
-        const coupons: Record<string, number> = { 
-            'SAVE10': 10, 
-            'WELCOME': 15, 
+        const coupons: Record<string, number> = {
+            'SAVE10': 10,
+            'WELCOME': 15,
             'REPAIR20': 20,
             'NEWUSER': 25
         }
-        
+
         if (coupons[couponCode.toUpperCase()]) {
-            setAppliedCoupon({ 
-                code: couponCode.toUpperCase(), 
-                discount: coupons[couponCode.toUpperCase()] 
+            setAppliedCoupon({
+                code: couponCode.toUpperCase(),
+                discount: coupons[couponCode.toUpperCase()]
             })
             setCouponCode('')
+            toast.success('Coupon applied successfully!')
         } else {
-            setError('Invalid coupon code')
-            setTimeout(() => setError(null), 3000)
+            toast.error('Invalid coupon code')
         }
     }
 
@@ -182,7 +184,7 @@ export default function CartContent() {
     const finalTotal = subtotal - discount + shipping
 
     // Loading state
-    if (loading && !error && cartItems.length <= 0 ) {
+    if (loading && !error && cartItems.length <= 0) {
         return (
             <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
                 <div className="text-center">
@@ -201,10 +203,10 @@ export default function CartContent() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                         {error}
-                        <Button 
-                            onClick={loadCart} 
-                            variant="outline" 
-                            size="sm" 
+                        <Button
+                            onClick={loadCart}
+                            variant="outline"
+                            size="sm"
                             className="mt-2 w-full"
                         >
                             Try Again
@@ -217,13 +219,6 @@ export default function CartContent() {
 
     return (
         <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
-            {/* Error Toast */}
-            {error && (
-                <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
-                    {error}
-                </div>
-            )}
-
             {/* Header */}
             <div className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                 <div className="container mx-auto px-4 py-6">
@@ -307,15 +302,14 @@ export default function CartContent() {
                                             <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
                                                 Device: {item.product.device_model}
                                             </p>
-                                            
+
                                             {/* Stock Info */}
-                                            <p className={`text-sm font-medium mb-3 ${
-                                                item.product.in_stock
-                                                    ? 'text-green-600 dark:text-green-400'
-                                                    : 'text-red-600 dark:text-red-400'
-                                            }`}>
-                                                {item.product.in_stock 
-                                                    ? `${item.product.available_quantity} available` 
+                                            <p className={`text-sm font-medium mb-3 ${item.product.in_stock
+                                                ? 'text-green-600 dark:text-green-400'
+                                                : 'text-red-600 dark:text-red-400'
+                                                }`}>
+                                                {item.product.in_stock
+                                                    ? `${item.product.available_quantity} available`
                                                     : 'Out of stock'
                                                 }
                                             </p>
@@ -323,8 +317,8 @@ export default function CartContent() {
                                             {/* Quantity Controls */}
                                             <div className="flex items-center gap-4">
                                                 <div className="flex items-center border border-neutral-300 dark:border-neutral-600 rounded-lg">
-                                                    <button 
-                                                        onClick={() => handleUpdateQuantity(item.id, -1)} 
+                                                    <button
+                                                        onClick={() => handleUpdateQuantity(item.id, -1)}
                                                         disabled={updateLoading === item.id || item.quantity <= 1}
                                                         className="px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
@@ -337,17 +331,17 @@ export default function CartContent() {
                                                             item.quantity
                                                         )}
                                                     </span>
-                                                    <button 
-                                                        onClick={() => handleUpdateQuantity(item.id, 1)} 
+                                                    <button
+                                                        onClick={() => handleUpdateQuantity(item.id, 1)}
                                                         disabled={updateLoading === item.id || item.quantity >= item.product.available_quantity}
                                                         className="px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
                                                         <Plus className="h-4 w-4" />
                                                     </button>
                                                 </div>
-                                                
-                                                <button 
-                                                    onClick={() => handleRemoveItem(item.id)} 
+
+                                                <button
+                                                    onClick={() => handleRemoveItem(item.id)}
                                                     disabled={removeLoading === item.id}
                                                     className="text-red-600 hover:text-red-700 flex items-center gap-1 disabled:opacity-50"
                                                 >
@@ -391,13 +385,13 @@ export default function CartContent() {
                                         Coupon Code
                                     </label>
                                     <div className="flex gap-2">
-                                        <input 
-                                            type="text" 
-                                            value={couponCode} 
+                                        <Input
+                                            type="text"
+                                            value={couponCode}
                                             onChange={(e) => setCouponCode(e.target.value)}
                                             onKeyPress={(e) => e.key === 'Enter' && applyCoupon()}
-                                            placeholder="Enter code" 
-                                            className="flex-1 px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white" 
+                                            placeholder="Enter code"
+                                            className="flex-1 bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-600"
                                         />
                                         <Button onClick={applyCoupon}>
                                             Apply
@@ -408,8 +402,8 @@ export default function CartContent() {
                                             <span className="text-sm text-green-700 dark:text-green-400">
                                                 {appliedCoupon.code} ({appliedCoupon.discount}% off)
                                             </span>
-                                            <button 
-                                                onClick={() => setAppliedCoupon(null)} 
+                                            <button
+                                                onClick={() => setAppliedCoupon(null)}
                                                 className="text-red-600 hover:text-red-700"
                                             >
                                                 <X className="h-4 w-4" />
@@ -424,14 +418,14 @@ export default function CartContent() {
                                         Shipping Estimate
                                     </label>
                                     <div className="flex gap-2">
-                                        <input 
-                                            type="text" 
-                                            value={zipCode} 
+                                        <Input
+                                            type="text"
+                                            value={zipCode}
                                             onChange={(e) => setZipCode(e.target.value)}
                                             onKeyPress={(e) => e.key === 'Enter' && calculateShipping()}
-                                            placeholder="ZIP Code" 
-                                            maxLength={5} 
-                                            className="flex-1 px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white" 
+                                            placeholder="ZIP Code"
+                                            maxLength={5}
+                                            className="flex-1 bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-600"
                                         />
                                         <Button variant="outline" onClick={calculateShipping}>
                                             Calculate
@@ -450,28 +444,28 @@ export default function CartContent() {
                                         <span>Subtotal</span>
                                         <span>${subtotal.toFixed(2)}</span>
                                     </div>
-                                    
+
                                     {wholesaleSavings > 0 && (
                                         <div className="flex justify-between text-green-600 dark:text-green-400">
                                             <span>Wholesale Savings</span>
                                             <span>-${wholesaleSavings.toFixed(2)}</span>
                                         </div>
                                     )}
-                                    
+
                                     {appliedCoupon && (
                                         <div className="flex justify-between text-green-600 dark:text-green-400">
                                             <span>Discount ({appliedCoupon.discount}%)</span>
                                             <span>-${discount.toFixed(2)}</span>
                                         </div>
                                     )}
-                                    
+
                                     {shippingEstimate !== null && (
                                         <div className="flex justify-between text-neutral-700 dark:text-neutral-300">
                                             <span>Shipping</span>
                                             <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
                                         </div>
                                     )}
-                                    
+
                                     <div className="flex justify-between text-xl font-bold text-neutral-900 dark:text-white border-t border-neutral-200 dark:border-neutral-700 pt-3">
                                         <span>Total</span>
                                         <span>${finalTotal.toFixed(2)}</span>

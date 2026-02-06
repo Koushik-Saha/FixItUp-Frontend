@@ -22,7 +22,7 @@ export default function PrivacyPolicyPage() {
 
                     <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 mb-8">
                         <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                            Max Fit IT ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website maxfitit.com and use our services.
+                            At Max Phone Repair (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;), we value your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website maxfitit.com (the &quot;Site&quot;) and use our services.
                         </p>
                     </div>
 

@@ -1,124 +1,101 @@
-// app/api/admin/customers/route.ts
-// Admin Customers API - List customers
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
-import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
+import { Prisma } from '@prisma/client'
 
-// Helper to check if user is admin
-async function checkAdmin(supabase: any, userId: string) {
-    const { data: profile } = await (supabase
-        .from('profiles') as any)
-        .select('role')
-        .eq('id', userId)
-        .single()
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
 
-    if (!profile || profile.role !== 'admin') {
-        throw new UnauthorizedError('Admin access required')
-    }
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
 }
 
-// OPTIONS /api/admin/customers - Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
-    return handleCorsPreflightRequest(request)
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
-// GET /api/admin/customers - List customers with filters
 export async function GET(request: NextRequest) {
-    const origin = request.headers.get('origin')
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
-        const { searchParams } = new URL(request.url)
-
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to access this resource')
+        const userRole = request.headers.get('x-user-role');
+        if (userRole !== 'ADMIN') {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401, headers: corsHeaders }
+            );
         }
 
-        // Check admin role
-        await checkAdmin(supabase, user.id)
+        const { searchParams } = new URL(request.url);
+        const search = searchParams.get('search');
+        const role = searchParams.get('role');
+        const wholesaleStatus = searchParams.get('wholesaleStatus');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '50');
+        const skip = (page - 1) * limit;
 
-        // Get query parameters
-        const search = searchParams.get('search')
-        const role = searchParams.get('role')
-        const wholesaleStatus = searchParams.get('wholesaleStatus')
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '50')
+        const where: Prisma.UserWhereInput = {};
 
-        // Build query - join profiles with auth.users to get email
-        let query = (supabase
-            .from('profiles') as any)
-            .select('*', { count: 'exact' })
-
-        // Apply search filter (name, phone - email requires auth.users join)
         if (search) {
-            query = query.or(`full_name.ilike.%${search}%,phone.ilike.%${search}%`)
+            where.OR = [
+                { fullName: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
+                { phone: { contains: search, mode: 'insensitive' } },
+            ];
         }
 
-        // Apply role filter
         if (role) {
-            query = query.eq('role', role)
+            where.role = role.toUpperCase() as any;
         }
 
-        // Apply wholesale status filter
         if (wholesaleStatus) {
-            query = query.eq('wholesale_status', wholesaleStatus)
+            where.wholesaleStatus = wholesaleStatus.toUpperCase() as any;
         }
 
-        // Apply sorting
-        query = query.order('created_at', { ascending: false })
-
-        // Apply pagination
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-        query = query.range(from, to)
-
-        const { data: profiles, error, count } = await query
-
-        if (error) {
-            console.error('Failed to fetch customers:', error)
-            throw new Error('Failed to fetch customers')
-        }
-
-        // Enrich with email from auth.users
-        const enrichedProfiles = await Promise.all(
-            (profiles || []).map(async (profile: any) => {
-                try {
-                    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(profile.id)
-                    return {
-                        ...profile,
-                        email: authUser?.email || null,
-                    }
-                } catch (err) {
-                    return {
-                        ...profile,
-                        email: null,
-                    }
+        const [users, count] = await Promise.all([
+            prisma.user.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+                select: {
+                    id: true,
+                    email: true,
+                    fullName: true,
+                    phone: true,
+                    role: true,
+                    wholesaleStatus: true,
+                    wholesaleTier: true,
+                    createdAt: true
                 }
-            })
-        )
+            }),
+            prisma.user.count({ where })
+        ]);
 
         return NextResponse.json({
-            data: enrichedProfiles,
+            data: users,
             pagination: {
                 page,
                 limit,
-                total: count || 0,
-                totalPages: Math.ceil((count || 0) / limit),
+                total: count,
+                totalPages: Math.ceil(count / limit),
             },
-        }, { headers: getCorsHeaders(origin) })
+        }, { headers: corsHeaders });
 
     } catch (error) {
-        const errorRes = errorResponse(error)
-        const headers = new Headers(errorRes.headers)
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

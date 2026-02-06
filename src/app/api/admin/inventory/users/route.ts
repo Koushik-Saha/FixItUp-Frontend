@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import prisma from "@/lib/prisma";
 import {
     errorResponse,
     UnauthorizedError,
     ForbiddenError,
 } from "@/lib/utils/errors";
-import type { Database } from "@/types/database";
 import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors';
-
-type Tables = Database["public"]["Tables"];
-type ProfileRow = Tables["profiles"]["Row"]; // <-- strongly typed user
+import { Role } from "@prisma/client";
 
 // OPTIONS /api/admin/inventory/users - Handle preflight request
 export async function OPTIONS(request: NextRequest) {
@@ -20,77 +17,54 @@ export async function OPTIONS(request: NextRequest) {
 export async function GET(request: NextRequest) {
     try {
         const origin = request.headers.get('origin');
-        const supabase = await createClient();
-
-        // Auth
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-        if (authError || !user) throw new UnauthorizedError();
-
-        // Admin check
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id)
-            .single<Pick<ProfileRow, "role">>();
-
-        if (!profile || (profile as any).role !== "admin") {
-            throw new ForbiddenError("Only admins can access user management");
-        }
 
         // Query params
         const { searchParams } = new URL(request.url);
         const role = searchParams.get("role");
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "50");
+        const skip = (page - 1) * limit;
 
-        const from = (page - 1) * limit;
-        const to = from + limit - 1;
-
-        // Build query
-        let query = supabase
-            .from("profiles")
-            .select("*", { count: "exact" }) as any;
-
-        if (role) query = query.eq("role", role);
-
-        query = query.order("created_at", { ascending: false }).range(from, to);
-
-        // ⬅ FIXED — typed result
-        const {
-            data: users,
-            error,
-            count,
-        }: { data: ProfileRow[] | null; error: any; count: number | null } =
-            await query;
-
-        if (error) {
-            console.error("Failed to fetch users:", error);
-            throw new Error("Failed to fetch users");
+        // Apply filters
+        const where: any = {};
+        if (role) {
+            where.role = role.toUpperCase() as Role; // Enum mapping
         }
 
-        // Stats query — also typed
-        const { data: allUsers } = (await supabase
-            .from("profiles")
-            .select("role")) as { data: Pick<ProfileRow, "role">[] | null };
+        // Fetch users
+        const [users, total] = await Promise.all([
+            prisma.user.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' }
+            }),
+            prisma.user.count({ where })
+        ]);
+
+        // Stats
+        const [totalCount, customerCount, wholesaleCount, adminCount] = await Promise.all([
+            prisma.user.count(),
+            prisma.user.count({ where: { role: 'CUSTOMER' } }),
+            prisma.user.count({ where: { role: 'WHOLESALE' } }),
+            prisma.user.count({ where: { role: 'ADMIN' } })
+        ]);
 
         const stats = {
-            total: allUsers?.length ?? 0,
-            customers: allUsers?.filter((u) => u.role === "customer").length ?? 0,
-            wholesale: allUsers?.filter((u) => u.role === "wholesale").length ?? 0,
-            admins: allUsers?.filter((u) => u.role === "admin").length ?? 0,
+            total: totalCount,
+            customers: customerCount,
+            wholesale: wholesaleCount,
+            admins: adminCount,
         };
 
         return NextResponse.json({
-            data: users ?? [],
+            data: users,
             stats,
             pagination: {
                 page,
                 limit,
-                total: count ?? 0,
-                totalPages: Math.ceil((count ?? 0) / limit),
+                total: total,
+                totalPages: Math.ceil(total / limit),
             },
         }, {
             headers: getCorsHeaders(origin),
