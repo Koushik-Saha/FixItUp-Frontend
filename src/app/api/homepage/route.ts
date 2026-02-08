@@ -72,17 +72,128 @@ export async function GET(request: NextRequest) {
             })
         ]);
 
+        // Fallback Mock Data if DB is empty (Development Mode / Initial Setup)
+        const mockHeroSlides = heroSlides.length > 0 ? heroSlides : [
+            {
+                id: 'mock-1',
+                title: 'Expert Phone Repair',
+                description: 'Fast, reliable repairs for iPhone, Samsung, and Google Pixel.',
+                image: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=1200',
+                badge: 'Trusted Service',
+                badgeColor: 'bg-blue-600',
+                gradient: 'from-blue-900 to-slate-900',
+                ctaPrimary: { text: "Book Repair", link: "/repair" },
+                ctaSecondary: { text: "View Pricing", link: "/repair/pricing" },
+                trustBadges: [
+                    { icon: "🛡️", text: "Lifetime Warranty" },
+                    { icon: "⚡", text: "Same Day Service" }
+                ],
+                isActive: true,
+                sortOrder: 1,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                discount: null
+            },
+            {
+                id: 'mock-2',
+                title: 'Premium Parts Store',
+                description: 'Upgrade your device with high-quality parts.',
+                image: 'https://images.unsplash.com/photo-1598327773204-6e82f5b66d79?w=1200',
+                badge: 'New Arrivals',
+                badgeColor: 'bg-green-600',
+                gradient: 'from-green-900 to-emerald-900',
+                ctaPrimary: { text: "Shop Parts", link: "/shop" },
+                ctaSecondary: { text: "Wholesale", link: "/wholesale/apply" },
+                discount: "10% OFF",
+                isActive: true,
+                sortOrder: 2,
+                trustBadges: [] as any,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
+        ];
+
+        const mockNewProducts = newProducts.length > 0 ? newProducts : [
+            {
+                id: 'mock-p1',
+                name: 'iPhone 13 Pro Max Screen',
+                slug: 'iphone-13-screen',
+                basePrice: 129.99 as any,
+                thumbnail: 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=500',
+                images: [],
+                isActive: true,
+                isNew: true
+            },
+            {
+                id: 'mock-p2',
+                name: 'Samsung S22 Battery',
+                slug: 's22-battery',
+                basePrice: 39.99 as any,
+                thumbnail: 'https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500',
+                images: [],
+                isActive: true,
+                isNew: true
+            },
+            {
+                id: 'mock-p3',
+                name: 'USB-C Charging Port',
+                slug: 'usb-c-port',
+                basePrice: 19.99 as any,
+                thumbnail: 'https://images.unsplash.com/photo-1618414902340-2b4742468725?w=500',
+                images: [],
+                isActive: true,
+                isNew: true
+            },
+            {
+                id: 'mock-p4',
+                name: 'Pixel 6 Screen Kit',
+                slug: 'pixel-6-screen',
+                basePrice: 149.99 as any,
+                thumbnail: 'https://images.unsplash.com/photo-1592434134753-a70baf7979d5?w=500',
+                images: [],
+                isActive: true,
+                isNew: true
+            }
+        ];
+
         // Transform Data
+
+        // Categories Fallback
+        const mockCategories = categories.length > 0 ? categories : [
+            { id: 'cat-1', name: 'Screens', slug: 'screens', icon: '📱', description: 'Replacement Screens' },
+            { id: 'cat-2', name: 'Batteries', slug: 'batteries', icon: '🔋', description: 'High Capacity Batteries' },
+            { id: 'cat-3', name: 'Charging Ports', slug: 'charging', icon: '⚡', description: 'Fix Charging Issues' },
+            { id: 'cat-4', name: 'Cameras', slug: 'cameras', icon: '📸', description: 'Crystal Clear Photos' },
+        ];
+
+        const finalCategories = mockCategories;
 
         // Categories Colors
         const colors = ["red", "blue", "orange", "cyan", "purple", "pink", "green", "indigo"];
-        const formattedCategories = categories.map((cat, i) => ({
+        const formattedCategories = finalCategories.map((cat, i) => ({
             id: cat.id,
             name: cat.name,
             slug: cat.slug,
             icon: cat.icon || cat.name?.charAt(0) || "•",
-            color: colors[i % colors.length]
+            color: colors[i % colors.length],
+            count: "Top Quality" // Static count for mock/fallback
         }));
+
+        // Stores Fallback
+        const finalStores = stores.length > 0 ? stores : [
+            {
+                id: 'store-1',
+                name: 'Max Phone Repair - Downtown',
+                address: '123 Main St',
+                city: 'New York',
+                state: 'NY',
+                zipCode: '10001',
+                phone: '(212) 555-0123',
+                email: 'downtown@maxphonerepair.com',
+                operatingHours: { "Mon-Fri": "9AM-7PM", "Sat": "10AM-6PM", "Sun": "Closed" },
+                isActive: true
+            }
+        ];
 
         // Flash Deals
         const formattedFlashDeals = flashProducts.map(p => {
@@ -97,13 +208,19 @@ export async function GET(request: NextRequest) {
                 price: Number(discountedPrice.toFixed(2)),
                 originalPrice: basePrice,
                 discount,
+                badge: "Save " + Math.round(discount) + "%",
+                badgeColor: "bg-red-500",
                 rating: 4.5,
                 reviews: 150
             };
         });
 
+        // Hero Slides
+        // Use mock data if available
+        const finalHeroSlides = mockHeroSlides;
+
         // New Arrivals
-        const formattedNewArrivals = newProducts.map(p => ({
+        const formattedNewArrivals = mockNewProducts.map(p => ({
             id: p.id,
             name: p.name,
             slug: p.slug,
@@ -193,8 +310,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             success: true,
             data: {
-                hero: heroSlides, // Replacing static hero with DB slides if frontend handles array
-                heroSlides,
+                hero: finalHeroSlides, // Replacing static hero with DB slides if frontend handles array
+                heroSlides: finalHeroSlides,
                 categories: formattedCategories,
                 flashDeals: {
                     title: "Flash Deals",
@@ -204,7 +321,7 @@ export async function GET(request: NextRequest) {
                 },
                 newArrivals: formattedNewArrivals,
                 brands,
-                stores: stores.map(s => ({
+                stores: finalStores.map(s => ({
                     id: s.id,
                     name: s.name,
                     badge: "POPULAR",

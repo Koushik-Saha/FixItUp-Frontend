@@ -148,7 +148,15 @@ export async function GET() {
             const brandSlug = brand.slug;
 
             const subcat = inferSubcategory(brandSlug, row.modelName);
-            if (!grouped[brandName]) grouped[brandName] = { subcategories: [], bySubcategory: {} };
+            if (!grouped[brandName]) {
+                grouped[brandName] = {
+                    id: brand.id,
+                    slug: brandSlug,
+                    icon: (brand as any).icon || null, // Cast to any if type is not inferred correctly, or check schema
+                    subcategories: [],
+                    bySubcategory: {}
+                };
+            }
 
             if (!grouped[brandName].subcategories.includes(subcat)) {
                 grouped[brandName].subcategories.push(subcat);

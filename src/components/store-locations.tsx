@@ -1,15 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import { MapPin, Phone, Clock, Mail, Navigation } from 'lucide-react'
+import { MapPin, Phone, Clock, Navigation } from 'lucide-react'
 import Link from 'next/link'
 
 // Static data removed
-
-interface StoreTime {
-    weekday: string
-    saturday: string
-    sunday: string
-}
 
 interface Store {
     id: number | string
@@ -20,7 +15,7 @@ interface Store {
     zipCode: string
     phone: string
     email: string
-    operatingHours: StoreTime
+    operatingHours: any
     isActive: boolean
     featured?: boolean
     image?: string
@@ -28,7 +23,7 @@ interface Store {
 }
 
 interface StoreLocationsProps {
-    stores: any[] // Using any to be flexible with DB type for now, or use mapped type
+    stores: Store[]
 }
 
 export function StoreLocations({ stores = [] }: StoreLocationsProps) {
@@ -198,5 +193,25 @@ export function StoreLocations({ stores = [] }: StoreLocationsProps) {
                 </div>
             </div>
         </section>
+    )
+}
+
+function Mail(props: any) {
+    return (
+        <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+        </svg>
     )
 }

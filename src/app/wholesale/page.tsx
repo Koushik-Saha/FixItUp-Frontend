@@ -107,7 +107,7 @@ export default function WholesalePortal() {
             itemToAdd = {
                 sku: product.sku,
                 quantity: qty,
-                price: product.base_price,
+                price: product.basePrice,
                 name: product.name
             }
         } else if (skuInput) {
@@ -117,7 +117,7 @@ export default function WholesalePortal() {
                 itemToAdd = {
                     sku: found.sku,
                     quantity: qty,
-                    price: found.base_price,
+                    price: found.basePrice,
                     name: found.name
                 }
             } else {

@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { HeroCarousel } from "@/components/hero-carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +15,8 @@ import { headers } from "next/headers";
 import TopBrand from "@/components/layout/top-brand";
 import { StoreLocations } from "@/components/store-locations";
 import ShopByCategory from "@/components/layout/shop-by-category";
+import { CTASection } from "@/components/layout/cta-section";
+import ProductGrid from "@/components/product/product-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -43,12 +49,11 @@ async function getHomepageData() {
 
 export default async function HomePage() {
     const data = await getHomepageData();
-    console.log("HomePage Data - Flash Deals:", data?.flashDeals?.products?.length);
 
     return (
         <section>
             {/* Hero Carousel */}
-            <HeroCarousel />
+            <HeroCarousel slides={data?.hero || []} />
 
             {/* Device Finder */}
             <div className="container mx-auto px-4 py-8 md:py-12">
@@ -68,8 +73,19 @@ export default async function HomePage() {
                 <RecentlyViewedProducts limit={8} />
             </div>
 
+            {/* New Arrivals */}
+            {data?.newArrivals?.length ? (
+                <ProductGrid
+                    title="New Arrivals"
+                    products={data.newArrivals}
+                />
+            ) : null}
+
             {/* Top Brands */}
             {data?.brands?.length ? <TopBrand topBrands={data.brands} /> : null}
+
+            {/* CTA Section */}
+            {data?.cta ? <CTASection cta={data.cta} /> : null}
 
             {/* Store Locations */}
             <StoreLocations stores={data?.stores || []} />

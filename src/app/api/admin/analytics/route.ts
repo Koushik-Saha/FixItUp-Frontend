@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const period = searchParams.get("period") || "month";
 
-        let startDate = new Date();
+        const startDate = new Date();
         let groupBy: "hour" | "day" | "month" = "day";
 
         switch (period) {

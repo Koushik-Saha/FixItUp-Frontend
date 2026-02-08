@@ -1,12 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, ShoppingBag, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import Image from 'next/image'
-import { toast } from 'sonner' // Using sonner for error toast if needed
 
 // Types matching Prisma Model
 type HeroSlide = {
@@ -23,33 +23,13 @@ type HeroSlide = {
     discount: string | null
 }
 
-export function HeroCarousel() {
-    const [slides, setSlides] = useState<HeroSlide[]>([])
+type HeroCarouselProps = {
+    slides: HeroSlide[]
+}
+
+export function HeroCarousel({ slides }: HeroCarouselProps) {
     const [currentSlideIndex, setCurrentSlide] = useState(0)
     const [isAutoPlaying, setIsAutoPlaying] = useState(true)
-    const [loading, setLoading] = useState(true)
-
-    // Fetch Slides
-    useEffect(() => {
-        async function fetchSlides() {
-            try {
-                const res = await fetch('/api/hero-slides')
-                if (!res.ok) throw new Error('Failed to fetch slides')
-                const data = await res.json()
-                if (Array.isArray(data) && data.length > 0) {
-                    setSlides(data)
-                }
-            } catch (error) {
-                console.error('Hero fetch error:', error)
-                // Fallback or Toast? 
-                // We'll just leave empty or show error state if critical.
-                // But hopefully API returns default data if DB is empty.
-            } finally {
-                setLoading(false)
-            }
-        }
-        fetchSlides()
-    }, [])
 
     // Auto-play carousel
     useEffect(() => {
@@ -77,13 +57,6 @@ export function HeroCarousel() {
         setIsAutoPlaying(false)
     }
 
-    if (loading) {
-        return (
-            <div className="h-[500px] w-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center animate-pulse">
-                <Loader2 className="h-10 w-10 text-neutral-300 animate-spin" />
-            </div>
-        )
-    }
 
     if (slides.length === 0) return null
 

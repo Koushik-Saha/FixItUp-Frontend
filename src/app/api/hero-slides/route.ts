@@ -58,7 +58,7 @@ const DEFAULT_SLIDES = [
 
 export async function GET() {
     try {
-        let slides = await prisma.heroSlide.findMany({
+        const slides = await prisma.heroSlide.findMany({
             where: { isActive: true },
             orderBy: { sortOrder: 'asc' },
         });

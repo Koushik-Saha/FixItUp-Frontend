@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Mail, CheckCircle, AlertCircle } from 'lucide-react'
+import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
 export function Newsletter() {
     const [email, setEmail] = useState('')

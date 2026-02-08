@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2, Plus, Minus, Tag, ShoppingCart, ArrowRight, X, Loader2, AlertCircle, Info } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, X, Loader2, AlertCircle, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { getCart, updateCartItem, removeFromCart, CartItem, CartSummary } from '@/lib/api/cart'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -14,7 +13,6 @@ import { Input } from "@/components/ui/input"
 import { useCartStore } from '@/store'
 
 export default function CartContent() {
-    const router = useRouter()
     const { user } = useAuth()
 
     // Zustand store for guest cart
@@ -174,7 +172,7 @@ export default function CartContent() {
                 wholesale_tier: undefined,
             })
         }
-    }, [user, guestCartItems])
+    }, [user, guestCartItems, guestGetSubtotal, guestGetItemCount])
 
     // Calculate totals with coupons and shipping
     const subtotal = cartSummary?.subtotal || 0

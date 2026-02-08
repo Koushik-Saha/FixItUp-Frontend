@@ -37,8 +37,39 @@ model User {
   reviews          Review[]
   wishlists        Wishlist[]
   couponUsages     CouponUsage[]
+  addresses        Address[]
 
   @@map("users")
+}
+
+// Addresses
+model Address {
+  id           String      @id @default(uuid())
+  userId       String      @map("user_id")
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type         AddressType @default(SHIPPING)
+  isDefault    Boolean     @default(false) @map("is_default")
+  
+  fullName     String      @map("full_name")
+  company      String?
+  street1      String
+  street2      String?
+  city         String
+  state        String
+  zipCode      String      @map("zip_code")
+  country      String      @default("US")
+  phone        String?
+  
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@map("addresses")
+}
+
+enum AddressType {
+  SHIPPING @map("shipping")
+  BILLING  @map("billing")
 }
 
 // Enums

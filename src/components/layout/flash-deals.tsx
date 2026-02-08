@@ -17,13 +17,12 @@ type ProductType = {
     image: string
     name: string
     originalPrice: number
-    price: number
+    price: number // Discounted Price found in API
     rating: number
     reviews: number
-    slug: string,
-    salePrice: number,
-    badgeColor: string,
-    badge: string
+    slug: string
+    badgeColor?: string
+    badge?: string
 }
 
 type FlashDealsType = {
@@ -83,11 +82,13 @@ export default function FlashDeals({ flashDeals }: FlashDealsProps) {
                                             className="object-cover group-hover:scale-110 transition-transform duration-300"
                                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                                         />
-                                        <Badge
-                                            className={`absolute top-2 left-2 md:top-3 md:left-3 ${product.badgeColor} text-white text-xs px-2 py-0.5`}
-                                        >
-                                            {product.badge}
-                                        </Badge>
+                                        {product.badge && (
+                                            <Badge
+                                                className={`absolute top-2 left-2 md:top-3 md:left-3 ${product.badgeColor || 'bg-red-500'} text-white text-xs px-2 py-0.5`}
+                                            >
+                                                {product.badge}
+                                            </Badge>
+                                        )}
                                         <button className="absolute top-2 right-2 md:top-3 md:right-3 bg-white/90 dark:bg-neutral-900/90 border border-neutral-200/70 dark:border-neutral-700/70 p-1.5 md:p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors">
                                             <Heart className="h-4 w-4 md:h-5 md:w-5 text-neutral-600 dark:text-neutral-300" />
                                         </button>
@@ -112,7 +113,7 @@ export default function FlashDeals({ flashDeals }: FlashDealsProps) {
                                         </div>
                                         <div className="flex items-baseline gap-2 mb-2 md:mb-3 lg:mb-4">
                                             <span className="text-lg md:text-xl lg:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                                ${product.salePrice}
+                                                ${product.price}
                                             </span>
                                             <span className="text-xs md:text-sm text-neutral-500 line-through">
                                                 ${product.originalPrice}

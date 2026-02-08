@@ -44,9 +44,15 @@ export async function GET(request: NextRequest) {
         const sortBy = searchParams.get('sort') || 'createdAt';
         const sortOrder = searchParams.get('order') === 'asc' ? 'asc' : 'desc';
         const skip = (page - 1) * limit;
+        const minPrice = parseFloat(searchParams.get('minPrice') || '0');
+        const maxPrice = parseFloat(searchParams.get('maxPrice') || '1000000');
 
         const where: Prisma.ProductWhereInput = {
-            isActive: true
+            isActive: true,
+            basePrice: {
+                gte: minPrice,
+                lte: maxPrice
+            }
         };
 
         if (category) {

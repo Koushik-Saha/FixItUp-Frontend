@@ -34,6 +34,7 @@ async function main() {
         await prisma.$executeRawUnsafe(`ALTER TABLE "wishlists" DROP CONSTRAINT IF EXISTS "wishlists_user_id_fkey";`)
         await prisma.$executeRawUnsafe(`ALTER TABLE "order_status_history" DROP CONSTRAINT IF EXISTS "order_status_history_changed_by_fkey";`)
         await prisma.$executeRawUnsafe(`ALTER TABLE "repair_tickets" DROP CONSTRAINT IF EXISTS "fk_repair_tickets_customer_id";`)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "reviews" DROP CONSTRAINT IF EXISTS "fk_reviews_user_id";`)
 
         console.log('Successfully dropped (or checked) constraints.')
     } catch (e) {

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Newsletter } from '@/components/newsletter'
 import { Home } from "lucide-react";
 
 export default function NotFound() {
@@ -29,7 +28,7 @@ export default function NotFound() {
                     </Link>
                 </div>
             </div>
-            <Newsletter />
+            {/* <Newsletter /> */}
         </div>
     );
 }

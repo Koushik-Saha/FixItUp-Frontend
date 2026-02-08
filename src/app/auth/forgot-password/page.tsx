@@ -5,21 +5,16 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('')
     const [isLoading, setIsLoading] = useState(false)
-    const [message, setMessage] = useState('')
-    const [error, setError] = useState('')
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
-        // setError('') // Removed local error state
-        // setMessage('') // Removed local message state
 
         try {
             const response = await fetch('/api/auth/forgot-password', {
@@ -33,15 +28,12 @@ export default function ForgotPasswordPage() {
             const data = await response.json()
 
             if (response.ok) {
-                // setMessage(data.message)
                 toast.success(data.message || 'If an account exists, a reset link has been sent.')
                 setEmail('')
             } else {
-                // setError(data.error || 'Failed to send reset email')
                 toast.error(data.error || 'Failed to send reset email')
             }
-        } catch (err) {
-            // setError('Something went wrong. Please try again.')
+        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-unused-vars
             toast.error('Something went wrong. Please try again.')
         } finally {
             setIsLoading(false)
@@ -70,7 +62,7 @@ export default function ForgotPasswordPage() {
                             Forgot Password?
                         </CardTitle>
                         <CardDescription>
-                            Enter your email address and we'll send you a link to reset your password.
+                            Enter your email address and we&apos;ll send you a link to reset your password.
                         </CardDescription>
                     </CardHeader>
 

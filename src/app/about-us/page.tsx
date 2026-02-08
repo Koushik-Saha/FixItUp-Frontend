@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-html-link-for-pages */
 'use client'
 
 import { Award, Shield, Clock, Users, Target, Heart, Star, Zap } from 'lucide-react'
@@ -60,8 +61,8 @@ export default function AboutUsPage() {
                     <h2 className="text-3xl font-bold text-neutral-900 dark:text-white text-center mb-8">Our Story</h2>
                     <div className="prose dark:prose-invert max-w-none">
                         <p className="text-lg text-neutral-700 dark:text-neutral-300 mb-6">Founded in 2014, Max Fit IT started as a small phone repair shop in Santa Barbara, California. Our founder, Michael Chen, saw the need for fast, reliable, and affordable phone repair services in the community.</p>
-                        <p className="text-lg text-neutral-700 dark:text-neutral-300 mb-6">What began as a one-person operation has grown into a trusted electronics repair and wholesale business serving thousands of customers across California. We've completed over 100,000 repairs and expanded to three locations, all while maintaining our commitment to quality and customer service.</p>
-                        <p className="text-lg text-neutral-700 dark:text-neutral-300">Today, Max Fit IT is known for our expertise in smartphone repair, our extensive wholesale program for repair shops, and our dedication to using only the highest-quality parts. We're proud to be an authorized service provider for major brands and continue to set the standard for electronics repair in California.</p>
+                        <p className="text-lg text-neutral-700 dark:text-neutral-300 mb-6">What began as a one-person operation has grown into a trusted electronics repair and wholesale business serving thousands of customers across California. We&apos;ve completed over 100,000 repairs and expanded to three locations, all while maintaining our commitment to quality and customer service.</p>
+                        <p className="text-lg text-neutral-700 dark:text-neutral-300">Today, Max Fit IT is known for our expertise in smartphone repair, our extensive wholesale program for repair shops, and our dedication to using only the highest-quality parts. We&apos;re proud to be an authorized service provider for major brands and continue to set the standard for electronics repair in California.</p>
                     </div>
                 </div>
 

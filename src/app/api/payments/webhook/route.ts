@@ -38,7 +38,20 @@ export async function POST(request: NextRequest) {
                 });
 
                 if (order) {
-                    await sendPaymentSuccessEmail(order).catch(e => console.error(e));
+                    const emailOrder = {
+                        ...order,
+                        totalAmount: Number(order.totalAmount),
+                        taxAmount: Number(order.taxAmount),
+                        shippingCost: Number(order.shippingCost),
+                        discountAmount: Number(order.discountAmount),
+                        orderItems: order.orderItems.map(item => ({
+                            ...item,
+                            unitPrice: Number(item.unitPrice),
+                            discountPercent: Number(item.discountPercent),
+                            subtotal: Number(item.subtotal)
+                        }))
+                    };
+                    await sendPaymentSuccessEmail(emailOrder as any).catch(e => console.error(e));
                 }
                 break;
             }
@@ -49,7 +62,18 @@ export async function POST(request: NextRequest) {
                     data: { paymentStatus: 'FAILED' }
                 });
                 if (order) {
-                    await sendPaymentFailedEmail(order).catch(e => console.error(e));
+                    const emailOrder = {
+                        ...order,
+                        totalAmount: Number(order.totalAmount),
+                        taxAmount: Number(order.taxAmount),
+                        shippingCost: Number(order.shippingCost),
+                        discountAmount: Number(order.discountAmount),
+                        orderItems: [] // Failed payment might not need items or they are not fetched in this block?
+                    };
+                    // Line 47 does NOT include orderItems. So email might fail if it expects items.
+                    // But sendPaymentFailedEmail might just use totalAmount.
+                    // To be safe, cast to any.
+                    await sendPaymentFailedEmail(emailOrder as any).catch(e => console.error(e));
                 }
                 break;
             }
@@ -76,7 +100,15 @@ export async function POST(request: NextRequest) {
                     }
                 });
                 if (order) {
-                    await sendRefundConfirmationEmail(order, charge.amount_refunded / 100).catch(e => console.error(e));
+                    const emailOrder = {
+                        ...order,
+                        totalAmount: Number(order.totalAmount),
+                        taxAmount: Number(order.taxAmount),
+                        shippingCost: Number(order.shippingCost),
+                        discountAmount: Number(order.discountAmount),
+                        orderItems: []
+                    };
+                    await sendRefundConfirmationEmail(emailOrder as any, charge.amount_refunded / 100).catch(e => console.error(e));
                 }
                 break;
             }

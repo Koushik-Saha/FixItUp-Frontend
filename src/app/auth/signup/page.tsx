@@ -1,26 +1,55 @@
 // src/app/auth/signup/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const signupSchema = z
+    .object({
+        full_name: z.string().min(2, "Full name must be at least 2 characters"),
+        email: z.string().email("Please enter a valid email address"),
+        phone: z.string().optional(),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        confirmPassword: z.string(),
+        wantsWholesale: z.boolean().default(false),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+    });
+
+type SignupForm = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
     const router = useRouter();
-    const { user, register, isLoading, init } = useAuth();
-    // successMessage state removed in favor of toast
+    const { user, register: registerUser, isLoading, init } = useAuth();
 
-    const [form, setForm] = useState({
-        full_name: "",
-        email: "",
-        phone: "",
-        password: "",
-        confirmPassword: "",
-        wantsWholesale: false,
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<SignupForm>({
+        resolver: zodResolver(signupSchema),
+        defaultValues: {
+            full_name: "",
+            email: "",
+            phone: "",
+            password: "",
+            confirmPassword: "",
+            wantsWholesale: false,
+        },
     });
 
     useEffect(() => {
@@ -33,38 +62,19 @@ export default function SignupPage() {
         }
     }, [user, router]);
 
-    const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        const { name, value, type, checked } = e.target;
-        setForm((prev) => ({
-            ...prev,
-            [name]: type === "checkbox" ? checked : value,
-        }));
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (form.password !== form.confirmPassword) {
-            toast.error("Passwords do not match");
-            return;
-        }
-
+    const onSubmit = async (data: SignupForm) => {
         try {
-            await register({
-                full_name: form.full_name,
-                email: form.email,
-                phone: form.phone || undefined,
-                password: form.password,
+            await registerUser({
+                full_name: data.full_name,
+                email: data.email,
+                phone: data.phone || undefined,
+                password: data.password,
             });
 
             toast.success("Account created successfully!");
-            // useAuth register handles the redirection on success via user state change?
-            // Actually useAuth doesn't auto redirect usually, but the useEffect([user]) above will handle it.
-
+            // session changes will trigger the useEffect to redirect
         } catch (err: any) {
-            console.error('Registration failed:', err);
+            console.error("Registration failed:", err);
             toast.error(err.message || "Registration failed. Please try again.");
         }
     };
@@ -80,19 +90,20 @@ export default function SignupPage() {
                     account.
                 </p>
 
-                <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                         <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Full Name
                         </label>
                         <Input
-                            name="full_name"
+                            {...register("full_name")}
                             placeholder="John Doe"
-                            value={form.full_name}
-                            onChange={handleChange}
-                            required
-                            disabled={isLoading}
+                            disabled={isLoading || isSubmitting}
+                            className={errors.full_name ? "border-red-500 focus-visible:ring-red-500" : ""}
                         />
+                        {errors.full_name && (
+                            <p className="text-red-500 text-xs mt-1 font-medium">{errors.full_name.message}</p>
+                        )}
                     </div>
 
                     <div className="col-span-1">
@@ -100,14 +111,15 @@ export default function SignupPage() {
                             Email
                         </label>
                         <Input
+                            {...register("email")}
                             type="email"
-                            name="email"
                             placeholder="you@example.com"
-                            value={form.email}
-                            onChange={handleChange}
-                            required
-                            disabled={isLoading}
+                            disabled={isLoading || isSubmitting}
+                            className={errors.email ? "border-red-500 focus-visible:ring-red-500" : ""}
                         />
+                        {errors.email && (
+                            <p className="text-red-500 text-xs mt-1 font-medium">{errors.email.message}</p>
+                        )}
                     </div>
 
                     <div className="col-span-1">
@@ -115,11 +127,9 @@ export default function SignupPage() {
                             Phone (Optional)
                         </label>
                         <Input
-                            name="phone"
+                            {...register("phone")}
                             placeholder="(555) 123-4567"
-                            value={form.phone}
-                            onChange={handleChange}
-                            disabled={isLoading}
+                            disabled={isLoading || isSubmitting}
                         />
                     </div>
 
@@ -128,15 +138,15 @@ export default function SignupPage() {
                             Password
                         </label>
                         <Input
+                            {...register("password")}
                             type="password"
-                            name="password"
                             placeholder="••••••••"
-                            value={form.password}
-                            onChange={handleChange}
-                            required
-                            minLength={6}
-                            disabled={isLoading}
+                            disabled={isLoading || isSubmitting}
+                            className={errors.password ? "border-red-500 focus-visible:ring-red-500" : ""}
                         />
+                        {errors.password && (
+                            <p className="text-red-500 text-xs mt-1 font-medium">{errors.password.message}</p>
+                        )}
                     </div>
 
                     <div className="col-span-1">
@@ -144,26 +154,24 @@ export default function SignupPage() {
                             Confirm Password
                         </label>
                         <Input
+                            {...register("confirmPassword")}
                             type="password"
-                            name="confirmPassword"
                             placeholder="••••••••"
-                            value={form.confirmPassword}
-                            onChange={handleChange}
-                            required
-                            minLength={6}
-                            disabled={isLoading}
+                            disabled={isLoading || isSubmitting}
+                            className={errors.confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}
                         />
+                        {errors.confirmPassword && (
+                            <p className="text-red-500 text-xs mt-1 font-medium">{errors.confirmPassword.message}</p>
+                        )}
                     </div>
 
                     <div className="col-span-2 mt-2 flex items-start gap-2 rounded-lg border border-slate-200 dark:border-neutral-600 bg-slate-50 dark:bg-neutral-700 px-3 py-3">
                         <input
+                            {...register("wantsWholesale")}
                             id="wantsWholesale"
                             type="checkbox"
-                            name="wantsWholesale"
                             className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            checked={form.wantsWholesale}
-                            onChange={handleChange}
-                            disabled={isLoading}
+                            disabled={isLoading || isSubmitting}
                         />
                         <label
                             htmlFor="wantsWholesale"
@@ -179,8 +187,8 @@ export default function SignupPage() {
                     <div className="col-span-2 mt-4">
                         <Button
                             type="submit"
-                            disabled={isLoading}
-                            loading={isLoading}
+                            disabled={isLoading || isSubmitting}
+                            loading={isLoading || isSubmitting}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             Create Account
@@ -198,10 +206,11 @@ export default function SignupPage() {
                     </Link>
                 </p>
 
-                {process.env.NODE_ENV === 'development' && (
+                {process.env.NODE_ENV === "development" && (
                     <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                         <p className="text-xs text-amber-800 dark:text-amber-400">
-                            <strong>Dev Mode:</strong> Email verification is disabled. You can login immediately after registration.
+                            <strong>Dev Mode:</strong> Email verification is disabled.
+                            You can login immediately after registration.
                         </p>
                     </div>
                 )}

@@ -83,24 +83,7 @@ export function CategorySection() {
     }
 
     // Interaction Handlers
-    const handleBrandClick = (brand: BrandCategory) => {
-        if (activeBrandId === brand.id) {
-            setActiveBrandId(null)
-            setPinnedSubcatId(null)
-            setActiveSubcatId(null)
-        } else {
-            setActiveBrandId(brand.id)
-            // Default select first, but allow pinning behavior
-            if (brand.children.length > 0) {
-                const firstId = brand.children[0].id
-                setPinnedSubcatId(firstId)
-                setActiveSubcatId(firstId)
-            } else {
-                setActiveSubcatId(null)
-            }
-        }
-        setSearchQuery('')
-    }
+    // Interaction Handlers (handleBrandClick removed as unused)
 
     const handleSubcatClick = (id: string) => {
         if (pinnedSubcatId === id) {
@@ -144,7 +127,7 @@ export function CategorySection() {
             brand: BrandCategory,
             key: string,
             label: string,
-            filterFn: (c: any) => boolean,
+            filterFn: (c: SubCategory) => boolean,
             sortOthers: string[] = []
         ) => {
             const childrenCopy = [...brand.children]
@@ -258,7 +241,7 @@ export function CategorySection() {
                 brand,
                 'moto',
                 'Moto Phones',
-                (c) => true, // Consolidate everything for Motorola usually
+                () => true, // Consolidate everything for Motorola usually
                 []
             )
         }

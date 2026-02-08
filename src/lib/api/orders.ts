@@ -47,6 +47,7 @@ export interface Order {
     payment_method?: string
     created_at: string
     updated_at: string
+    orderItems?: any[]
 }
 
 export interface OrderResponse {
@@ -94,7 +95,7 @@ export async function getOrders(params: {
     status?: string
 } = {}): Promise<OrderResponse> {
     const searchParams = new URLSearchParams()
-    
+
     if (params.page) searchParams.set('page', params.page.toString())
     if (params.limit) searchParams.set('limit', params.limit.toString())
     if (params.status) searchParams.set('status', params.status)

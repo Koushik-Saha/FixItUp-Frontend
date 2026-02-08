@@ -1,70 +1,104 @@
-import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
-import { errorResponse, UnauthorizedError, ConflictError } from '@/lib/utils/errors'
-import { wholesaleApplicationSchema, validateData, formatValidationErrors } from '@/utils/validation'
-// import { sendWholesaleApplicationEmail } from '@/lib/email' // Assuming this still works or needs refactor
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/jwt";
+import * as z from "zod";
 
-export async function POST(request: NextRequest) {
+const wholesaleApplicationSchema = z.object({
+    businessName: z.string().min(1, "Business name is required"),
+    businessType: z.string().min(1, "Business type is required"),
+    taxId: z.string().min(1, "Tax ID is required"),
+    website: z.string().optional(),
+    businessPhone: z.string().min(1, "Business phone is required"),
+    businessEmail: z.string().email("Invalid email"),
+    businessAddress: z.object({
+        street1: z.string().min(1, "Street address is required"),
+        street2: z.string().optional(),
+        city: z.string().min(1, "City is required"),
+        state: z.string().min(1, "State is required"),
+        zipCode: z.string().min(1, "Zip code is required"),
+        country: z.string().default("US"),
+    }),
+});
+
+export async function POST(req: NextRequest) {
     try {
-        const userId = request.headers.get('x-user-id');
-        if (!userId) throw new UnauthorizedError('Please login to apply');
+        const session = await getSession();
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
 
-        // Check existing application
-        const existingApp = await prisma.wholesaleApplication.findFirst({
+        const body = await req.json();
+        const result = wholesaleApplicationSchema.safeParse(body);
+
+        if (!result.success) {
+            return NextResponse.json(
+                { error: "Validation error", details: result.error.flatten() },
+                { status: 400 }
+            );
+        }
+
+        // Check if user already has a pending or approved application
+        const existing = await prisma.wholesaleApplication.findFirst({
             where: {
-                userId,
-                status: { in: ['PENDING', 'APPROVED'] }
+                userId: session.id,
+                status: {
+                    in: ["PENDING", "APPROVED"]
+                }
             }
         });
 
-        if (existingApp) {
-            if (existingApp.status === 'APPROVED') {
-                throw new ConflictError('You already have an approved wholesale account');
-            }
-            if (existingApp.status === 'PENDING') {
-                throw new ConflictError('You already have a pending application');
-            }
+        if (existing) {
+            return NextResponse.json(
+                { error: "You already have a pending or approved application." },
+                { status: 400 }
+            );
         }
-
-        const body = await request.json();
-        const output = validateData(wholesaleApplicationSchema, body);
-
-        if (!output.success) {
-            return NextResponse.json({
-                error: 'Validation failed',
-                errors: formatValidationErrors(output.errors!)
-            }, { status: 400 });
-        }
-
-        const data = output.data!;
 
         const application = await prisma.wholesaleApplication.create({
             data: {
-                userId,
-                businessName: data.business_name,
-                businessType: data.business_type || 'Other',
-                taxId: data.tax_id,
-                website: data.website,
-                businessPhone: data.business_phone,
-                businessEmail: data.business_email,
-                businessAddress: data.business_address,
-                requestedTier: (data.requested_tier?.toUpperCase() as any) || 'TIER1',
-                status: 'PENDING'
-            }
+                userId: session.id,
+                ...result.data,
+                businessAddress: result.data.businessAddress as any, // Json type casting
+                status: "PENDING",
+            },
         });
 
-        // Email logic (kept as commented TODO or if import works)
-        // await sendWholesaleApplicationEmail(application);
+        // Optionally update user status to indicate pending review if needed, 
+        // but schema usually keeps user role as CUSTOMER until Approved.
+        // We can check `wholesaleStatus` on User model.
+        await prisma.user.update({
+            where: { id: session.id },
+            data: { wholesaleStatus: "PENDING" }
+        });
 
-        return NextResponse.json({
-            message: 'Application submitted successfully.',
-            data: {
-                application_id: application.id,
-                status: application.status
-            }
-        }, { status: 201 });
-
+        return NextResponse.json(application, { status: 201 });
     } catch (error) {
-        return errorResponse(error);
+        console.error("Error submitting wholesale application:", error);
+        return NextResponse.json(
+            { error: "Failed to submit application" },
+            { status: 500 }
+        );
+    }
+}
+
+export async function GET() {
+    try {
+        const session = await getSession();
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const application = await prisma.wholesaleApplication.findFirst({
+            where: { userId: session.id },
+            orderBy: { createdAt: 'desc' } // Get latest
+        });
+
+        return NextResponse.json(application);
+    } catch (error) {
+        console.error("Error fetching application:", error);
+        return NextResponse.json(
+            { error: "Failed to fetch application" },
+            { status: 500 }
+        );
     }
 }

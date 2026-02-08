@@ -22,7 +22,7 @@ export default function TermsOfServicePage() {
 
                     <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-6 mb-8">
                         <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                            <strong>IMPORTANT:</strong> Please read these Terms of Service ("Terms") carefully before using our website or services. By accessing or using maxfitit.com or our services, you agree to be bound by these Terms. If you do not agree to these Terms, do not use our website or services.
+                            <strong>IMPORTANT:</strong> Please read these Terms of Service (&quot;Terms&quot;) carefully before using our website or services. By accessing or using maxfitit.com or our services, you agree to be bound by these Terms. If you do not agree to these Terms, do not use our website or services.
                         </p>
                     </div>
 
