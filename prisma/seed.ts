@@ -11,6 +11,7 @@ async function main() {
     // await prisma.category.deleteMany()
 
     // 2. Hero Slides
+    /*
     const hero1 = await prisma.heroSlide.create({
         data: {
             title: "Expert Phone Repair",
@@ -45,6 +46,7 @@ async function main() {
             isActive: true
         }
     })
+    */
 
     // 3. Categories
     const screens = await prisma.category.create({

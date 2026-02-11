@@ -48,6 +48,13 @@ export async function POST(
             )
         }
 
+        if (!customer.email) {
+            return NextResponse.json(
+                { error: 'Customer has no email address' },
+                { status: 400, headers: getCorsHeaders(origin) }
+            )
+        }
+
         // Generate Reset Token
         const resetToken = crypto.randomUUID()
         const expiry = new Date()

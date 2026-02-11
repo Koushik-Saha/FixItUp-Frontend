@@ -122,7 +122,11 @@ export async function GET(request: NextRequest) {
 
         // Orders Breakdown
         const orderCounts: Record<string, number> = {};
-        orders.forEach(g => { orderCounts[g.status.toLowerCase()] = g._count.id });
+        orders.forEach(g => {
+            if (g.status) {
+                orderCounts[g.status.toLowerCase()] = g._count.id;
+            }
+        });
 
         const data = {
             overview: {

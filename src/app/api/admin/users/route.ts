@@ -48,9 +48,14 @@ export async function GET(request: NextRequest) {
 
         const skip = (page - 1) * limit;
 
-        const where: Prisma.UserWhereInput = {
-            role: 'CUSTOMER' // Fetch customers only for now, or all? "Customer List" implies customers.
-        };
+        const roleParam = searchParams.get("role");
+        const role = roleParam ? (roleParam.toUpperCase() as Prisma.EnumRoleFilter) : undefined;
+
+        const where: Prisma.UserWhereInput = {};
+
+        if (role) {
+            where.role = role;
+        }
 
         if (search) {
             where.OR = [

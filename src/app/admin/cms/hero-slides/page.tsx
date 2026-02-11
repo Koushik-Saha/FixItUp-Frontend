@@ -190,7 +190,7 @@ export default function HeroSlidesPage() {
                                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(slide)}>
                                             <Edit className="h-4 w-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDelete(slide.id)}>
+                                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDelete(String(slide.id))}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </TableCell>

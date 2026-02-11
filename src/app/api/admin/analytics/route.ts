@@ -138,13 +138,15 @@ export async function GET(request: NextRequest) {
 
 interface AnalyticsOrder {
     totalAmount: Decimal | number;
-    createdAt: Date;
-    status: string;
+    createdAt: Date | null;
+    status: string | null;
+    isWholesale: boolean | null;
 }
 
 function groupDataByTime(orders: AnalyticsOrder[], groupBy: string) {
     const grouped: Record<string, { orders: number, revenue: number }> = {};
     orders.forEach(order => {
+        if (!order.createdAt) return;
         const date = new Date(order.createdAt);
         let key = "";
         if (groupBy === 'hour') key = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`;
