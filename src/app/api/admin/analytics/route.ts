@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { errorResponse } from "@/lib/utils/errors";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const allowedOrigins = [
     "http://localhost:3000",
@@ -134,7 +135,14 @@ export async function GET(request: NextRequest) {
     }
 }
 
-function groupDataByTime(orders: any[], groupBy: string) {
+
+interface AnalyticsOrder {
+    totalAmount: Decimal | number;
+    createdAt: Date;
+    status: string;
+}
+
+function groupDataByTime(orders: AnalyticsOrder[], groupBy: string) {
     const grouped: Record<string, { orders: number, revenue: number }> = {};
     orders.forEach(order => {
         const date = new Date(order.createdAt);

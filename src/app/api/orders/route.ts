@@ -1,14 +1,34 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable react/no-unescaped-entities */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { errorResponse, UnauthorizedError, ValidationError } from '@/lib/utils/errors'
-import { createOrderSchema, validateData } from '@/utils/validation'
-import { Prisma } from '@prisma/client'
+import { z } from 'zod'
+import { Prisma, OrderStatus } from '@prisma/client'
 
-// Setup CORS headers helper (inline for now)
+// Schema for creating an order
+const createOrderSchema = z.object({
+    shipping_address: z.object({
+        full_name: z.string().min(1),
+        address_line_1: z.string().min(1),
+        address_line_2: z.string().optional(),
+        city: z.string().min(1),
+        state: z.string().min(1),
+        postal_code: z.string().min(1),
+        country: z.string().min(1),
+        phone: z.string().optional(),
+    }),
+    billing_address: z.object({
+        full_name: z.string().min(1),
+        address_line_1: z.string().min(1),
+        address_line_2: z.string().optional(),
+        city: z.string().min(1),
+        state: z.string().min(1),
+        postal_code: z.string().min(1),
+        country: z.string().min(1),
+        phone: z.string().optional(),
+    }).optional(),
+    customer_notes: z.string().optional()
+})
+
 const allowedOrigins = [
     "http://localhost:3000",
     "http://localhost:3001",
@@ -21,7 +41,7 @@ function getCorsHeaders(request: NextRequest) {
     const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
     return {
         "Access-Control-Allow-Origin": allowOrigin,
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Methods": "POST,OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
         "Access-Control-Allow-Credentials": "true",
     };
@@ -33,43 +53,35 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     const corsHeaders = getCorsHeaders(request);
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = parseInt(searchParams.get('page') || '1');
+    const status = searchParams.get('status');
 
     try {
         const userId = request.headers.get('x-user-id');
         const userRole = request.headers.get('x-user-role');
+        if (!userId) throw new UnauthorizedError();
 
-        if (!userId) {
-            throw new UnauthorizedError('Please login to view orders');
-        }
-
-        const { searchParams } = new URL(request.url);
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '10');
-        const status = searchParams.get('status');
-        const from = (page - 1) * limit;
-
-        const isAdmin = userRole === 'ADMIN';
-
+        const skip = (page - 1) * limit;
         const where: Prisma.OrderWhereInput = {};
 
-        if (!isAdmin) {
+        // Admin can see all, Users only see their own
+        if (userRole !== 'ADMIN') {
             where.userId = userId;
         }
 
-        if (status) {
-            // Map status string to Enum if needed, or if schema matches string it's fine.
-            // Schema uses OrderStatus enum (PENDING, PROCESSING, etc)
-            // Need to ensure status param matches enum casing or map it.
-            // Using simple casting for now, verifying input is better practice.
-            where.status = status.toUpperCase() as any;
+        if (status && status !== 'ALL') {
+            where.status = status as OrderStatus;
         }
 
-        const [orders, count] = await Promise.all([
+        const [orders, total] = await Promise.all([
             prisma.order.findMany({
                 where,
-                orderBy: { createdAt: 'desc' },
-                skip: from,
+                skip,
                 take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: { orderItems: true }
             }),
             prisma.order.count({ where })
         ]);
@@ -79,9 +91,9 @@ export async function GET(request: NextRequest) {
             pagination: {
                 page,
                 limit,
-                total: count,
-                totalPages: Math.ceil(count / limit),
-            },
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
         }, { headers: corsHeaders });
 
     } catch (error) {
@@ -95,155 +107,165 @@ export async function POST(request: NextRequest) {
     const corsHeaders = getCorsHeaders(request);
 
     try {
-        const body = await request.json();
         const userId = request.headers.get('x-user-id');
-        const isGuest = !userId;
+        if (!userId) throw new UnauthorizedError('Must be logged in to place an order');
 
-        // Fetch User if logged in to get Wholesale status
-        let user = null;
-        if (userId) {
-            user = await prisma.user.findUnique({ where: { id: userId } });
+        const body = await request.json();
+        const validation = createOrderSchema.safeParse(body);
+
+        if (!validation.success) {
+            return NextResponse.json({
+                error: 'Invalid request',
+                details: validation.error.flatten().fieldErrors
+            }, { status: 400, headers: corsHeaders });
         }
 
-        // Validate
-        const validation = validateData(createOrderSchema, body);
-        if (!validation.success || !validation.data) {
-            throw new ValidationError('Validation failed');
-        }
+        const { shipping_address, billing_address, customer_notes } = validation.data;
 
-        const { items, shipping_address, billing_address, customer_notes, customer_email } = validation.data;
-        const orderEmail = isGuest ? customer_email : user?.email;
-
-        if (!orderEmail) {
-            return NextResponse.json({ error: 'Customer email is required' }, { status: 400, headers: corsHeaders });
-        }
-
-        // Use transaction for atomic operations
-        const result = await prisma.$transaction(async (tx) => {
-            // 1. Fetch Products
-            const productIds = items.map((item: any) => item.product_id);
-            const products = await tx.product.findMany({
-                where: { id: { in: productIds } }
-            });
-
-            if (products.length !== items.length) {
-                throw new Error('One or more products not found');
-            }
-
-            // 2. Calculate Totals & Check Stock
-            const orderItemsData = [];
-            let subtotal = 0;
-
-            for (const item of items) {
-                const product = products.find(p => p.id === item.product_id)!;
-
-                if (!product.isActive) {
-                    throw new Error(`Product ${product.name} is not available`);
-                }
-
-                if (product.totalStock < item.quantity) {
-                    throw new Error(`Insufficient stock for ${product.name}`);
-                }
-
-                // Calculate price
-                let unitPrice = Number(product.basePrice);
-                let discountPercentage = 0;
-
-                // Wholesale Logic
-                if (user?.role === 'WHOLESALE' && user.wholesaleTier) {
-                    // Assuming tier1Discount is Decimal
-                    if (user.wholesaleTier === 'TIER1') discountPercentage = Number(product.tier1Discount);
-                    if (user.wholesaleTier === 'TIER2') discountPercentage = Number(product.tier2Discount);
-                    if (user.wholesaleTier === 'TIER3') discountPercentage = Number(product.tier3Discount);
-
-                    unitPrice = unitPrice * (1 - discountPercentage / 100);
-                }
-
-                const itemSubtotal = unitPrice * item.quantity;
-                subtotal += itemSubtotal;
-
-                // Decrement Stock
-                await tx.product.update({
-                    where: { id: product.id },
-                    data: { totalStock: { decrement: item.quantity } }
-                });
-
-                orderItemsData.push({
-                    productId: product.id,
-                    productName: product.name,
-                    productSku: product.sku,
-                    productImage: product.thumbnail || product.images[0],
-                    unitPrice: new Prisma.Decimal(unitPrice),
-                    discountPercent: new Prisma.Decimal(discountPercentage),
-                    quantity: item.quantity,
-                    subtotal: new Prisma.Decimal(itemSubtotal)
-                });
-            }
-
-            const taxRate = 0.07;
-            const taxAmount = subtotal * taxRate;
-            const shippingCost = subtotal >= 50 ? 0 : 9.99;
-            const totalAmount = subtotal + taxAmount + shippingCost;
-
-            // Generate Order Number
-            const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-            // 3. Create Order
-            const order = await tx.order.create({
-                data: {
-                    orderNumber,
-                    userId: user?.id || null,
-                    customerName: shipping_address.full_name,
-                    customerEmail: orderEmail,
-                    customerPhone: shipping_address.phone || user?.phone,
-                    subtotal: new Prisma.Decimal(subtotal),
-                    discountAmount: new Prisma.Decimal(0), // Calculate logic if needed
-                    taxAmount: new Prisma.Decimal(taxAmount),
-                    shippingCost: new Prisma.Decimal(shippingCost),
-                    totalAmount: new Prisma.Decimal(totalAmount),
-                    isWholesale: user?.role === 'WHOLESALE',
-                    wholesaleTier: user?.wholesaleTier || null,
-                    shippingAddress: shipping_address,
-                    billingAddress: billing_address || shipping_address,
-                    customerNotes: customer_notes,
-                    status: 'PENDING',
-                    paymentStatus: 'PENDING',
-                    orderItems: {
-                        create: orderItemsData
-                    }
-                }
-            });
-
-            // 4. Clear Cart
-            if (user) {
-                await tx.cartItem.deleteMany({
-                    where: {
-                        userId: user.id,
-                        productId: { in: productIds }
-                    }
-                });
-            }
-
-            return order;
+        // 1. Fetch Cart
+        const cartItems = await prisma.cartItem.findMany({
+            where: { userId },
+            include: { product: true }
         });
 
-        // Response
+        if (cartItems.length === 0) {
+            return NextResponse.json({ error: 'Cart is empty' }, { status: 400, headers: corsHeaders });
+        }
+
+        // 2. Validate Stock & Pricing
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true, wholesaleTier: true, fullName: true, email: true, phone: true }
+        });
+
+        if (!user) throw new UnauthorizedError();
+
+        let subtotal = 0;
+
+        interface ProcessedItem {
+            productId: string;
+            productName: string;
+            productSku: string;
+            productImage: string;
+            quantity: number;
+            unitPrice: number;
+            discountPercent: number;
+            subtotal: number;
+        }
+        const processedItems: ProcessedItem[] = [];
+
+        for (const item of cartItems) {
+            const product = item.product;
+
+            // Check active
+            if (!product.isActive) {
+                return NextResponse.json({
+                    error: `Product ${product.name} is no longer available`,
+                    code: 'PRODUCT_UNAVAILABLE'
+                }, { status: 400, headers: corsHeaders });
+            }
+
+            // Check stock
+            if (product.totalStock < item.quantity) {
+                return NextResponse.json({
+                    error: `Insufficient stock for ${product.name}`,
+                    code: 'INSUFFICIENT_STOCK',
+                    available: product.totalStock
+                }, { status: 400, headers: corsHeaders });
+            }
+
+            // Calculate Unit Price (Wholesale Logic)
+            let unitPrice = Number(product.basePrice);
+            let discountPercentage = 0;
+
+            if (user.role === 'WHOLESALE' && user.wholesaleTier) {
+                if (user.wholesaleTier === 'TIER1') discountPercentage = Number(product.tier1Discount);
+                else if (user.wholesaleTier === 'TIER2') discountPercentage = Number(product.tier2Discount);
+                else if (user.wholesaleTier === 'TIER3') discountPercentage = Number(product.tier3Discount);
+
+                unitPrice = unitPrice * (1 - discountPercentage / 100);
+            }
+
+            const itemSubtotal = unitPrice * item.quantity;
+            subtotal += itemSubtotal;
+
+            processedItems.push({
+                productId: product.id,
+                productName: product.name,
+                productSku: product.sku,
+                productImage: product.thumbnail || product.images[0],
+                quantity: item.quantity,
+                unitPrice,
+                discountPercent: discountPercentage,
+                subtotal: itemSubtotal
+            });
+        }
+
+        // 3. Calculate Totals
+        const taxRate = 0; // Implement tax calculation logic here
+        const taxAmount = subtotal * taxRate;
+        const shippingCost = subtotal > 100 ? 0 : 10; // Simple logic: Free shipping over $100
+        const totalAmount = subtotal + taxAmount + shippingCost;
+
+        // 4. Transaction: Create Order, Items, Update Stock, Clear Cart
+        const order = await prisma.$transaction(async (tx) => {
+            // Create Order
+            const newOrder = await tx.order.create({
+                data: {
+                    userId,
+                    orderNumber: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Simple generation
+                    customerName: user.fullName || shipping_address.full_name,
+                    customerEmail: user.email,
+                    customerPhone: user.phone || shipping_address.phone,
+                    status: 'PENDING',
+                    paymentStatus: 'PENDING', // Payment integration later
+                    subtotal,
+                    taxAmount,
+                    shippingCost,
+                    totalAmount,
+                    isWholesale: user.role === 'WHOLESALE',
+                    wholesaleTier: user.wholesaleTier,
+                    shippingAddress: shipping_address as unknown as Prisma.InputJsonValue,
+                    billingAddress: (billing_address || shipping_address) as unknown as Prisma.InputJsonValue,
+                    customerNotes: customer_notes,
+
+                    // Create Items
+                    orderItems: {
+                        create: processedItems
+                    }
+                }
+            });
+
+            // Update Stock
+            for (const item of processedItems) {
+                await tx.product.update({
+                    where: { id: item.productId },
+                    data: {
+                        totalStock: { decrement: item.quantity }
+                    }
+                });
+            }
+
+            // Clear Cart
+            await tx.cartItem.deleteMany({
+                where: { userId }
+            });
+
+            return newOrder;
+        });
+
         return NextResponse.json({
-            message: 'Order created successfully',
+            message: 'Order placed successfully',
             data: {
-                order_id: result.id,
-                order_number: result.orderNumber,
-                total_amount: result.totalAmount
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                totalAmount: Number(order.totalAmount)
             }
         }, { status: 201, headers: corsHeaders });
 
-    } catch (error: any) {
-        console.error("Create Order Error", error);
-        // Clean error message for user
-        const message = error.message || 'Failed to create order';
-        return NextResponse.json(
-            { error: message },
-            { status: 400, headers: corsHeaders }
-        );
+    } catch (error) {
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

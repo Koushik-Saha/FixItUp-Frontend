@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react'
 import { Search, MapPin, Navigation, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
+import type { Store as PrismaStore } from '@prisma/client'
 
 // As Seen In logos
 const AS_SEEN_IN = [
@@ -82,13 +83,47 @@ const REGIONAL_PARTNERS = [
     }
 ]
 
+// Define Store interface based on usage and API
+interface OperatingHours {
+    open?: string;
+    close?: string;
+}
+
+interface StoreHours {
+    monday?: OperatingHours;
+    tuesday?: OperatingHours;
+    wednesday?: OperatingHours;
+    thursday?: OperatingHours;
+    friday?: OperatingHours;
+    saturday?: OperatingHours;
+    sunday?: OperatingHours;
+}
+
+interface Store {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    zip: string; // mapped
+    distance: string; // mapped
+    coordinates: { lat: number; lng: number }; // mapped
+    operatingHours?: StoreHours;
+    hours: {
+        weekday: string;
+        saturday: string;
+        sunday: string;
+    };
+}
+
 export default function StoreLocatorPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [expandedRegion, setExpandedRegion] = useState<number | null>(null)
-    const [selectedStore, setSelectedStore] = useState<any>(null)
+    const [selectedStore, setSelectedStore] = useState<Store | null>(null)
 
     // Dynamic Data States
-    const [stores, setStores] = useState([])
+    const [stores, setStores] = useState<Store[]>([])
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [loading, setLoading] = useState(true)
@@ -96,7 +131,7 @@ export default function StoreLocatorPage() {
     // Fetch stores
 
     // Helper to format time (09:00 -> 9:00 AM)
-    const formatTime = (time: string) => {
+    const formatTime = (time: string | undefined) => {
         if (!time) return '';
         const [hours, minutes] = time.split(':');
         const h = parseInt(hours);
@@ -105,7 +140,7 @@ export default function StoreLocatorPage() {
         return `${h12}:${minutes} ${ampm}`;
     };
 
-    const formatHours = (hours: any) => {
+    const formatHours = (hours: StoreHours | undefined) => {
         if (!hours) return {
             weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
             saturday: 'Saturday: 10:00 AM - 6:00 PM',
@@ -132,12 +167,13 @@ export default function StoreLocatorPage() {
                 const res = await fetch(`/api/stores?page=${page}&limit=10&query=${encodeURIComponent(searchQuery)}`)
                 const data = await res.json()
                 if (data.success) {
-                    const mappedStores = data.data.map((s: any) => ({
+                    const mappedStores = data.data.map((s: PrismaStore): Store => ({
                         ...s,
                         zip: s.zipCode,
+                        operatingHours: s.operatingHours as unknown as StoreHours,
                         distance: 'Calculating...',
                         coordinates: { lat: 34.0522, lng: -118.2437 }, // Mock coordinates for now
-                        hours: formatHours(s.operatingHours)
+                        hours: formatHours(s.operatingHours as unknown as StoreHours)
                     }))
                     setStores(mappedStores)
                     setTotalPages(data.pagination.totalPages)
@@ -205,7 +241,7 @@ export default function StoreLocatorPage() {
                                 ) : stores.length === 0 ? (
                                     <div className="text-center py-8 text-neutral-500">No stores found.</div>
                                 ) : (
-                                    stores.map((store: any) => (
+                                    stores.map((store: Store) => (
                                         <button
                                             key={store.id}
                                             onClick={() => setSelectedStore(store)}

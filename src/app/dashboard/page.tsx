@@ -217,9 +217,9 @@ export default function CustomerDashboard() {
                                             <div key={order.id} className="border border-neutral-800 rounded-xl p-4">
                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                                                     <div>
-                                                        <span className="text-sm font-medium text-white">#{order.order_number}</span>
+                                                        <span className="text-sm font-medium text-white">#{order.orderNumber}</span>
                                                         <span className="text-xs text-neutral-500 ml-2">
-                                                            {new Date(order.created_at).toLocaleDateString()}
+                                                            {new Date(order.createdAt).toLocaleDateString()}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-3">
@@ -230,7 +230,7 @@ export default function CustomerDashboard() {
                                                             {order.status}
                                                         </span>
                                                         <span className="font-semibold text-white">
-                                                            ${Number(order.total_amount).toFixed(2)}
+                                                            ${Number(order.totalAmount).toFixed(2)}
                                                         </span>
                                                     </div>
                                                 </div>

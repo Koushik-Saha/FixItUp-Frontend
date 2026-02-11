@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { errorResponse, UnauthorizedError, NotFoundError } from '@/lib/utils/errors'
 
 const allowedOrigins = [
@@ -95,13 +96,13 @@ export async function PUT(
         }
 
         const body = await request.json();
-        const updateData: any = {};
+        const updateData: Prisma.UserUpdateInput = {};
 
         if (body.full_name) updateData.fullName = body.full_name;
         if (body.phone) updateData.phone = body.phone;
-        if (body.role) updateData.role = body.role.toUpperCase();
-        if (body.wholesale_tier) updateData.wholesaleTier = body.wholesale_tier.toUpperCase();
-        if (body.wholesale_status) updateData.wholesaleStatus = body.wholesale_status.toUpperCase();
+        if (body.role) updateData.role = body.role.toUpperCase() as Prisma.EnumRoleFieldUpdateOperationsInput;
+        if (body.wholesale_tier) updateData.wholesaleTier = body.wholesale_tier.toUpperCase() as Prisma.NullableEnumWholesaleTierFieldUpdateOperationsInput;
+        if (body.wholesale_status) updateData.wholesaleStatus = body.wholesale_status.toUpperCase() as Prisma.NullableEnumWholesaleStatusFieldUpdateOperationsInput;
         if (body.email) updateData.email = body.email;
 
         const updatedUser = await prisma.user.update({

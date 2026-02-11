@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { Prisma, RepairStatus, Priority } from '@prisma/client'
 import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
 import { sendRepairStatusUpdateEmail } from '@/lib/email'
 
@@ -73,20 +74,25 @@ export async function PUT(
         }
 
         const body = await request.json();
-        const updateData: any = {};
+        const updateData: Prisma.RepairTicketUpdateInput = {};
 
         // Mapping (snake_case from frontend/docs to camelCase prisma)
-        if (body.status) updateData.status = body.status.toUpperCase();
-        if (body.priority) updateData.priority = body.priority.toUpperCase();
+        if (body.status) updateData.status = body.status.toUpperCase() as RepairStatus;
+        if (body.priority) updateData.priority = body.priority.toUpperCase() as Priority;
         if (body.assigned_store_id) updateData.assignedStoreId = body.assigned_store_id;
         if (body.assigned_technician) updateData.assignedTechnician = body.assigned_technician;
         if (body.appointment_date) updateData.appointmentDate = body.appointment_date;
 
         // Costs (Decimal)
-        if (body.estimated_cost) updateData.estimatedCost = body.estimated_cost;
-        if (body.actual_cost) updateData.actualCost = body.actual_cost;
-        if (body.parts_cost) updateData.partsCost = body.parts_cost;
-        if (body.labor_cost) updateData.laborCost = body.labor_cost;
+        if (body.estimated_cost) updateData.estimatedCost = isNaN(Number(body.estimated_cost)) ? undefined : Number(body.estimated_cost);
+        // Note: Prisma Decimal input usually accepts number or string. Let's pass what we got if it matches, 
+        // or ensure it's a Decimal compatible format. 
+        // Actually, for strict typing, let's cast or transform.
+        // Assuming body contains numbers or strings that Prisma can handle.
+        if (body.estimated_cost !== undefined) updateData.estimatedCost = body.estimated_cost;
+        if (body.actual_cost !== undefined) updateData.actualCost = body.actual_cost;
+        if (body.parts_cost !== undefined) updateData.partsCost = body.parts_cost;
+        if (body.labor_cost !== undefined) updateData.laborCost = body.labor_cost;
 
         if (body.technician_notes) updateData.technicianNotes = body.technician_notes;
         if (body.internal_notes) updateData.internalNotes = body.internal_notes;

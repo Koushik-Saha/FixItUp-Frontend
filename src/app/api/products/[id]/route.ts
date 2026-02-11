@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { errorResponse, NotFoundError, ForbiddenError, ValidationError } from '@/lib/utils/errors'
 import { productSchema, validateData, formatValidationErrors } from '@/utils/validation'
 
@@ -117,32 +118,29 @@ export async function PUT(
 
         const data = output.data!;
 
-        // Map frontend fields (snake_case) to Prisma (camelCase) if validation uses snake_case output
-        // Assuming validateData returns object with same keys as schema (snake_case likely)
-        // Prisma uses camelCase cols. 
-        // Let's assume `data` contains snake_case keys from schema, need mapping.
-
-        const updateData: any = {};
-        if (data.name) updateData.name = data.name;
-        if (data.sku) updateData.sku = data.sku;
-        if (data.slug) updateData.slug = data.slug;
-        if (data.description) updateData.description = data.description;
-        if (data.brand) updateData.brand = data.brand;
-        if (data.device_model) updateData.deviceModel = data.device_model;
-        if (data.category_id) updateData.categoryId = data.category_id;
-        if (data.base_price) updateData.basePrice = data.base_price;
-        if (data.cost_price) updateData.costPrice = data.cost_price;
-        if (data.total_stock) updateData.totalStock = data.total_stock;
+        const updateData: Prisma.ProductUpdateInput = {};
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.sku !== undefined) updateData.sku = data.sku;
+        if (data.slug !== undefined) updateData.slug = data.slug;
+        if (data.description !== undefined) updateData.description = data.description;
+        if (data.brand !== undefined) updateData.brand = data.brand;
+        if (data.device_model !== undefined) updateData.deviceModel = data.device_model;
+        if (data.category_id !== undefined) {
+            updateData.category = { connect: { id: data.category_id } };
+        }
+        if (data.base_price !== undefined) updateData.basePrice = new Prisma.Decimal(data.base_price);
+        if (data.cost_price !== undefined) updateData.costPrice = new Prisma.Decimal(data.cost_price);
+        if (data.total_stock !== undefined) updateData.totalStock = data.total_stock;
         if (data.is_active !== undefined) updateData.isActive = data.is_active;
         if (data.is_featured !== undefined) updateData.isFeatured = data.is_featured;
         if (data.is_new !== undefined) updateData.isNew = data.is_new;
-        if (data.images) updateData.images = data.images;
-        if (data.thumbnail) updateData.thumbnail = data.thumbnail;
-        if (data.specifications) updateData.specifications = data.specifications;
+        if (data.images !== undefined) updateData.images = data.images;
+        if (data.thumbnail !== undefined) updateData.thumbnail = data.thumbnail;
+        if (data.specifications !== undefined) updateData.specifications = data.specifications as Prisma.InputJsonValue;
         // Wholesale discounts
-        if (data.wholesale_tier1_discount) updateData.tier1Discount = data.wholesale_tier1_discount;
-        if (data.wholesale_tier2_discount) updateData.tier2Discount = data.wholesale_tier2_discount;
-        if (data.wholesale_tier3_discount) updateData.tier3Discount = data.wholesale_tier3_discount;
+        if (data.wholesale_tier1_discount !== undefined) updateData.tier1Discount = new Prisma.Decimal(data.wholesale_tier1_discount);
+        if (data.wholesale_tier2_discount !== undefined) updateData.tier2Discount = new Prisma.Decimal(data.wholesale_tier2_discount);
+        if (data.wholesale_tier3_discount !== undefined) updateData.tier3Discount = new Prisma.Decimal(data.wholesale_tier3_discount);
 
 
         const product = await prisma.product.update({

@@ -27,6 +27,8 @@ export const productSchema = z.object({
     wholesale_tier3_discount: z.number().min(0).max(100).optional(),
     total_stock: z.number().int().min(0).optional(),
     low_stock_threshold: z.number().int().min(0).optional(),
+    meta_title: z.string().optional(),
+    meta_description: z.string().optional(),
 })
 
 // Order validation

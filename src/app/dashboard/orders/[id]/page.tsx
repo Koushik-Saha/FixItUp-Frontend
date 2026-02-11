@@ -72,7 +72,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
     };
 
     // Helper to calculate item subtotal safely
-    const calculateItemTotal = (item: any) => {
+    const calculateItemTotal = (item: { unitPrice: number | string; quantity: number }) => {
         return (Number(item.unitPrice) * item.quantity).toFixed(2);
     };
 
@@ -88,11 +88,11 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                     </Button>
                     <div>
                         <h1 className="text-2xl font-bold flex items-center gap-3">
-                            Order #{order.order_number}
+                            Order #{order.orderNumber}
                             <StatusBadge status={order.status} />
                         </h1>
                         <p className="text-neutral-400 text-sm mt-1">
-                            Placed on {formatDate(order.created_at)}
+                            Placed on {formatDate(order.createdAt)}
                         </p>
                     </div>
                 </div>
@@ -110,7 +110,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                             </h2>
                         </div>
                         <div className="divide-y divide-neutral-800">
-                            {(order as any).orderItems?.map((item: any) => (
+                            {order.orderItems?.map((item) => (
                                 <div key={item.id} className="p-6 flex gap-4 md:items-center">
                                     <div className="h-16 w-16 bg-neutral-800 rounded-lg flex-shrink-0 overflow-hidden">
                                         {item.productImage ? (
@@ -155,22 +155,22 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                             </div>
                             <div className="flex justify-between text-neutral-400">
                                 <span>Shipping</span>
-                                <span>${Number(order.shipping_cost).toFixed(2)}</span>
+                                <span>${Number(order.shippingCost).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-neutral-400">
                                 <span>Tax</span>
-                                <span>${Number(order.tax_amount).toFixed(2)}</span>
+                                <span>${Number(order.taxAmount).toFixed(2)}</span>
                             </div>
-                            {Number(order.discount_amount) > 0 && (
+                            {Number(order.discountAmount) > 0 && (
                                 <div className="flex justify-between text-green-400">
                                     <span>Discount</span>
-                                    <span>-${Number(order.discount_amount).toFixed(2)}</span>
+                                    <span>-${Number(order.discountAmount).toFixed(2)}</span>
                                 </div>
                             )}
                             <Separator className="bg-neutral-800 my-2" />
                             <div className="flex justify-between font-bold text-lg text-white">
                                 <span>Total</span>
-                                <span>${Number(order.total_amount).toFixed(2)}</span>
+                                <span>${Number(order.totalAmount).toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
@@ -183,15 +183,15 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                                 <Truck className="h-4 w-4" /> Shipping Address
                             </h3>
                             <div className="text-sm text-neutral-300 pl-6 border-l-2 border-neutral-800">
-                                <p className="font-medium text-white">{order.shipping_address.full_name}</p>
-                                <p>{order.shipping_address.address_line_1}</p>
-                                {order.shipping_address.address_line_2 && (
-                                    <p>{order.shipping_address.address_line_2}</p>
+                                <p className="font-medium text-white">{order.shippingAddress.fullName}</p>
+                                <p>{order.shippingAddress.addressLine1}</p>
+                                {order.shippingAddress.addressLine2 && (
+                                    <p>{order.shippingAddress.addressLine2}</p>
                                 )}
                                 <p>
-                                    {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.postal_code}
+                                    {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
                                 </p>
-                                <p className="text-neutral-500 mt-1">{order.shipping_address.country}</p>
+                                <p className="text-neutral-500 mt-1">{order.shippingAddress.country}</p>
                             </div>
                         </div>
 
@@ -201,10 +201,10 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                                 <CreditCard className="h-4 w-4" /> Payment Status
                             </h3>
                             <div className="pl-6 border-l-2 border-neutral-800">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${order.payment_status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${order.paymentStatus === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                                     'bg-neutral-500/10 text-neutral-500 border-neutral-500/20'
                                     }`}>
-                                    {order.payment_status}
+                                    {order.paymentStatus}
                                 </span>
                             </div>
                         </div>

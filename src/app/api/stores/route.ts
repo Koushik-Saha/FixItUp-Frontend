@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { errorResponse } from '@/lib/utils/errors'
+import { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
     try {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
         const query = searchParams.get('query') || ''
         const city = searchParams.get('city') || ''
 
-        const whereClause: any = { isActive: true }
+        const whereClause: Prisma.StoreWhereInput = { isActive: true }
 
         if (query) {
             whereClause.OR = [

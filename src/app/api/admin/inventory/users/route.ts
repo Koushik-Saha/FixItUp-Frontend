@@ -6,7 +6,7 @@ import {
     ForbiddenError,
 } from "@/lib/utils/errors";
 import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors';
-import { Role } from "@prisma/client";
+import { Role, Prisma } from "@prisma/client";
 
 // OPTIONS /api/admin/inventory/users - Handle preflight request
 export async function OPTIONS(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         const skip = (page - 1) * limit;
 
         // Apply filters
-        const where: any = {};
+        const where: Prisma.UserWhereInput = {};
         if (role) {
             where.role = role.toUpperCase() as Role; // Enum mapping
         }

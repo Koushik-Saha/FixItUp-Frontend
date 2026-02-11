@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { errorResponse } from "@/lib/utils/errors";
 import { Prisma } from "@prisma/client";
+import { productSchema, validateData, formatValidationErrors } from "@/utils/validation";
 
 // ... Reuse CORS helper/constants from a shared lib probably, but for now inline to matching previous file style
 const allowedOrigins = [
@@ -69,6 +70,17 @@ export async function PUT(
     try {
         const body = await request.json();
 
+        // Validation
+        const validation = validateData(productSchema.partial(), body);
+        if (!validation.success || !validation.data) {
+            return NextResponse.json({
+                error: 'Validation failed',
+                errors: formatValidationErrors(validation.errors!)
+            }, { status: 400, headers: corsHeaders });
+        }
+
+        const data = validation.data;
+
         // Check existence
         const existing = await prisma.product.findUnique({ where: { id } });
         if (!existing) {
@@ -76,49 +88,43 @@ export async function PUT(
         }
 
         // Check SKU dupes if changed
-        if (body.sku && body.sku !== existing.sku) {
-            const dupe = await prisma.product.findUnique({ where: { sku: body.sku } });
+        if (data.sku && data.sku !== existing.sku) {
+            const dupe = await prisma.product.findUnique({ where: { sku: data.sku } });
             if (dupe) {
                 return NextResponse.json({ error: 'Duplicate SKU' }, { status: 400, headers: corsHeaders });
             }
         }
 
-        // Map camelCase/snake_case mapping if needed.
-        // Assuming body sends snake_case from old admin panel?
-        // Admin panel sends logic defined in implementation. 
-        // Based on previous file, it destructured snake_case variables.
-        // So we need to map snake_case body to camelCase Prisma fields.
+        const updateData: Prisma.ProductUpdateInput = {};
+        if (data.name) updateData.name = data.name;
+        if (data.sku) updateData.sku = data.sku;
+        if (data.slug) updateData.slug = data.slug;
+        if (data.category_id) updateData.category = { connect: { id: data.category_id } };
+        if (data.brand) updateData.brand = data.brand;
+        if (data.device_model) updateData.deviceModel = data.device_model;
+        if (data.product_type) updateData.productType = data.product_type;
+        if (data.base_price !== undefined) updateData.basePrice = new Prisma.Decimal(data.base_price);
+        if (data.cost_price !== undefined) updateData.costPrice = data.cost_price ? new Prisma.Decimal(data.cost_price) : null;
 
-        const updateData: any = {};
-        if (body.name) updateData.name = body.name;
-        if (body.sku) updateData.sku = body.sku;
-        if (body.slug) updateData.slug = body.slug;
-        if (body.category_id) updateData.categoryId = body.category_id;
-        if (body.brand) updateData.brand = body.brand;
-        if (body.device_model) updateData.deviceModel = body.device_model;
-        if (body.product_type) updateData.productType = body.product_type;
-        if (body.base_price !== undefined) updateData.basePrice = body.base_price;
-        if (body.cost_price !== undefined) updateData.costPrice = body.cost_price;
+        if (data.wholesale_tier1_discount !== undefined) updateData.tier1Discount = data.wholesale_tier1_discount ? new Prisma.Decimal(data.wholesale_tier1_discount) : 0;
+        if (data.wholesale_tier2_discount !== undefined) updateData.tier2Discount = data.wholesale_tier2_discount ? new Prisma.Decimal(data.wholesale_tier2_discount) : 0;
+        if (data.wholesale_tier3_discount !== undefined) updateData.tier3Discount = data.wholesale_tier3_discount ? new Prisma.Decimal(data.wholesale_tier3_discount) : 0;
 
-        if (body.wholesale_tier1_discount !== undefined) updateData.tier1Discount = body.wholesale_tier1_discount;
-        if (body.wholesale_tier2_discount !== undefined) updateData.tier2Discount = body.wholesale_tier2_discount;
-        if (body.wholesale_tier3_discount !== undefined) updateData.tier3Discount = body.wholesale_tier3_discount;
+        if (data.total_stock !== undefined) updateData.totalStock = data.total_stock;
+        if (data.low_stock_threshold !== undefined) updateData.lowStockThreshold = data.low_stock_threshold;
 
-        if (body.total_stock !== undefined) updateData.totalStock = body.total_stock;
-        if (body.low_stock_threshold !== undefined) updateData.lowStockThreshold = body.low_stock_threshold;
+        if (data.images) updateData.images = data.images;
+        if (data.thumbnail) updateData.thumbnail = data.thumbnail;
+        if (data.description) updateData.description = data.description;
+        if (data.specifications) updateData.specifications = data.specifications as Prisma.InputJsonValue;
 
-        if (body.images) updateData.images = body.images;
-        if (body.thumbnail) updateData.thumbnail = body.thumbnail;
-        if (body.description) updateData.description = body.description;
-        if (body.specifications) updateData.specifications = body.specifications;
+        if (data.meta_title) updateData.metaTitle = data.meta_title;
+        if (data.meta_description) updateData.metaDescription = data.meta_description;
 
-        if (body.meta_title) updateData.metaTitle = body.meta_title;
-        if (body.meta_description) updateData.metaDescription = body.meta_description;
-
-        if (body.is_active !== undefined) updateData.isActive = body.is_active;
-        if (body.is_featured !== undefined) updateData.isFeatured = body.is_featured;
-        if (body.is_new !== undefined) updateData.isNew = body.is_new;
-        if (body.is_bestseller !== undefined) updateData.isBestseller = body.is_bestseller;
+        if (data.is_active !== undefined) updateData.isActive = data.is_active;
+        if (data.is_featured !== undefined) updateData.isFeatured = data.is_featured;
+        if (data.is_new !== undefined) updateData.isNew = data.is_new;
+        if (data.is_bestseller !== undefined) updateData.isBestseller = data.is_bestseller;
 
         const product = await prisma.product.update({
             where: { id },

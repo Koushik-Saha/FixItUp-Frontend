@@ -39,8 +39,12 @@ interface Category {
     children?: Category[]
 }
 
+import { Product } from '@prisma/client'
+
+// ...
+
 interface ProductFormProps {
-    initialData?: any // Todo: Type this properly
+    initialData?: Partial<Product>
     isEditing?: boolean
 }
 
@@ -52,7 +56,27 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
 
     const { register, control, handleSubmit, formState: { errors }, watch, setValue } = useForm<ProductFormData>({
         resolver: zodResolver(productSchema),
-        defaultValues: initialData || {
+        defaultValues: initialData ? {
+            name: initialData.name,
+            sku: initialData.sku,
+            slug: initialData.slug,
+            brand: initialData.brand,
+            device_model: initialData.deviceModel || '',
+            category_id: initialData.categoryId || '', // Prisma uses categoryId
+            product_type: initialData.productType || 'Part',
+            base_price: Number(initialData.basePrice) || 0,
+            cost_price: Number(initialData.costPrice) || 0,
+            total_stock: initialData.totalStock || 0,
+            low_stock_threshold: initialData.lowStockThreshold || 10,
+            description: initialData.description || '',
+            is_active: initialData.isActive ?? true,
+            is_featured: initialData.isFeatured ?? false,
+            is_new: initialData.isNew ?? false,
+            wholesale_tier1_discount: Number(initialData.tier1Discount) || 0, // Prisma uses tier1Discount
+            wholesale_tier2_discount: Number(initialData.tier2Discount) || 0,
+            wholesale_tier3_discount: Number(initialData.tier3Discount) || 0,
+            images: (initialData.images as unknown as string[]) || [], // images is JsonValue[] in Prisma
+        } : {
             is_active: true,
             is_featured: false,
             is_new: false,
@@ -87,7 +111,7 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
     const onSubmit = async (data: ProductFormData) => {
         setLoading(true)
         try {
-            const url = isEditing
+            const url = isEditing && initialData?.id
                 ? `/api/admin/products/${initialData.id}`
                 : '/api/admin/products'
 
@@ -108,8 +132,12 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
             toast.success(isEditing ? 'Product updated' : 'Product created')
             router.push('/admin/products')
             router.refresh()
-        } catch (error: any) {
-            toast.error(error.message)
+        } catch (error) {
+            if (error instanceof Error) {
+                toast.error(error.message)
+            } else {
+                toast.error('An unexpected error occurred')
+            }
         } finally {
             setLoading(false)
         }

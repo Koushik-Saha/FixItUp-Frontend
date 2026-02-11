@@ -244,7 +244,7 @@ export default function WholesalePortal() {
     }
 
     // Stats calculation (Client side based on fetched orders - approximate)
-    const totalSpent = orders.reduce((sum, o) => sum + Number(o.total_amount), 0)
+    const totalSpent = orders.reduce((sum, o) => sum + Number(o.totalAmount), 0)
     const totalOrdersCount = orders.length // Only shows fetched count
 
     return (
@@ -343,13 +343,13 @@ export default function WholesalePortal() {
                                     {orders.slice(0, 3).map(order => (
                                         <div key={order.id} className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
                                             <div>
-                                                <p className="font-semibold text-neutral-900 dark:text-white">#{order.order_number}</p>
+                                                <p className="font-semibold text-neutral-900 dark:text-white">#{order.orderNumber}</p>
                                                 <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                                                    {new Date(order.created_at).toLocaleDateString()}
+                                                    {new Date(order.createdAt).toLocaleDateString()}
                                                 </p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="font-bold text-neutral-900 dark:text-white">${Number(order.total_amount).toFixed(2)}</p>
+                                                <p className="font-bold text-neutral-900 dark:text-white">${Number(order.totalAmount).toFixed(2)}</p>
                                                 <span className="text-sm px-2 py-1 rounded bg-neutral-100 dark:bg-neutral-700">
                                                     {order.status}
                                                 </span>
@@ -517,9 +517,9 @@ export default function WholesalePortal() {
                                     <tbody>
                                         {orders.map(order => (
                                             <tr key={order.id} className="border-b border-neutral-200 dark:border-neutral-700">
-                                                <td className="py-4 px-4 font-semibold">#{order.order_number}</td>
-                                                <td className="py-4 px-4">{new Date(order.created_at).toLocaleDateString()}</td>
-                                                <td className="py-4 px-4 font-bold">${Number(order.total_amount).toFixed(2)}</td>
+                                                <td className="py-4 px-4 font-semibold">#{order.orderNumber}</td>
+                                                <td className="py-4 px-4">{new Date(order.createdAt).toLocaleDateString()}</td>
+                                                <td className="py-4 px-4 font-bold">${Number(order.totalAmount).toFixed(2)}</td>
                                                 <td className="py-4 px-4">
                                                     <span className="px-2 py-1 bg-neutral-100 dark:bg-neutral-700 rounded text-sm">
                                                         {order.status}

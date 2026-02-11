@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
-import { sendOrderStatusUpdateEmail } from '@/lib/email'
+import { sendOrderStatusUpdateEmail, EmailOrder, ShippingAddress } from '@/lib/email'
 
 // Reuse CORS logic ideally
 const allowedOrigins = [
@@ -69,29 +69,58 @@ export async function PUT(
         const body = await request.json();
 
         // Allowed field mapping
-        const updateData: any = {};
-        if (body.status) updateData.status = body.status.toUpperCase(); // Ensure Enum match?
-        if (body.payment_status) updateData.paymentStatus = body.payment_status.toUpperCase();
+        const updateData: Prisma.OrderUpdateInput = {};
+
+        // Prisma Enums are strict, so we should validte or cast carefully
+        if (body.status) updateData.status = body.status.toUpperCase() as any; // Using any momentarily for Enum compatibility if strings don't match perfectly, but better to use strict enum if imported
+        if (body.payment_status) updateData.paymentStatus = body.payment_status.toUpperCase() as any;
+
         if (body.tracking_number) updateData.trackingNumber = body.tracking_number;
         if (body.carrier) updateData.carrier = body.carrier;
         if (body.admin_notes) updateData.adminNotes = body.admin_notes;
 
         // Timestamps
         const now = new Date();
-        if (body.status === 'shipped') updateData.shippedAt = now;
-        if (body.status === 'delivered') updateData.deliveredAt = now;
-        if (body.status === 'cancelled') updateData.cancelledAt = now;
+        const statusStr = body.status?.toLowerCase();
+        if (statusStr === 'shipped') updateData.shippedAt = now;
+        if (statusStr === 'delivered') updateData.deliveredAt = now;
+        if (statusStr === 'cancelled') updateData.cancelledAt = now;
 
         const updatedOrder = await prisma.order.update({
             where: { id },
-            data: updateData
+            data: updateData,
+            include: { orderItems: true } // Include items for email if needed
         });
 
         // Email Notification
-        // Note: sendOrderStatusUpdateEmail likely expects specific shape.
         try {
             if (body.status) {
-                await sendOrderStatusUpdateEmail(updatedOrder as any, body.status);
+                // Map Prisma result to EmailOrder
+                // We trust shippingAddress JSON matches ShippingAddress interface structure
+                const emailOrder: EmailOrder = {
+                    id: updatedOrder.id,
+                    orderNumber: updatedOrder.orderNumber,
+                    customerName: updatedOrder.customerName,
+                    customerEmail: updatedOrder.customerEmail,
+                    createdAt: updatedOrder.createdAt,
+                    status: updatedOrder.status,
+                    subtotal: Number(updatedOrder.subtotal),
+                    discountAmount: Number(updatedOrder.discountAmount),
+                    taxAmount: Number(updatedOrder.taxAmount),
+                    shippingCost: Number(updatedOrder.shippingCost),
+                    totalAmount: Number(updatedOrder.totalAmount),
+                    orderItems: updatedOrder.orderItems.map(item => ({
+                        productName: item.productName,
+                        quantity: item.quantity,
+                        unitPrice: Number(item.unitPrice),
+                        subtotal: Number(item.subtotal)
+                    })),
+                    shippingAddress: updatedOrder.shippingAddress as unknown as ShippingAddress,
+                    trackingNumber: updatedOrder.trackingNumber,
+                    carrier: updatedOrder.carrier
+                };
+
+                await sendOrderStatusUpdateEmail(emailOrder, body.status);
             }
         } catch (e) {
             console.error('Email failed', e);

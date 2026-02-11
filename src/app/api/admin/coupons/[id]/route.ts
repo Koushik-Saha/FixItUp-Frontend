@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { errorResponse, UnauthorizedError, NotFoundError } from '@/lib/utils/errors'
 import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
 
@@ -107,11 +108,24 @@ export async function PUT(
         }
 
         // Prepare update data
-        const updateData: any = { ...body }
-        if (body.code) {
-            updateData.code = body.code.toUpperCase()
+        // Prepare update data
+        const updateData: Prisma.CouponUpdateInput = {
+            code: body.code ? body.code.toUpperCase() : undefined,
+            discountType: body.discountType,
+            discountValue: body.discountValue,
+            minPurchase: body.minOrderAmount, // Mapped from frontend minOrderAmount to schema minPurchase
+            maxDiscount: body.maxDiscount,
+            startDate: body.startDate,
+            endDate: body.endDate,
+            // usageLimit: body.usageLimit, // Removed as it does not exist in Prisma schema
+            maxUses: body.usageLimit,
+            isActive: body.isActive
         }
-        // Prisma updates 'updatedAt' automatically usually, but we can set it
+
+        // Remove undefined keys
+        Object.keys(updateData).forEach(key =>
+            (updateData as any)[key] === undefined && delete (updateData as any)[key]
+        )
 
         const coupon = await prisma.coupon.update({
             where: { id },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { errorResponse, UnauthorizedError } from "@/lib/utils/errors";
 import { Prisma } from "@prisma/client";
+import { productSchema, validateData, formatValidationErrors } from "@/utils/validation";
 
 // Put your frontend URL here (dev + prod)
 const allowedOrigins = [
@@ -130,42 +131,20 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         // Validation
-        const {
-            name,
-            sku,
-            slug,
-            category_id,
-            brand,
-            device_model,
-            product_type,
-            base_price,
-            cost_price,
-            wholesale_tier1_discount,
-            wholesale_tier2_discount,
-            wholesale_tier3_discount,
-            total_stock,
-            low_stock_threshold,
-            images,
-            thumbnail,
-            description,
-            specifications,
-            meta_title,
-            meta_description,
-            is_active,
-            is_featured,
-            is_new,
-            is_bestseller,
-        } = body;
+        // Validation
+        const validation = validateData(productSchema, body);
 
-        if (!name || !sku || !slug || !brand || base_price === undefined) {
-            return NextResponse.json(
-                { error: "Missing required fields" },
-                { status: 400, headers: corsHeaders }
-            );
+        if (!validation.success || !validation.data) {
+            return NextResponse.json({
+                error: 'Validation failed',
+                errors: formatValidationErrors(validation.errors!)
+            }, { status: 400, headers: corsHeaders });
         }
 
+        const data = validation.data;
+
         // Check Duplicate SKU
-        const existing = await prisma.product.findUnique({ where: { sku } });
+        const existing = await prisma.product.findUnique({ where: { sku: data.sku } });
         if (existing) {
             return NextResponse.json(
                 { error: "Product with this SKU already exists" },
@@ -175,30 +154,30 @@ export async function POST(request: NextRequest) {
 
         const product = await prisma.product.create({
             data: {
-                name,
-                sku,
-                slug,
-                categoryId: category_id,
-                brand,
-                deviceModel: device_model,
-                productType: product_type,
-                basePrice: base_price,
-                costPrice: cost_price,
-                tier1Discount: wholesale_tier1_discount || 0,
-                tier2Discount: wholesale_tier2_discount || 0,
-                tier3Discount: wholesale_tier3_discount || 0,
-                totalStock: total_stock || 0,
-                lowStockThreshold: low_stock_threshold || 10,
-                images: images || [],
-                thumbnail,
-                description,
-                specifications: specifications || Prisma.JsonNull,
-                metaTitle: meta_title,
-                metaDescription: meta_description,
-                isActive: is_active !== false,
-                isFeatured: is_featured || false,
-                isNew: is_new || false,
-                isBestseller: is_bestseller || false,
+                name: data.name,
+                sku: data.sku,
+                slug: data.slug,
+                categoryId: data.category_id || null, // Handle optional UUID
+                brand: data.brand,
+                deviceModel: data.device_model,
+                productType: data.product_type,
+                basePrice: new Prisma.Decimal(data.base_price),
+                costPrice: data.cost_price ? new Prisma.Decimal(data.cost_price) : undefined,
+                tier1Discount: data.wholesale_tier1_discount ? new Prisma.Decimal(data.wholesale_tier1_discount) : 0,
+                tier2Discount: data.wholesale_tier2_discount ? new Prisma.Decimal(data.wholesale_tier2_discount) : 0,
+                tier3Discount: data.wholesale_tier3_discount ? new Prisma.Decimal(data.wholesale_tier3_discount) : 0,
+                totalStock: data.total_stock || 0,
+                lowStockThreshold: data.low_stock_threshold || 10,
+                images: data.images || [],
+                thumbnail: data.thumbnail,
+                description: data.description,
+                specifications: (data.specifications as Prisma.InputJsonValue) || Prisma.JsonNull,
+                metaTitle: data.meta_title,
+                metaDescription: data.meta_description,
+                isActive: data.is_active !== false,
+                isFeatured: data.is_featured || false,
+                isNew: data.is_new || false,
+                isBestseller: data.is_bestseller || false,
             }
         });
 

@@ -230,7 +230,13 @@ export async function GET(request: NextRequest) {
         }));
 
         // Phone Models grouped by Brand (Category Slug)
-        const phoneModelsByBrand = phoneModels.reduce((acc: any, model) => {
+        interface PhoneModelGroup {
+            brand: string;
+            slug: string;
+            models: { id: string; name: string; slug: string; releaseYear: number }[];
+        }
+
+        const phoneModelsByBrand = phoneModels.reduce((acc: Record<string, PhoneModelGroup>, model) => {
             const brandSlug = model.category.slug;
             if (!acc[brandSlug]) {
                 acc[brandSlug] = {
@@ -243,10 +249,10 @@ export async function GET(request: NextRequest) {
                 id: model.id,
                 name: model.modelName,
                 slug: model.modelSlug,
-                releaseYear: model.releaseYear
+                releaseYear: model.releaseYear || 0
             });
             return acc;
-        }, {});
+        }, {} as Record<string, PhoneModelGroup>);
 
         // Hero Slides (Map snake_case/json to frontend expectations if needed, but Prisma result is camelCase)
         // Frontend likely expects camelCase if I updated it, or I need to map.

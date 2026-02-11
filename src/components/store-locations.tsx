@@ -1,8 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { MapPin, Phone, Clock, Navigation } from 'lucide-react'
 import Link from 'next/link'
+
+import { OperatingHours } from '@/types/json-fields'
 
 // Static data removed
 
@@ -15,7 +16,7 @@ interface Store {
     zipCode: string
     phone: string
     email: string
-    operatingHours: any
+    operatingHours: OperatingHours
     isActive: boolean
     featured?: boolean
     image?: string
@@ -36,25 +37,39 @@ export function StoreLocations({ stores = [] }: StoreLocationsProps) {
         return `${h12}:${minutes} ${ampm}`;
     };
 
-    const formatHours = (hours: any) => {
-        if (!hours) return {
+    const formatHours = (hours: OperatingHours | null | undefined): { weekday: string; saturday: string; sunday: string } => {
+        const defaults = {
             weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
             saturday: 'Saturday: 10:00 AM - 6:00 PM',
             sunday: 'Sunday: 11:00 AM - 5:00 PM',
         };
 
-        // If it's already the legacy format (fallback or static)
-        if (hours.weekday) return hours;
+        if (!hours) return defaults;
 
-        // DB Format: { monday: { open: '09:00', close: '19:00' }, ... }
-        const mon = hours.monday || {};
-        const sat = hours.saturday || {};
-        const sun = hours.sunday || {};
+        // Legacy format check (if fields are strings)
+        if (typeof hours.weekday === 'string') {
+            return {
+                weekday: hours.weekday,
+                saturday: typeof hours.saturday === 'string' ? hours.saturday : defaults.saturday,
+                sunday: typeof hours.sunday === 'string' ? hours.sunday : defaults.sunday,
+            }
+        }
+
+        // Strict DB format (objects)
+        const mon = hours.monday;
+        const sat = hours.saturday as { open: string; close: string } | undefined; // Cast to ensure object access if needed or rely on type
+        const sun = hours.sunday as { open: string; close: string } | undefined;
+
+        // Helper to format a day's hours
+        const formatDay = (day: { open: string; close: string } | undefined, label: string) => {
+            if (!day || !day.open) return `${label}: Closed`;
+            return `${label}: ${formatTime(day.open)} - ${formatTime(day.close)}`;
+        }
 
         return {
-            weekday: mon.open ? `Mon-Fri: ${formatTime(mon.open)} - ${formatTime(mon.close)}` : 'Mon-Fri: Closed',
-            saturday: sat.open ? `Saturday: ${formatTime(sat.open)} - ${formatTime(sat.close)}` : 'Saturday: Closed',
-            sunday: sun.open ? `Sunday: ${formatTime(sun.open)} - ${formatTime(sun.close)}` : 'Sunday: Closed',
+            weekday: mon?.open ? `Mon-Fri: ${formatTime(mon.open)} - ${formatTime(mon.close)}` : 'Mon-Fri: Closed',
+            saturday: formatDay(sat, 'Saturday'),
+            sunday: formatDay(sun, 'Sunday'),
         };
     };
 
@@ -196,7 +211,7 @@ export function StoreLocations({ stores = [] }: StoreLocationsProps) {
     )
 }
 
-function Mail(props: any) {
+function Mail(props: React.SVGProps<SVGSVGElement>) {
     return (
         <svg
             {...props}

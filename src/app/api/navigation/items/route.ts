@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { errorResponse } from '@/lib/utils/errors'
+import { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
     try {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
         const type = searchParams.get('type')
         const parentId = searchParams.get('parentId')
 
-        const where: any = {
+        const where: Prisma.NavigationItemWhereInput = {
             isActive: true
         }
 

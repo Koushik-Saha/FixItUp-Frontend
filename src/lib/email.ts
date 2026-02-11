@@ -56,14 +56,16 @@ export async function sendEmail(options: EmailOptions) {
 
 // Order confirmation email
 // Interfaces for email data
-interface OrderItem {
+// Order confirmation email
+// Interfaces for email data
+export interface OrderItem {
     productName: string
     quantity: number
     unitPrice: number
     subtotal: number
 }
 
-interface ShippingAddress {
+export interface ShippingAddress {
     full_name: string
     address_line1: string
     address_line2?: string | null
@@ -72,7 +74,7 @@ interface ShippingAddress {
     zip_code: string
 }
 
-interface EmailOrder {
+export interface EmailOrder {
     id: string
     orderNumber: string
     customerName: string

@@ -76,7 +76,7 @@ export default async function RootLayout({
 }: {
     children: React.ReactNode
 }) {
-    const footerSections: any = await getFooterSections();
+    const footerSections = await getFooterSections();
 
     return (
         <html lang="en" suppressHydrationWarning>

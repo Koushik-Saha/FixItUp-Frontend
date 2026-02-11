@@ -11,7 +11,9 @@ import {
     Wrench,
     Settings,
     LogOut,
-    Store
+    Store,
+    LayoutTemplate,
+    FolderTree
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -45,6 +47,16 @@ const sidebarItems = [
         title: 'Stores',
         href: '/admin/stores',
         icon: Store
+    },
+    {
+        title: 'Hero Slides',
+        href: '/admin/cms/hero-slides',
+        icon: LayoutTemplate
+    },
+    {
+        title: 'Categories',
+        href: '/admin/cms/categories',
+        icon: FolderTree
     },
     {
         title: 'Settings',

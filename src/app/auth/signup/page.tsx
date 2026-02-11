@@ -92,10 +92,11 @@ export default function SignupPage() {
 
                 <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
+                        <label htmlFor="full_name" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Full Name
                         </label>
                         <Input
+                            id="full_name"
                             {...register("full_name")}
                             placeholder="John Doe"
                             disabled={isLoading || isSubmitting}
@@ -107,10 +108,11 @@ export default function SignupPage() {
                     </div>
 
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
+                        <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Email
                         </label>
                         <Input
+                            id="email"
                             {...register("email")}
                             type="email"
                             placeholder="you@example.com"
@@ -123,10 +125,11 @@ export default function SignupPage() {
                     </div>
 
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
+                        <label htmlFor="phone" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Phone (Optional)
                         </label>
                         <Input
+                            id="phone"
                             {...register("phone")}
                             placeholder="(555) 123-4567"
                             disabled={isLoading || isSubmitting}
@@ -134,10 +137,11 @@ export default function SignupPage() {
                     </div>
 
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
+                        <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Password
                         </label>
                         <Input
+                            id="password"
                             {...register("password")}
                             type="password"
                             placeholder="••••••••"
@@ -150,10 +154,11 @@ export default function SignupPage() {
                     </div>
 
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
+                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Confirm Password
                         </label>
                         <Input
+                            id="confirmPassword"
                             {...register("confirmPassword")}
                             type="password"
                             placeholder="••••••••"

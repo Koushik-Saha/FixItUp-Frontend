@@ -57,14 +57,38 @@ const STEPS = [
     { id: 4, title: 'Review' }
 ]
 
+// Data Types
+interface NavItem {
+    name: string
+    url: string
+    image?: string
+}
+
+interface NavColumn {
+    title?: string
+    items: NavItem[]
+}
+
+interface SubCategory {
+    title: string
+    columns: NavColumn[]
+}
+
+interface BrandData {
+    name: string
+    id?: string
+    icon?: string
+    bySubcategory?: Record<string, SubCategory>
+}
+
 export default function RepairWizard() {
     const router = useRouter()
     const [currentStep, setCurrentStep] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Data States
-    const [brands, setBrands] = useState<any[]>([])
-    const [models, setModels] = useState<any[]>([])
+    const [brands, setBrands] = useState<BrandData[]>([])
+    const [models, setModels] = useState<NavItem[]>([])
     const [loadingBrands, setLoadingBrands] = useState(true)
     const [loadingModels, setLoadingModels] = useState(false)
 
@@ -116,11 +140,11 @@ export default function RepairWizard() {
         if (!brandData) return;
 
         // Flatten models from subcategories
-        const allModels: any[] = []
+        const allModels: NavItem[] = []
         if (brandData.bySubcategory) {
-            Object.values(brandData.bySubcategory).forEach((subcat: any) => {
-                subcat.columns.forEach((col: any) => {
-                    col.items.forEach((item: any) => {
+            Object.values(brandData.bySubcategory).forEach((subcat) => {
+                subcat.columns.forEach((col) => {
+                    col.items.forEach((item) => {
                         allModels.push(item)
                     })
                 })
@@ -128,14 +152,14 @@ export default function RepairWizard() {
         }
         // Remove duplicates
         const uniqueModels = Array.from(new Set(allModels.map(m => m.name)))
-            .map(name => allModels.find(m => m.name === name))
+            .map(name => allModels.find(m => m.name === name)!) // ! is safe because we iterate from existing names
             .sort((a, b) => a.name.localeCompare(b.name))
 
         setModels(uniqueModels)
     }, [formValues.deviceBrand, brands])
 
     const nextStep = async () => {
-        let fieldsToValidate: any[] = []
+        let fieldsToValidate: (keyof RepairFormValues)[] = []
         if (currentStep === 1) fieldsToValidate = ['deviceBrand', 'deviceModel', 'imeiSerial']
         if (currentStep === 2) fieldsToValidate = ['issueCategory', 'issueDescription']
         if (currentStep === 3) fieldsToValidate = ['serviceType', 'customerName', 'customerEmail', 'customerPhone', 'storeId']
@@ -167,8 +191,12 @@ export default function RepairWizard() {
             // Redirect to success page or ticket view
             router.push(`/repairs/confirmation?ticket=${json.data.ticketNumber}`)
 
-        } catch (error: any) {
-            toast.error(error.message)
+        } catch (error) {
+            if (error instanceof Error) {
+                toast.error(error.message)
+            } else {
+                toast.error('Failed to submit ticket')
+            }
         } finally {
             setIsSubmitting(false)
         }

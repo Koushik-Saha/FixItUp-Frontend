@@ -78,8 +78,24 @@ export async function POST(request: NextRequest) {
                 .map((p) => [p.id, p])
         )
 
-        const unavailableProducts: any[] = []
-        const itemsToAdd: any[] = []
+        interface UnavailableProduct {
+            product_id: string
+            name: string
+            reason: string
+        }
+
+        interface ItemToAdd {
+            productId: string
+            quantity: number
+        }
+
+        interface ReorderError {
+            product_id: string
+            error: string
+        }
+
+        const unavailableProducts: UnavailableProduct[] = []
+        const itemsToAdd: ItemToAdd[] = []
 
         orderItems.forEach((item) => {
             if (!item.productId) return
@@ -107,7 +123,7 @@ export async function POST(request: NextRequest) {
 
         // Add available items to cart
         let addedCount = 0
-        const errors: any[] = []
+        const errors: ReorderError[] = []
 
         for (const item of itemsToAdd) {
             try {
@@ -129,10 +145,11 @@ export async function POST(request: NextRequest) {
                     }
                 })
                 addedCount++
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : 'Failed to add to cart'
                 errors.push({
                     product_id: item.productId,
-                    error: err.message || 'Failed to add to cart'
+                    error: message
                 })
             }
         }

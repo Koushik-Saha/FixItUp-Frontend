@@ -47,8 +47,8 @@ export default function OrdersPage() {
     const filteredOrders = orders.filter((order) => {
         const matchesStatus = statusFilter === "ALL" || order.status === statusFilter;
         const matchesSearch =
-            order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.total_amount.toString().includes(searchQuery);
+            order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.totalAmount.toString().includes(searchQuery);
         return matchesStatus && matchesSearch;
     });
 
@@ -141,13 +141,13 @@ export default function OrdersPage() {
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-3">
                                         <h3 className="font-semibold text-lg text-white">
-                                            #{order.order_number}
+                                            #{order.orderNumber}
                                         </h3>
                                         <StatusBadge status={order.status} />
                                     </div>
                                     <div className="flex items-center gap-4 text-sm text-neutral-400">
                                         <span>
-                                            {new Date(order.created_at).toLocaleDateString(undefined, {
+                                            {new Date(order.createdAt).toLocaleDateString(undefined, {
                                                 year: 'numeric',
                                                 month: 'long',
                                                 day: 'numeric'
@@ -162,7 +162,7 @@ export default function OrdersPage() {
                                     <div className="text-right">
                                         <p className="text-xs text-neutral-500 uppercase font-medium">Total</p>
                                         <p className="text-lg font-bold text-white">
-                                            ${Number(order.total_amount).toFixed(2)}
+                                            ${Number(order.totalAmount).toFixed(2)}
                                         </p>
                                     </div>
                                     <Button

@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
         const revenue = Number(revenueStats._sum.totalAmount || 0);
 
         // Orders Breakdown
-        const orderCounts: any = {};
+        const orderCounts: Record<string, number> = {};
         orders.forEach(g => { orderCounts[g.status.toLowerCase()] = g._count.id });
 
         const data = {

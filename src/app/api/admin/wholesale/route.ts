@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         const where: Prisma.WholesaleApplicationWhereInput = {};
 
         if (status && status !== 'all') {
-            where.status = status.toUpperCase() as any;
+            where.status = status.toUpperCase() as Prisma.EnumWholesaleStatusFilter;
         }
 
         const [applications, total] = await Promise.all([

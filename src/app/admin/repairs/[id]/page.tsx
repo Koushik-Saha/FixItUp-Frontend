@@ -15,10 +15,31 @@ import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 
+// ... imports
+
+interface RepairTicket {
+    id: string
+    ticketNumber: string
+    customerName: string
+    customerEmail: string
+    customerPhone?: string
+    deviceBrand: string
+    deviceModel: string
+    issueDescription: string
+    imeiSerial?: string
+    status: string
+    priority: string
+    technicianNotes?: string
+    estimatedCost?: number | null
+    partsCost?: number | null
+    laborCost?: number | null
+    createdAt: string
+}
+
 export default function RepairDetailsPage() {
     const params = useParams()
     const router = useRouter()
-    const [ticket, setTicket] = useState<any>(null)
+    const [ticket, setTicket] = useState<RepairTicket | null>(null)
     const [loading, setLoading] = useState(true)
     const [updating, setUpdating] = useState(false)
 
@@ -79,8 +100,12 @@ export default function RepairDetailsPage() {
 
             toast.success('Ticket updated successfully')
             // Refresh logic if needed, or just stay
-        } catch (error: any) {
-            toast.error(error.message)
+        } catch (error) {
+            if (error instanceof Error) {
+                toast.error(error.message)
+            } else {
+                toast.error('Failed to update ticket')
+            }
         } finally {
             setUpdating(false)
         }

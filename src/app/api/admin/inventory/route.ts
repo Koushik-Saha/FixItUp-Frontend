@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { errorResponse, ForbiddenError } from '@/lib/utils/errors'
 
 const allowedOrigins = [
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
         const storeId = searchParams.get('store_id');
         const status = searchParams.get('status');
 
-        const where: any = {};
+        const where: Prisma.InventoryWhereInput = {};
         if (storeId) where.storeId = storeId;
 
         // Fetch all relevant inventory (filtering by status requires calculation usually on product threshold)

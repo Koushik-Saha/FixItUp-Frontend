@@ -14,10 +14,34 @@ const ORDER_STATUSES = [
     { id: 'delivered', label: 'Delivered', icon: CheckCircle, description: 'Your order has been delivered' }
 ]
 
+interface TrackingItem {
+    name: string
+    quantity: number
+}
+
+interface TimelineEvent {
+    date: string
+    status: string
+    location: string
+}
+
+interface TrackingData {
+    number: string
+    status: string
+    email: string
+    items: TrackingItem[]
+    trackingNumber: string
+    carrier: string
+    carrierLink: string
+    estimatedDelivery: string
+    currentLocation: string
+    timeline: TimelineEvent[]
+}
+
 export default function OrderTrackingPage() {
     const [orderNumber, setOrderNumber] = useState('')
     const [email, setEmail] = useState('')
-    const [tracking, setTracking] = useState<any>(null)
+    const [tracking, setTracking] = useState<TrackingData | null>(null)
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
@@ -51,7 +75,7 @@ export default function OrderTrackingPage() {
                 number: order.order_number,
                 status: order.status,
                 email: email,
-                items: order.items.map((item: any) => ({
+                items: order.items.map((item: { product_name: string; quantity: number }) => ({
                     name: item.product_name,
                     quantity: item.quantity,
                 })),
@@ -66,8 +90,8 @@ export default function OrderTrackingPage() {
                 currentLocation: getStatusLabel(order.status),
                 timeline: generateTimeline(order),
             })
-        } catch (err: any) {
-            setError(err.message || 'Failed to track order')
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Failed to track order')
             setTracking(null)
         } finally {
             setLoading(false)
@@ -95,8 +119,8 @@ export default function OrderTrackingPage() {
         return labels[status] || status
     }
 
-    const generateTimeline = (order: any) => {
-        const timeline = []
+    const generateTimeline = (order: { created_at: string; updated_at: string; shipped_at?: string; delivered_at?: string; status: string; shipping_address?: { city: string } }) => {
+        const timeline: TimelineEvent[] = []
 
         timeline.push({
             date: new Date(order.created_at).toLocaleString(),
@@ -318,7 +342,7 @@ export default function OrderTrackingPage() {
                                 <div className="mb-6">
                                     <h4 className="font-semibold text-neutral-900 dark:text-white mb-3">Items in this shipment</h4>
                                     <div className="space-y-2">
-                                        {tracking.items.map((item: any, index: number) => (
+                                        {tracking.items.map((item: TrackingItem, index: number) => (
                                             <div key={index} className="flex justify-between py-2 border-b border-neutral-200 dark:border-neutral-700 last:border-0">
                                                 <span className="text-neutral-700 dark:text-neutral-300">{item.name}</span>
                                                 <span className="text-neutral-600 dark:text-neutral-400">Qty: {item.quantity}</span>
@@ -331,7 +355,7 @@ export default function OrderTrackingPage() {
                                 <div>
                                     <h4 className="font-semibold text-neutral-900 dark:text-white mb-4">Shipment Timeline</h4>
                                     <div className="space-y-4">
-                                        {tracking.timeline.map((event: any, index: number) => (
+                                        {tracking.timeline.map((event: TimelineEvent, index: number) => (
                                             <div key={index} className="flex gap-4">
                                                 <div className="flex flex-col items-center">
                                                     <div className={`w-3 h-3 rounded-full ${index === 0 ? 'bg-green-600' : 'bg-neutral-300 dark:bg-neutral-600'

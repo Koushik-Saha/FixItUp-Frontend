@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { errorResponse } from "@/lib/utils/errors";
-import { Prisma } from "@prisma/client";
+import { Prisma, RepairStatus } from "@prisma/client";
 
 const allowedOrigins = [
     "http://localhost:3000",
@@ -52,7 +52,10 @@ export async function GET(request: NextRequest) {
         const where: Prisma.RepairTicketWhereInput = {};
 
         if (status && status !== 'all') {
-            where.status = status.toUpperCase() as any;
+            // Validate status against Enum
+            if (Object.values(RepairStatus).includes(status.toUpperCase() as RepairStatus)) {
+                where.status = status.toUpperCase() as RepairStatus;
+            }
         }
 
         if (search) {

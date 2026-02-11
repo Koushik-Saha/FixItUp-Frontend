@@ -36,6 +36,11 @@ interface Pagination {
     totalPages: number
 }
 
+interface ApiResponse {
+    data: Order[]
+    pagination: Pagination
+}
+
 export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([])
     const [pagination, setPagination] = useState<Pagination | null>(null)
@@ -55,7 +60,7 @@ export default function OrdersPage() {
 
             const res = await fetch(`/api/admin/orders?${params.toString()}`)
             if (!res.ok) throw new Error('Failed to fetch orders')
-            const data = await res.json()
+            const data: ApiResponse = await res.json()
             setOrders(data.data)
             setPagination(data.pagination)
         } catch (error) {

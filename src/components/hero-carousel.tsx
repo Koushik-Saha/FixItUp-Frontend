@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -8,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import Image from 'next/image'
 
+import { HeroCTA, TrustBadge } from '@/types/json-fields'
+
 // Types matching Prisma Model
 type HeroSlide = {
     id: string
@@ -15,11 +16,11 @@ type HeroSlide = {
     badgeColor: string | null
     title: string
     description: string | null
-    ctaPrimary: any // JSON
-    ctaSecondary: any // JSON
+    ctaPrimary: HeroCTA | null
+    ctaSecondary: HeroCTA | null // JSON
     image: string
     gradient: string | null
-    trustBadges: any // JSON
+    trustBadges: TrustBadge[] // JSON
     discount: string | null
 }
 
@@ -63,9 +64,9 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
     const slide = slides[currentSlideIndex]
 
     // Safety check for JSON fields (they might come as null from DB)
-    const ctaPrimary = slide.ctaPrimary as { text: string, link: string }
-    const ctaSecondary = slide.ctaSecondary as { text: string, link: string }
-    const trustBadges = (slide.trustBadges as { icon: string, text: string }[]) || []
+    const ctaPrimary = slide.ctaPrimary
+    const ctaSecondary = slide.ctaSecondary
+    const trustBadges = slide.trustBadges || []
 
     return (
         <div className="relative overflow-hidden">

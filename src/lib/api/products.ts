@@ -71,7 +71,7 @@ export interface SearchResponse {
 }
 
 // Get products with filtering and pagination
-export async function getProducts(params: {
+export interface GetProductsParams {
     category?: string
     brand?: string
     device?: string
@@ -84,7 +84,9 @@ export async function getProducts(params: {
     order?: 'asc' | 'desc'
     minPrice?: number
     maxPrice?: number
-} = {}): Promise<ProductsResponse> {
+}
+
+export async function getProducts(params: GetProductsParams = {}): Promise<ProductsResponse> {
     const searchParams = new URLSearchParams()
 
     if (params.category) searchParams.set('category', params.category)

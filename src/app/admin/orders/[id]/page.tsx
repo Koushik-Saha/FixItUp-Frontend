@@ -17,10 +17,50 @@ import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 
+// ... imports
+
+interface OrderItem {
+    id: string
+    price: number
+    quantity: number
+    product?: {
+        name: string
+        sku: string
+        thumbnail?: string
+    }
+}
+
+interface OrderUser {
+    fullName: string
+    email: string
+    phone?: string
+}
+
+interface OrderAddress {
+    fullName: string
+    addressLine1: string
+    addressLine2?: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+}
+
+interface Order {
+    id: string
+    orderNumber: string
+    createdAt: string
+    status: string
+    totalAmount: number
+    orderItems: OrderItem[]
+    user: OrderUser
+    shippingAddress?: OrderAddress
+}
+
 export default function OrderDetailsPage() {
     const params = useParams()
     const router = useRouter()
-    const [order, setOrder] = useState<any>(null)
+    const [order, setOrder] = useState<Order | null>(null)
     const [loading, setLoading] = useState(true)
     const [updating, setUpdating] = useState(false)
 
@@ -52,10 +92,14 @@ export default function OrderDetailsPage() {
 
             if (!res.ok) throw new Error('Failed to update status')
 
-            setOrder((prev: any) => ({ ...prev, status: newStatus }))
+            setOrder((prev) => prev ? ({ ...prev, status: newStatus }) : null)
             toast.success('Order status updated')
-        } catch (error: any) {
-            toast.error(error.message)
+        } catch (error) {
+            if (error instanceof Error) {
+                toast.error(error.message)
+            } else {
+                toast.error('Failed to update status')
+            }
         } finally {
             setUpdating(false)
         }
@@ -117,7 +161,7 @@ export default function OrderDetailsPage() {
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                         <div className="p-4 border-b border-slate-200 font-medium text-slate-800">Order Items</div>
                         <div className="divide-y divide-slate-200">
-                            {order.orderItems.map((item: any) => (
+                            {order.orderItems.map((item) => (
                                 <div key={item.id} className="p-4 flex items-center gap-4">
                                     <div className="h-16 w-16 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200">
                                         {item.product?.thumbnail && (

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyJWT } from '@/lib/jwt'
+import { verifyJWT, JWTPayload } from '@/lib/jwt'
 
 export async function middleware(request: NextRequest) {
     const token = request.cookies.get('auth_token')?.value
-    let userPayload: any = null
+    let userPayload: JWTPayload | null = null
 
     if (token) {
         try {
