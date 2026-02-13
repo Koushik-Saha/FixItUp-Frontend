@@ -46,7 +46,7 @@ export function ProductCard({ product, showQuickView = true, className }: Produc
     if (isWishlisted) {
       removeFromWishlist(product.id)
     } else {
-      addToWishlist(product.id)
+      addToWishlist(product)
     }
   }
 

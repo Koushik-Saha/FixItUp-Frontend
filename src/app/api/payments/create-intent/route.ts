@@ -5,7 +5,8 @@ import Stripe from 'stripe'
 
 function getStripe() {
     return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-        apiVersion: '2024-11-20.acacia' as any,
+        apiVersion: '2025-11-17.clover' as any, // Cast to any to avoid strict type checks if library defs are strict
+        typescript: true,
     })
 }
 
@@ -29,16 +30,25 @@ export async function POST(request: NextRequest) {
         // Check existing intent
         const stripe = getStripe();
         if (order.paymentIntentId) {
-            const existing = await stripe.paymentIntents.retrieve(order.paymentIntentId);
-            if (existing.status === 'succeeded') {
-                return NextResponse.json({ error: 'Order already paid' }, { status: 400 });
-            }
-            return NextResponse.json({
-                data: {
-                    client_secret: existing.client_secret,
-                    payment_intent_id: existing.id
+            try {
+                const existing = await stripe.paymentIntents.retrieve(order.paymentIntentId);
+                if (existing.status === 'succeeded') {
+                    return NextResponse.json({ error: 'Order already paid' }, { status: 400 });
                 }
-            });
+                // If existing intent is canceled or requires different handling, maybe create new?
+                // For now, return existing if it's usable.
+                if (existing.status !== 'canceled') {
+                    return NextResponse.json({
+                        data: {
+                            client_secret: existing.client_secret,
+                            payment_intent_id: existing.id
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn('Failed to retrieve existing payment intent, creating new one', err);
+                // If retrieval fails (e.g. invalid ID), fall through to create new
+            }
         }
 
         // Create new intent
@@ -49,7 +59,7 @@ export async function POST(request: NextRequest) {
                 order_id: order.id,
                 order_number: order.orderNumber,
                 user_id: userId,
-                customer_email: order.customerEmail
+                customer_email: order.customerEmail || ''
             },
             automatic_payment_methods: { enabled: true }
         });
@@ -70,6 +80,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
+        console.error('Payment intent creation failed:', error);
         return errorResponse(error);
     }
 }

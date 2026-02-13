@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         const skip = (page - 1) * limit;
 
         const roleParam = searchParams.get("role");
-        const role = roleParam ? (roleParam.toUpperCase() as Prisma.EnumRoleFilter) : undefined;
+        const role = roleParam ? (roleParam.toUpperCase() as any) : undefined;
 
         const where: Prisma.UserWhereInput = {};
 
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
                     role: true,
                     createdAt: true,
                     _count: {
-                        select: { orders: true, repairTickets: true }
+                        select: { orders: true, repair_tickets: true }
                     }
                 },
                 orderBy: { createdAt: 'desc' },

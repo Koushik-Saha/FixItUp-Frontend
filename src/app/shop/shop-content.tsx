@@ -11,6 +11,7 @@ import { getProducts, Product, GetProductsParams } from '@/lib/api/products'
 import { addToCart } from '@/lib/api/cart'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { useCartStore } from '@/store'
 
 // Imports
 import { ProductCard } from '@/components/shop/product-card'
@@ -129,6 +130,13 @@ export default function ShopContent() {
         try {
             setCartLoading(productId)
             await addToCart(productId, 1)
+
+            // Sync with local store
+            const product = products.find(p => p.id === productId)
+            if (product) {
+                useCartStore.getState().addItem(product as any, 1)
+            }
+
             setAddToCartMessage('Item added to cart successfully!')
             setTimeout(() => setAddToCartMessage(null), 3000)
         } catch (err) {
@@ -244,6 +252,7 @@ export default function ShopContent() {
                     {/* Filters Sidebar */}
                     <ShopSidebar
                         showFilters={showFilters}
+                        setShowFilters={setShowFilters}
                         categories={categories}
                         brands={brands}
                         searchQuery={searchQuery}

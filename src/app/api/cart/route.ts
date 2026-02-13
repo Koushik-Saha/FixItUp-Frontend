@@ -94,8 +94,8 @@ export async function GET(request: NextRequest) {
                     brand: product.brand,
                     device_model: product.deviceModel,
                     image: product.thumbnail || product.images[0],
-                    in_stock: product.totalStock > 0,
-                    available_quantity: product.totalStock
+                    in_stock: (product.totalStock || 0) > 0,
+                    available_quantity: product.totalStock || 0
                 },
                 pricing: {
                     unit_price: Number(unitPrice.toFixed(2)),
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
 
         if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404, headers: corsHeaders });
         if (!product.isActive) return NextResponse.json({ error: 'Product unavailable' }, { status: 400, headers: corsHeaders });
-        if (product.totalStock < quantity) return NextResponse.json({ error: 'Insufficient stock', available: product.totalStock }, { status: 400, headers: corsHeaders });
+        if ((product.totalStock || 0) < quantity) return NextResponse.json({ error: 'Insufficient stock', available: product.totalStock || 0 }, { status: 400, headers: corsHeaders });
 
         // Upsert logic manually to check stock on specific item
         const existingItem = await prisma.cartItem.findFirst({
@@ -176,10 +176,10 @@ export async function POST(request: NextRequest) {
 
         if (existingItem) {
             const newQuantity = existingItem.quantity + quantity;
-            if (product.totalStock < newQuantity) {
+            if ((product.totalStock || 0) < newQuantity) {
                 return NextResponse.json({
                     error: 'Cannot add more items. Max available reached.',
-                    available: product.totalStock,
+                    available: product.totalStock || 0,
                     current_in_cart: existingItem.quantity
                 }, { status: 400, headers: corsHeaders });
             }

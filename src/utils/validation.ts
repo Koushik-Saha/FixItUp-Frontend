@@ -69,6 +69,7 @@ export const createRepairTicketSchema = z.object({
     issue_category: z.string().optional(),
     appointment_date: z.string().datetime().optional(),
     customer_notes: z.string().max(500).optional(),
+    assigned_store_id: z.string().uuid().optional(),
 })
 
 // Wholesale application validation

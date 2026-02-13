@@ -13,7 +13,8 @@ import {
     LogOut,
     Store,
     LayoutTemplate,
-    FolderTree
+    FolderTree,
+    FileText
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -57,6 +58,11 @@ const sidebarItems = [
         title: 'Categories',
         href: '/admin/cms/categories',
         icon: FolderTree
+    },
+    {
+        title: 'About Us',
+        href: '/admin/cms/about',
+        icon: FileText
     },
     {
         title: 'Settings',

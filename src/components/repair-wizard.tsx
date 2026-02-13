@@ -177,10 +177,25 @@ export default function RepairWizard() {
     const onSubmit = async (data: RepairFormValues) => {
         setIsSubmitting(true)
         try {
+            // Transform to snake_case for API
+            const apiPayload = {
+                customer_name: data.customerName,
+                customer_email: data.customerEmail,
+                customer_phone: data.customerPhone,
+                device_brand: data.deviceBrand,
+                device_model: data.deviceModel,
+                imei_serial: data.imeiSerial,
+                issue_category: data.issueCategory,
+                issue_description: data.issueDescription,
+                appointment_date: data.appointmentDate,
+                assigned_store_id: data.serviceType === 'DROP_OFF' ? data.storeId : undefined,
+                customer_notes: `Service Type: ${data.serviceType === 'MAIL_IN' ? 'Mail-In' : 'Drop-Off'}`
+            }
+
             const res = await fetch('/api/repairs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify(apiPayload)
             })
 
             const json = await res.json()

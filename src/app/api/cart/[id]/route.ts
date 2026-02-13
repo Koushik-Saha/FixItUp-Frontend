@@ -63,8 +63,8 @@ export async function PUT(
         if (!product.isActive) {
             return NextResponse.json({ error: 'Product no longer available' }, { status: 400, headers: corsHeaders });
         }
-        if (product.totalStock < quantity) {
-            return NextResponse.json({ error: 'Insufficient stock', available: product.totalStock }, { status: 400, headers: corsHeaders });
+        if ((product.totalStock || 0) < quantity) {
+            return NextResponse.json({ error: 'Insufficient stock', available: product.totalStock || 0 }, { status: 400, headers: corsHeaders });
         }
 
         const updated = await prisma.cartItem.update({

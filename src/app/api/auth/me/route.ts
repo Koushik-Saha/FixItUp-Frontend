@@ -47,7 +47,7 @@ export async function GET() {
             email: user.email,
             full_name: user.fullName,
             phone: user.phone || undefined,
-            role: user.role.toLowerCase(), // Prisma enum is uppercase
+            role: (user.role || 'CUSTOMER').toLowerCase(), // Prisma enum is uppercase
             wholesale_status: user.wholesaleStatus?.toLowerCase(),
             wholesale_tier: user.wholesaleTier?.toLowerCase()
         };
@@ -99,7 +99,7 @@ export async function PUT(request: Request) {
             email: updatedUser.email,
             full_name: updatedUser.fullName,
             phone: updatedUser.phone || undefined,
-            role: updatedUser.role.toLowerCase(),
+            role: (updatedUser.role || 'CUSTOMER').toLowerCase(),
             wholesale_status: updatedUser.wholesaleStatus?.toLowerCase(),
             wholesale_tier: updatedUser.wholesaleTier?.toLowerCase()
         };

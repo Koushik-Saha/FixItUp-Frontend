@@ -58,13 +58,13 @@ export async function GET(
                         order.status === 'DELIVERED'
                         ? order.createdAt
                         : null,
-                completed: ['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status),
+                completed: ['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status || ''),
             },
             {
                 status: 'shipped',
                 label: 'Shipped',
                 date: order.shippedAt,
-                completed: ['SHIPPED', 'DELIVERED'].includes(order.status),
+                completed: ['SHIPPED', 'DELIVERED'].includes(order.status || ''),
             },
             {
                 status: 'delivered',

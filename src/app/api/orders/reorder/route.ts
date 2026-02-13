@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         // Check which products are available
         const availableProducts = new Map(
             products
-                .filter((p) => p.isActive && p.totalStock > 0)
+                .filter((p) => p.isActive && (p.totalStock || 0) > 0)
                 .map((p) => [p.id, p])
         )
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
                 })
             } else {
                 // Limit quantity to available stock
-                const quantity = Math.min(item.quantity, product.totalStock)
+                const quantity = Math.min(item.quantity, product.totalStock || 0)
                 itemsToAdd.push({
                     productId: item.productId,
                     quantity

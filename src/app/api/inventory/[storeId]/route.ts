@@ -48,7 +48,7 @@ export async function GET(
 
         if (status === 'low_stock') {
             filteredInventory = filteredInventory.filter(item => {
-                return item.quantity > 0 && item.quantity <= (item.product.lowStockThreshold || 10)
+                return (item.quantity || 0) > 0 && (item.quantity || 0) <= (item.product.lowStockThreshold || 10)
             })
         } else if (status === 'out_of_stock') {
             filteredInventory = filteredInventory.filter(item => item.quantity === 0)
@@ -57,11 +57,11 @@ export async function GET(
         // Calculate stats
         const totalItems = filteredInventory.length
         const lowStockItems = filteredInventory.filter(item => {
-            return item.quantity > 0 && item.quantity <= (item.product.lowStockThreshold || 10)
+            return (item.quantity || 0) > 0 && (item.quantity || 0) <= (item.product.lowStockThreshold || 10)
         }).length
         const outOfStockItems = filteredInventory.filter(item => item.quantity === 0).length
         const totalValue = filteredInventory.reduce((sum, item) => {
-            return sum + (item.quantity * Number(item.product.basePrice || 0))
+            return sum + ((item.quantity || 0) * Number(item.product.basePrice || 0))
         }, 0)
 
         // Get store info
@@ -119,10 +119,12 @@ export async function PUT(
 
         let newQuantity = quantity
 
+        const currentQuantity = currentInventory.quantity || 0
+
         if (action === 'add') {
-            newQuantity = currentInventory.quantity + quantity
+            newQuantity = currentQuantity + quantity
         } else if (action === 'subtract') {
-            newQuantity = Math.max(0, currentInventory.quantity - quantity)
+            newQuantity = Math.max(0, currentQuantity - quantity)
         }
 
         // Update inventory

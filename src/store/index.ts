@@ -167,8 +167,8 @@ export const useUIStore = create<UIState>()((set) => ({
 
 // Wishlist Store
 interface WishlistState {
-  items: string[] // Product IDs
-  addItem: (productId: string) => void
+  items: Product[] // Changed from string[] to Product[]
+  addItem: (product: Product) => void
   removeItem: (productId: string) => void
   isInWishlist: (productId: string) => boolean
   clearWishlist: () => void
@@ -179,22 +179,22 @@ export const useWishlistStore = create<WishlistState>()(
     (set, get) => ({
       items: [],
 
-      addItem: (productId) =>
+      addItem: (product) =>
         set((state) => {
-          if (!state.items.includes(productId)) {
-            return { items: [...state.items, productId] }
+          if (!state.items.find((item) => item.id === product.id)) {
+            return { items: [...state.items, product] }
           }
           return state
         }),
 
       removeItem: (productId) =>
         set((state) => ({
-          items: state.items.filter((id) => id !== productId),
+          items: state.items.filter((item) => item.id !== productId),
         })),
 
       isInWishlist: (productId) => {
         const { items } = get()
-        return items.includes(productId)
+        return items.some((item) => item.id === productId)
       },
 
       clearWishlist: () => set({ items: [] }),

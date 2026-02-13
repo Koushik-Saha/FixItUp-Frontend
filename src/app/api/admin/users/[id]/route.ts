@@ -59,7 +59,7 @@ export async function GET(
                 isBlocked: true,
                 createdAt: true,
                 _count: {
-                    select: { orders: true, repairTickets: true }
+                    select: { orders: true, repair_tickets: true }
                 }
             },
         });

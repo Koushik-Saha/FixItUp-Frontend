@@ -25,10 +25,12 @@ import SmartSearch from '@/components/smart-search'
 export function Header() {
   const { user } = useAuth()
   const isAuthenticated = !!user
-  const { getItemCount } = useCartStore()
-  const { items: wishlistItems } = useWishlistStore()
 
-  const cartCount = getItemCount()
+  // Use explicit selectors to ensure re-renders on state change
+  const cartItems = useCartStore((state) => state.items)
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0)
+
+  const wishlistItems = useWishlistStore((state) => state.items)
   const wishlistCount = wishlistItems.length
 
   return (
@@ -59,6 +61,9 @@ export function Header() {
               </Link>
               <Link href="/wholesale" className="hover:text-blue-400 transition-colors">
                 Wholesale B2B & B2C
+              </Link>
+              <Link href="/warranty-return-policy" className="hover:text-blue-400 transition-colors">
+                Warranty & Returns
               </Link>
             </div>
           </div>

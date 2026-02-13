@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { errorResponse, UnauthorizedError, ValidationError } from '@/lib/utils/errors'
 import { z } from 'zod'
-import { Prisma, OrderStatus } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 // Schema for creating an order
 const createOrderSchema = z.object({
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
         }
 
         if (status && status !== 'ALL') {
-            where.status = status as OrderStatus;
+            where.status = status;
         }
 
         const [orders, total] = await Promise.all([
@@ -166,11 +166,11 @@ export async function POST(request: NextRequest) {
             }
 
             // Check stock
-            if (product.totalStock < item.quantity) {
+            if ((product.totalStock || 0) < item.quantity) {
                 return NextResponse.json({
                     error: `Insufficient stock for ${product.name}`,
                     code: 'INSUFFICIENT_STOCK',
-                    available: product.totalStock
+                    available: product.totalStock || 0
                 }, { status: 400, headers: corsHeaders });
             }
 
@@ -215,8 +215,8 @@ export async function POST(request: NextRequest) {
                     userId,
                     orderNumber: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Simple generation
                     customerName: user.fullName || shipping_address.full_name,
-                    customerEmail: user.email,
-                    customerPhone: user.phone || shipping_address.phone,
+                    customerEmail: user.email || '',
+                    customerPhone: user.phone || shipping_address.phone || null,
                     status: 'PENDING',
                     paymentStatus: 'PENDING', // Payment integration later
                     subtotal,

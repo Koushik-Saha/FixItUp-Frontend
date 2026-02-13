@@ -50,7 +50,10 @@ export async function getCart(): Promise<CartResponse> {
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch cart')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to fetch cart'
+        throw new Error(errorMessage)
     }
 
     return response.json()
@@ -71,7 +74,10 @@ export async function addToCart(productId: string, quantity: number = 1): Promis
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to add item to cart')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to add item to cart'
+        throw new Error(errorMessage)
     }
 
     return response.json()
@@ -89,7 +95,10 @@ export async function updateCartItem(itemId: string, quantity: number): Promise<
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update cart item')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to update cart item'
+        throw new Error(errorMessage)
     }
 
     return response.json()
@@ -106,7 +115,10 @@ export async function removeFromCart(itemId: string): Promise<{ message: string 
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to remove item from cart')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to remove item from cart'
+        throw new Error(errorMessage)
     }
 
     return response.json()

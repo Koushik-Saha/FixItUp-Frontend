@@ -104,7 +104,10 @@ export async function createOrder(orderData: CreateOrderRequest): Promise<Create
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create order')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to create order'
+        throw new Error(errorMessage)
     }
 
     return response.json()
@@ -131,7 +134,10 @@ export async function getOrders(params: {
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch orders')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to fetch orders'
+        throw new Error(errorMessage)
     }
 
     return response.json()
@@ -148,7 +154,10 @@ export async function getOrder(orderId: string): Promise<{ data: Order }> {
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch order')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to fetch order'
+        throw new Error(errorMessage)
     }
 
     return response.json()

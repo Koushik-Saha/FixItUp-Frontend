@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         });
 
         // Auto-login after register
-        const token = await signJWT({ id: user.id, email: user.email, role: user.role });
+        const token = await signJWT({ id: user.id, email: email, role: "CUSTOMER" });
         const cookieStore = await cookies();
         cookieStore.set("auth_token", token, {
             httpOnly: true,

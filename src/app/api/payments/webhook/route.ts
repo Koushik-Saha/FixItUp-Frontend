@@ -5,7 +5,8 @@ import { sendPaymentSuccessEmail, sendPaymentFailedEmail, sendRefundConfirmation
 
 function getStripe() {
     return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-        apiVersion: '2024-11-20.acacia' as any,
+        apiVersion: '2025-11-17.clover' as any,
+        typescript: true,
     })
 }
 

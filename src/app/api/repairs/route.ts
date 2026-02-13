@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
 
                 appointmentDate: data.appointment_date,
                 customerNotes: data.customer_notes,
+                assignedStoreId: data.assigned_store_id,
 
                 status: "SUBMITTED",
                 priority: "NORMAL",
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
             deviceBrand: ticket.deviceBrand,
             deviceModel: ticket.deviceModel,
             issueDescription: ticket.issueDescription,
-            status: ticket.status,
+            status: ticket.status || 'submitted',
             appointmentDate: ticket.appointmentDate,
             estimatedCost: ticket.estimatedCost ? Number(ticket.estimatedCost) : null,
             actualCost: ticket.actualCost ? Number(ticket.actualCost) : null,

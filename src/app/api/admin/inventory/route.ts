@@ -59,16 +59,16 @@ export async function GET(request: NextRequest) {
 
         if (status === 'low_stock') {
             filteredInventory = rawInventory.filter(item =>
-                item.quantity > 0 && item.quantity <= (item.product.lowStockThreshold || 10)
+                (item.quantity || 0) > 0 && (item.quantity || 0) <= (item.product.lowStockThreshold || 10)
             );
         } else if (status === 'out_of_stock') {
-            filteredInventory = rawInventory.filter(item => item.quantity === 0);
+            filteredInventory = rawInventory.filter(item => (item.quantity || 0) === 0);
         }
 
         const totalItems = filteredInventory.length;
-        const lowStockItems = filteredInventory.filter(item => item.quantity > 0 && item.quantity <= (item.product.lowStockThreshold || 10)).length;
-        const outOfStockItems = filteredInventory.filter(item => item.quantity === 0).length;
-        const totalValue = filteredInventory.reduce((sum, item) => sum + (item.quantity * Number(item.product.basePrice)), 0);
+        const lowStockItems = filteredInventory.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= (item.product.lowStockThreshold || 10)).length;
+        const outOfStockItems = filteredInventory.filter(item => (item.quantity || 0) === 0).length;
+        const totalValue = filteredInventory.reduce((sum, item) => sum + ((item.quantity || 0) * Number(item.product.basePrice)), 0);
 
         return NextResponse.json({
             data: {
@@ -104,7 +104,7 @@ export async function PUT(request: NextRequest) {
         const current = await prisma.inventory.findUnique({ where: { id: inventory_id } });
         if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: corsHeaders });
 
-        let newQuantity = current.quantity;
+        let newQuantity = current.quantity || 0;
         if (action === 'add') newQuantity += (quantity || 0);
         else if (action === 'subtract') newQuantity = Math.max(0, newQuantity - (quantity || 0));
         else newQuantity = quantity; // set directly if no action?

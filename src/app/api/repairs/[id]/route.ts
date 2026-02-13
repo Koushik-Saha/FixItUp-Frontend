@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { Prisma, RepairStatus, Priority } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { errorResponse, UnauthorizedError, NotFoundError, ForbiddenError } from '@/lib/utils/errors'
 import { sendRepairStatusUpdateEmail } from '@/lib/email'
 
@@ -77,9 +77,11 @@ export async function PUT(
         const updateData: Prisma.RepairTicketUpdateInput = {};
 
         // Mapping (snake_case from frontend/docs to camelCase prisma)
-        if (body.status) updateData.status = body.status.toUpperCase() as RepairStatus;
-        if (body.priority) updateData.priority = body.priority.toUpperCase() as Priority;
-        if (body.assigned_store_id) updateData.assignedStoreId = body.assigned_store_id;
+        if (body.status) updateData.status = body.status.toUpperCase();
+        if (body.priority) updateData.priority = body.priority.toUpperCase();
+        if (body.assigned_store_id) {
+            updateData.stores = { connect: { id: body.assigned_store_id } };
+        }
         if (body.assigned_technician) updateData.assignedTechnician = body.assigned_technician;
         if (body.appointment_date) updateData.appointmentDate = body.appointment_date;
 

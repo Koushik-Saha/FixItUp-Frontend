@@ -24,9 +24,17 @@ interface ProductClientProps {
     product: Product
 }
 
+import { useCartStore, useWishlistStore } from '@/store'
+
+// ... existing imports
+
 export default function ProductClient({ product }: ProductClientProps) {
     const { user } = useAuth()
     const { addProduct } = useRecentlyViewed()
+
+    // Stores
+    const { addItem: addItemToCart } = useCartStore()
+    const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
 
     const [selectedImage, setSelectedImage] = useState(0)
     const [quantity, setQuantity] = useState(1)
@@ -43,22 +51,40 @@ export default function ProductClient({ product }: ProductClientProps) {
                 brand: product.brand,
                 deviceModel: product.deviceModel,
                 thumbnail: product.thumbnail || (product.images && product.images[0]) || null,
-                price: product.basePrice
-            })
+                price: product.basePrice,
+                retailPrice: product.basePrice // Ensure compatibility
+            } as any)
         }
     }, [product, addProduct])
 
     const handleAddToCart = async () => {
-        if (!product || !user) return
+        if (!product || !user) {
+            window.location.href = '/auth/login'
+            return
+        }
         try {
             setCartLoading(true)
             await addToCart(product.id, quantity)
+
+            // Sync with local store for immediate UI update
+            addItemToCart(product as any, quantity)
+
             toast.success('Item added to cart successfully!')
         } catch (err) {
             console.error('Failed to add to cart', err)
             toast.error('Failed to add item to cart')
         } finally {
             setCartLoading(false)
+        }
+    }
+
+    const handleToggleWishlist = () => {
+        if (isInWishlist(product.id)) {
+            removeFromWishlist(product.id)
+            toast.success('Removed from wishlist')
+        } else {
+            addToWishlist(product as any)
+            toast.success('Added to wishlist')
         }
     }
 
@@ -243,8 +269,14 @@ export default function ProductClient({ product }: ProductClientProps) {
                                     {cartLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShoppingCart className="h-5 w-5" />}
                                     {!user ? 'Login to Purchase' : 'Add to Cart'}
                                 </Button>
-                                <button className="p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                                    <Heart className="h-5 w-5" />
+                                <button
+                                    onClick={handleToggleWishlist}
+                                    className={`p-3 border rounded-lg transition-colors ${isInWishlist(product.id)
+                                        ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100'
+                                        : 'border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                        }`}
+                                >
+                                    <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                                 </button>
                                 <button className="p-3 border border-neutral-300 dark:border-neutral-600 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                                     <Share2 className="h-5 w-5" />

@@ -159,6 +159,10 @@ export function Footer({ sections = [] }: FooterProps) {
                             <Link href="/term-and-condition" className="hover:text-white transition-colors">
                                 Terms and Conditions
                             </Link>
+                            <span>|</span>
+                            <Link href="/warranty-return-policy" className="hover:text-white transition-colors">
+                                Warranty & Returns
+                            </Link>
                         </div>
                         <button className="bg-white text-black p-3 rounded-full hover:bg-neutral-200 transition-colors">
                             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

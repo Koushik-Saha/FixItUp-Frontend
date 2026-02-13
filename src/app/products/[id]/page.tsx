@@ -86,7 +86,7 @@ export default async function ProductPage({ params }: Props) {
                             price: product.basePrice,
                             priceValidUntil: '2025-12-31',
                             itemCondition: 'https://schema.org/NewCondition',
-                            availability: product.totalStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+                            availability: (product.totalStock || 0) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
                         },
                     }),
                 }}

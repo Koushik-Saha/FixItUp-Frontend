@@ -19,9 +19,13 @@ export async function GET(request: NextRequest) {
                 take: 10
             }),
 
-            // 2. Categories
+            // 2. Categories (Top-level only - Brands)
             prisma.category.findMany({
-                where: { isActive: true },
+                where: {
+                    isActive: true,
+                    parentId: null,
+                    slug: { in: ['apple', 'samsung', 'google', 'motorola', 'oneplus', 'ipad', 'macbook', 'watch'] }
+                },
                 orderBy: { displayOrder: 'asc' },
                 take: 8
             }),
@@ -176,7 +180,7 @@ export async function GET(request: NextRequest) {
             slug: cat.slug,
             icon: cat.icon || cat.name?.charAt(0) || "•",
             color: colors[i % colors.length],
-            count: "Top Quality" // Static count for mock/fallback
+            count: (cat as any).product_count ? `${(cat as any).product_count} Products` : "Top Quality"
         }));
 
         // Stores Fallback
