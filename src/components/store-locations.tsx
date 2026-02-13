@@ -1,121 +1,85 @@
 'use client'
 
-import { MapPin, Phone, Clock, Mail, Navigation } from 'lucide-react'
+import { MapPin, Phone, Clock, Navigation } from 'lucide-react'
 import Link from 'next/link'
 
-const STORE_LOCATIONS = [
-    {
-        id: 1,
-        name: 'Santa Barbara Store',
-        address: '110 S Hope Ave Suite H 123',
-        city: 'Santa Barbara',
-        state: 'CA',
-        zip: '93105',
-        phone: '(805) 555-0123',
-        email: 'santabarbara@maxfitit.com',
-        hours: {
-            weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
-            saturday: 'Saturday: 10:00 AM - 6:00 PM',
-            sunday: 'Sunday: 11:00 AM - 5:00 PM',
-        },
-        mapUrl:
-            'https://www.google.com/maps/search/?api=1&query=110+S+Hope+Ave+Suite+H+123+Santa+Barbara+CA+93105',
-        image: '/images/stores/santa-barbara.jpg',
-        featured: true,
-    },
-    {
-        id: 2,
-        name: 'Los Angeles - Downtown',
-        address: '725 S Broadway',
-        city: 'Los Angeles',
-        state: 'CA',
-        zip: '90014',
-        phone: '(213) 555-0124',
-        email: 'losangeles@maxfitit.com',
-        hours: {
-            weekday: 'Mon-Fri: 9:00 AM - 8:00 PM',
-            saturday: 'Saturday: 10:00 AM - 7:00 PM',
-            sunday: 'Sunday: 11:00 AM - 6:00 PM',
-        },
-        mapUrl:
-            'https://www.google.com/maps/search/?api=1&query=725+S+Broadway+Los+Angeles+CA+90014',
-        image: '/images/stores/los-angeles.jpg',
-    },
-    {
-        id: 3,
-        name: 'San Francisco Store',
-        address: '1455 Market Street Suite 210',
-        city: 'San Francisco',
-        state: 'CA',
-        zip: '94103',
-        phone: '(415) 555-0125',
-        email: 'sanfrancisco@maxfitit.com',
-        hours: {
-            weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
-            saturday: 'Saturday: 10:00 AM - 6:00 PM',
-            sunday: 'Sunday: 11:00 AM - 5:00 PM',
-        },
-        mapUrl:
-            'https://www.google.com/maps/search/?api=1&query=1455+Market+Street+San+Francisco+CA+94103',
-        image: '/images/stores/san-francisco.jpg',
-    },
-    {
-        id: 4,
-        name: 'Las Vegas Store',
-        address: '3200 Las Vegas Blvd S Suite 150',
-        city: 'Las Vegas',
-        state: 'NV',
-        zip: '89109',
-        phone: '(702) 555-0126',
-        email: 'lasvegas@maxfitit.com',
-        hours: {
-            weekday: 'Mon-Fri: 10:00 AM - 9:00 PM',
-            saturday: 'Saturday: 10:00 AM - 9:00 PM',
-            sunday: 'Sunday: 11:00 AM - 7:00 PM',
-        },
-        mapUrl:
-            'https://www.google.com/maps/search/?api=1&query=3200+Las+Vegas+Blvd+S+Las+Vegas+NV+89109',
-        image: '/images/stores/las-vegas.jpg',
-    },
-    {
-        id: 5,
-        name: 'San Diego Store',
-        address: '940 Broadway Suite 102',
-        city: 'San Diego',
-        state: 'CA',
-        zip: '92101',
-        phone: '(619) 555-0127',
-        email: 'sandiego@maxfitit.com',
-        hours: {
-            weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
-            saturday: 'Saturday: 10:00 AM - 6:00 PM',
-            sunday: 'Sunday: 11:00 AM - 5:00 PM',
-        },
-        mapUrl:
-            'https://www.google.com/maps/search/?api=1&query=940+Broadway+San+Diego+CA+92101',
-        image: '/images/stores/san-diego.jpg',
-    },
-    {
-        id: 6,
-        name: 'Sacramento Store',
-        address: '1689 Arden Way Suite 125',
-        city: 'Sacramento',
-        state: 'CA',
-        zip: '95815',
-        phone: '(916) 555-0128',
-        email: 'sacramento@maxfitit.com',
-        hours: {
-            weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
-            saturday: 'Saturday: 10:00 AM - 6:00 PM',
-            sunday: 'Sunday: 11:00 AM - 5:00 PM',
-        },
-        mapUrl:
-            'https://www.google.com/maps/search/?api=1&query=1689+Arden+Way+Sacramento+CA+95815',
-        image: '/images/stores/sacramento.jpg',
-    },
-]
+import { OperatingHours } from '@/types/json-fields'
 
-export function StoreLocations() {
+// Static data removed
+
+interface Store {
+    id: number | string
+    name: string
+    address: string
+    city: string
+    state: string
+    zipCode: string
+    phone: string
+    email: string
+    operatingHours: OperatingHours
+    isActive: boolean
+    featured?: boolean
+    image?: string
+    mapUrl?: string
+}
+
+interface StoreLocationsProps {
+    stores: Store[]
+}
+
+export function StoreLocations({ stores = [] }: StoreLocationsProps) {
+    const formatTime = (time: string) => {
+        if (!time) return '';
+        const [hours, minutes] = time.split(':');
+        const h = parseInt(hours);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${minutes} ${ampm}`;
+    };
+
+    const formatHours = (hours: OperatingHours | null | undefined): { weekday: string; saturday: string; sunday: string } => {
+        const defaults = {
+            weekday: 'Mon-Fri: 9:00 AM - 7:00 PM',
+            saturday: 'Saturday: 10:00 AM - 6:00 PM',
+            sunday: 'Sunday: 11:00 AM - 5:00 PM',
+        };
+
+        if (!hours) return defaults;
+
+        // Legacy format check (if fields are strings)
+        if (typeof hours.weekday === 'string') {
+            return {
+                weekday: hours.weekday,
+                saturday: typeof hours.saturday === 'string' ? hours.saturday : defaults.saturday,
+                sunday: typeof hours.sunday === 'string' ? hours.sunday : defaults.sunday,
+            }
+        }
+
+        // Strict DB format (objects)
+        const mon = hours.monday;
+        const sat = hours.saturday as { open: string; close: string } | undefined; // Cast to ensure object access if needed or rely on type
+        const sun = hours.sunday as { open: string; close: string } | undefined;
+
+        // Helper to format a day's hours
+        const formatDay = (day: { open: string; close: string } | undefined, label: string) => {
+            if (!day || !day.open) return `${label}: Closed`;
+            return `${label}: ${formatTime(day.open)} - ${formatTime(day.close)}`;
+        }
+
+        return {
+            weekday: mon?.open ? `Mon-Fri: ${formatTime(mon.open)} - ${formatTime(mon.close)}` : 'Mon-Fri: Closed',
+            saturday: formatDay(sat, 'Saturday'),
+            sunday: formatDay(sun, 'Sunday'),
+        };
+    };
+
+    const displayStores = stores.map(s => ({
+        ...s,
+        mapUrl: s.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${s.address} ${s.city} ${s.state} ${s.zipCode}`)}`,
+        hours: formatHours(s.operatingHours),
+        zip: s.zipCode, // map zipCode to zip
+    }));
+
     return (
         <section className="py-20 bg-neutral-50 dark:bg-neutral-950">
             <div className="container mx-auto px-4">
@@ -125,7 +89,7 @@ export function StoreLocations() {
                         Visit Our Stores
                     </h2>
                     <p className="text-lg text-neutral-600 dark:text-neutral-400">
-                        We have 6 locations across California and Nevada to serve you. Visit
+                        We have {displayStores.length}+ locations across California and Nevada to serve you. Visit
                         us for professional phone repair, accessories, and wholesale
                         services.
                     </p>
@@ -133,12 +97,11 @@ export function StoreLocations() {
 
                 {/* Store Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-                    {STORE_LOCATIONS.map((store) => (
+                    {displayStores.map((store) => (
                         <div
                             key={store.id}
-                            className={`bg-white/95 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 ${
-                                store.featured ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
-                            }`}
+                            className={`bg-white/95 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 ${store.featured ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
+                                }`}
                         >
                             {/* Store Image Placeholder */}
                             <div className="h-48 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 relative">
@@ -222,7 +185,7 @@ export function StoreLocations() {
                 {/* Bottom CTA */}
                 <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 lg:p-12 text-center text-white shadow-lg">
                     <h3 className="text-2xl lg:text-3xl font-bold mb-4">
-                        Can't Visit a Store? We Ship Nationwide!
+                        Can&apos;t Visit a Store? We Ship Nationwide!
                     </h3>
                     <p className="text-lg mb-6 text-blue-100">
                         Order online and get your phone parts and accessories delivered
@@ -236,14 +199,34 @@ export function StoreLocations() {
                             Shop Online
                         </Link>
                         <Link
-                            href="/contact"
+                            href="/stores"
                             className="bg-transparent border-2 border-white hover:bg-white hover:text-blue-600 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
                         >
-                            Contact Us
+                            View All Stores
                         </Link>
                     </div>
                 </div>
             </div>
         </section>
+    )
+}
+
+function Mail(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+        </svg>
     )
 }

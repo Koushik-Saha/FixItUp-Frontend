@@ -1,0 +1,125 @@
+
+> max-phone-repair@1.0.0 build
+> next build
+
+   ▲ Next.js 15.5.7
+   - Environments: .env.local, .env.production, .env
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ⚠ Attempted to load /Users/koushiksaha/Desktop/FixItUp/max-phone-repair/frontend/node_modules/next/next-swc-fallback/@next/swc-darwin-arm64/next-swc.darwin-arm64.node, but it was not installed
+ ⚠ Attempted to load @next/swc-darwin-arm64, but it was not installed
+ ⚠ Attempted to load /Users/koushiksaha/Desktop/FixItUp/max-phone-repair/frontend/node_modules/next/next-swc-fallback/@next/swc-darwin-arm64/next-swc.darwin-arm64.node, but it was not installed
+ ⚠ Attempted to load @next/swc-darwin-arm64, but it was not installed
+ ⚠ Attempted to load /Users/koushiksaha/Desktop/FixItUp/max-phone-repair/frontend/node_modules/next/next-swc-fallback/@next/swc-darwin-arm64/next-swc.darwin-arm64.node, but it was not installed
+ ⚠ Attempted to load @next/swc-darwin-arm64, but it was not installed
+ ✓ Compiled successfully in 10.0s
+   Linting and checking validity of types ...
+
+Failed to compile.
+
+./src/__tests__/auth/login.test.ts
+16:19  Warning: 'mockUser' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/[brand]/page.tsx
+130:49  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+176:53  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+200:54  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+200:68  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/app/about-us/page.tsx
+4:54  Warning: 'Star' is defined but never used.  @typescript-eslint/no-unused-vars
+64:248  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+65:266  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/api/admin/analytics/route.ts
+34:13  Error: 'startDate' is never reassigned. Use 'const' instead.  prefer-const
+
+./src/app/api/admin/coupons/[id]/route.ts
+6:44  Warning: 'NotFoundError' is defined but never used.  @typescript-eslint/no-unused-vars
+10:16  Warning: 'checkAdmin' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/admin/customers/[id]/block/route.ts
+10:16  Warning: 'checkAdmin' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/admin/customers/[id]/reset-password/route.ts
+12:16  Warning: 'checkAdmin' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/admin/customers/[id]/route.ts
+3:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+3:44  Warning: 'NotFoundError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/admin/customers/route.ts
+3:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/admin/inventory/users/route.ts
+5:5  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+6:5  Warning: 'ForbiddenError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/admin/products/[id]/route.ts
+4:10  Warning: 'Prisma' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/admin/products/route.ts
+3:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/cart/route.ts
+3:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/hero-slides/route.ts
+61:13  Error: 'slides' is never reassigned. Use 'const' instead.  prefer-const
+82:22  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/homepage/banners/[id]/route.ts
+6:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+6:44  Warning: 'ForbiddenError' is defined but never used.  @typescript-eslint/no-unused-vars
+6:60  Warning: 'NotFoundError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/homepage/banners/route.ts
+3:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/homepage/route.ts
+5:27  Warning: 'request' is defined but never used.  @typescript-eslint/no-unused-vars
+143:15  Warning: 'hero' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/inventory/[storeId]/route.ts
+6:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+6:44  Warning: 'ForbiddenError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/nav/phone-models/route.ts
+4:6  Warning: 'PhoneModelRow' is defined but never used.  @typescript-eslint/no-unused-vars
+12:6  Warning: 'CategoryRow' is defined but never used.  @typescript-eslint/no-unused-vars
+200:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/orders/[id]/tracking/route.ts
+6:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+6:59  Warning: 'ForbiddenError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/products/[id]/route.ts
+3:56  Warning: 'ValidationError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/products/route.ts
+3:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+3:60  Warning: 'ValidationError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/repairs/route.ts
+3:44  Warning: 'ValidationError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/user/addresses/route.ts
+20:27  Warning: 'req' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/wholesale/applications/route.ts
+3:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+8:15  Warning: 'userId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/wholesale/approve/[id]/route.ts
+6:25  Warning: 'UnauthorizedError' is defined but never used.  @typescript-eslint/no-unused-vars
+6:44  Warning: 'ForbiddenError' is defined but never used.  @typescript-eslint/no-unused-vars
+8:10  Warning: 'WholesaleStatus' is defined but never used.  @typescript-eslint/no-unused-vars
+8:42  Warning: 'Role' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/wholesale/pricing/route.ts
+7:27  Warning: 'request' is defined but never used.  @typescript-eslint/no-unused-vars
+58:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

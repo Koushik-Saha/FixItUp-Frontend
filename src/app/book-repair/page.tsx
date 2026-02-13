@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, User, Mail, Phone, CheckCircle, AlertCircle, Smartphone } from 'lucide-react'
+import Link from 'next/link'
+import { Calendar, MapPin, User, CheckCircle, Smartphone } from 'lucide-react'
 
 // Sample data
 const BRANDS = ['Apple', 'Samsung', 'Google', 'Motorola', 'LG', 'OnePlus']
@@ -45,7 +46,7 @@ const STORES = [
 const generateTimeSlots = () => {
     const slots = []
     for (let hour = 9; hour <= 17; hour++) {
-        for (let min of [0, 30]) {
+        for (const min of [0, 30]) {
             if (hour === 17 && min === 30) break // Stop at 5:00 PM
             const time = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`
             const period = hour >= 12 ? 'PM' : 'AM'
@@ -198,8 +199,8 @@ export default function BookRepairPage() {
                             <div className="flex justify-between">
                                 <span className="text-neutral-600 dark:text-neutral-400">Device:</span>
                                 <span className="font-semibold text-neutral-900 dark:text-white">
-                  {formData.brand} {formData.model}
-                </span>
+                                    {formData.brand} {formData.model}
+                                </span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-neutral-600 dark:text-neutral-400">Issue:</span>
@@ -212,14 +213,14 @@ export default function BookRepairPage() {
                             <div className="flex justify-between">
                                 <span className="text-neutral-600 dark:text-neutral-400">Date & Time:</span>
                                 <span className="font-semibold text-neutral-900 dark:text-white">
-                  {new Date(formData.date).toLocaleDateString()} at {TIME_SLOTS.find(t => t.value === formData.time)?.label}
-                </span>
+                                    {new Date(formData.date).toLocaleDateString()} at {TIME_SLOTS.find(t => t.value === formData.time)?.label}
+                                </span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-neutral-600 dark:text-neutral-400">Customer:</span>
                                 <span className="font-semibold text-neutral-900 dark:text-white">
-                  {formData.firstName} {formData.lastName}
-                </span>
+                                    {formData.firstName} {formData.lastName}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -275,12 +276,12 @@ export default function BookRepairPage() {
                         >
                             Print Details
                         </button>
-                        <a
+                        <Link
                             href="/"
                             className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-center"
                         >
                             Back to Home
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -364,7 +365,7 @@ export default function BookRepairPage() {
 
                                 <div>
                                     <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                                        What's the Issue? <span className="text-red-600">*</span>
+                                        What&apos;s the Issue? <span className="text-red-600">*</span>
                                     </label>
                                     <select
                                         name="issue"
@@ -403,9 +404,9 @@ export default function BookRepairPage() {
                                         className={`
                       block p-4 border-2 rounded-lg cursor-pointer transition-all
                       ${formData.storeId === store.id.toString()
-                                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                                            : 'border-neutral-200 dark:border-neutral-700 hover:border-blue-400'
-                                        }
+                                                ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                                                : 'border-neutral-200 dark:border-neutral-700 hover:border-blue-400'
+                                            }
                     `}
                                     >
                                         <input
@@ -610,7 +611,7 @@ export default function BookRepairPage() {
                                 Book Repair Appointment
                             </button>
                             <p className="text-center text-sm text-neutral-600 dark:text-neutral-400 mt-4">
-                                You'll receive a confirmation email with your repair ticket number
+                                You&apos;ll receive a confirmation email with your repair ticket number
                             </p>
                         </div>
 

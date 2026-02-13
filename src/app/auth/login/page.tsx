@@ -1,16 +1,43 @@
 // src/app/auth/login/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {useAuth} from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const loginSchema = z.object({
+    email: z.string().email("Please enter a valid email address"),
+    password: z.string().min(1, "Password is required"),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
     const router = useRouter();
-    const { user, login, isLoading, error, init } = useAuth();
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const { user, login, isLoading, init } = useAuth();
+
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<LoginForm>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            email: "",
+            password: "",
+        },
+    });
 
     useEffect(() => {
         init();
@@ -22,12 +49,12 @@ export default function LoginPage() {
         }
     }, [user, router]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const onSubmit = async (data: LoginForm) => {
         try {
-            await login({ email, password });
-        } catch {
-            // error already in store
+            await login(data);
+            toast.success("Welcome back!");
+        } catch (err: any) {
+            toast.error(err.message || "Invalid credentials. Please try again.");
         }
     };
 
@@ -41,56 +68,57 @@ export default function LoginPage() {
                     Enter your email and password to access your dashboard.
                 </p>
 
-                {error && (
-                    <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-3 py-2 text-sm">
-                        {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
+                        <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1">
                             Email
                         </label>
-                        <input
+                        <Input
+                            id="email"
+                            {...register("email")}
                             type="email"
-                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="you@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
+                            disabled={isLoading || isSubmitting}
+                            className={errors.email ? "border-red-500 focus-visible:ring-red-500" : ""}
                         />
+                        {errors.email && (
+                            <p className="text-red-500 text-xs mt-1 font-medium">{errors.email.message}</p>
+                        )}
                     </div>
 
                     <div>
                         <div className="flex items-center justify-between mb-1">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300">
+                            <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-neutral-300">
                                 Password
                             </label>
-                            <Link 
+                            <Link
                                 href="/auth/forgot-password"
                                 className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
                             >
                                 Forgot password?
                             </Link>
                         </div>
-                        <input
+                        <Input
+                            id="password"
+                            {...register("password")}
                             type="password"
-                            className="w-full rounded-lg border border-slate-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
+                            disabled={isLoading || isSubmitting}
+                            className={errors.password ? "border-red-500 focus-visible:ring-red-500" : ""}
                         />
+                        {errors.password && (
+                            <p className="text-red-500 text-xs mt-1 font-medium">{errors.password.message}</p>
+                        )}
                     </div>
 
-                    <button
+                    <Button
                         type="submit"
-                        disabled={isLoading}
-                        className="w-full inline-flex items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2.5 hover:bg-blue-700 disabled:opacity-60"
+                        disabled={isLoading || isSubmitting}
+                        loading={isLoading || isSubmitting}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                        {isLoading ? "Signing in..." : "Sign In"}
-                    </button>
+                        Sign In
+                    </Button>
                 </form>
 
                 <p className="mt-6 text-sm text-center text-slate-500 dark:text-neutral-400">

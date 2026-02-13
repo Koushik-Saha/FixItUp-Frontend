@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Shield, Upload, X, Calendar, Package, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { Shield, Upload, X, Calendar, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
 
@@ -27,13 +27,13 @@ interface MediaFile {
 }
 
 export default function WarrantyClaimsPage() {
-    const [claims, setClaims] = useState<WarrantyClaim[]>([])
+    // const [claims, setClaims] = useState<WarrantyClaim[]>([])
     const [showNewClaimForm, setShowNewClaimForm] = useState(false)
-    const [selectedClaim, setSelectedClaim] = useState<WarrantyClaim | null>(null)
+    // const [selectedClaim, setSelectedClaim] = useState<WarrantyClaim | null>(null)
 
     // New claim form state
     const [orderNumber, setOrderNumber] = useState('')
-    const [productId, setProductId] = useState('')
+    // const [productId, setProductId] = useState('')
     const [issueType, setIssueType] = useState('')
     const [description, setDescription] = useState('')
     const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
@@ -139,13 +139,14 @@ export default function WarrantyClaimsPage() {
 
             // Reset form
             setOrderNumber('')
-            setProductId('')
+            // setProductId('') // Unused
+            setIssueType('')
             setIssueType('')
             setDescription('')
             setMediaFiles([])
             setShowNewClaimForm(false)
 
-        } catch (error) {
+        } catch {
             toast.error('Failed to submit claim')
         } finally {
             setSubmitting(false)
@@ -347,7 +348,7 @@ export default function WarrantyClaimsPage() {
                                 No Claims Yet
                             </h3>
                             <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-                                You haven't filed any warranty claims yet.
+                                You haven&apos;t filed any warranty claims yet.
                             </p>
                         </div>
                     ) : (

@@ -10,14 +10,25 @@ export const productSchema = z.object({
     slug: z.string().min(3).max(200),
     category_id: z.string().uuid().optional(),
     brand: z.string().min(2).max(100),
-    device_model: z.string().max(100).optional(),
-    product_type: z.string().max(50).optional(),
+    device_model: z.string().max(100),
+    product_type: z.string().max(50),
     description: z.string().optional(),
     base_price: z.number().positive(),
     cost_price: z.number().positive().optional(),
     images: z.array(z.string().url()).optional(),
+    thumbnail: z.string().url().optional(),
+    specifications: z.record(z.any()).optional(),
     is_active: z.boolean().optional(),
     is_featured: z.boolean().optional(),
+    is_new: z.boolean().optional(),
+    is_bestseller: z.boolean().optional(),
+    wholesale_tier1_discount: z.number().min(0).max(100).optional(),
+    wholesale_tier2_discount: z.number().min(0).max(100).optional(),
+    wholesale_tier3_discount: z.number().min(0).max(100).optional(),
+    total_stock: z.number().int().min(0).optional(),
+    low_stock_threshold: z.number().int().min(0).optional(),
+    meta_title: z.string().optional(),
+    meta_description: z.string().optional(),
 })
 
 // Order validation
@@ -58,6 +69,7 @@ export const createRepairTicketSchema = z.object({
     issue_category: z.string().optional(),
     appointment_date: z.string().datetime().optional(),
     customer_notes: z.string().max(500).optional(),
+    assigned_store_id: z.string().uuid().optional(),
 })
 
 // Wholesale application validation

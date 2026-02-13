@@ -60,7 +60,7 @@ export default function NotifyWhenAvailable({ productId, productName }: NotifyWh
             <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                 <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
                 <span className="text-sm text-green-700 dark:text-green-300 font-medium">
-                    You'll be notified when available
+                    You&apos;ll be notified when available
                 </span>
             </div>
         )
@@ -84,7 +84,7 @@ export default function NotifyWhenAvailable({ productId, productName }: NotifyWh
                 Get notified when back in stock
             </h3>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3">
-                We'll send you an email as soon as {productName} is available again.
+                We&apos;ll send you an email as soon as {productName} is available again.
             </p>
             <form onSubmit={handleSubmit} className="space-y-3">
                 <input

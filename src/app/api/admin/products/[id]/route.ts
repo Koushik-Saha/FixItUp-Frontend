@@ -1,233 +1,171 @@
-// app/api/admin/products/[id]/route.ts
-// Admin Products API - Get, Update, Delete single product
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { errorResponse } from "@/lib/utils/errors";
+import { Prisma } from "@prisma/client";
+import { productSchema, validateData, formatValidationErrors } from "@/utils/validation";
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
-import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
+// ... Reuse CORS helper/constants from a shared lib probably, but for now inline to matching previous file style
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://localhost:5001",
+    "http://127.0.0.1:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
 
-// Helper to check if user is admin
-async function checkAdmin(supabase: any, userId: string) {
-    const { data: profile } = await (supabase
-        .from('profiles') as any)
-        .select('role')
-        .eq('id', userId)
-        .single()
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
 
-    if (!profile || profile.role !== 'admin') {
-        throw new UnauthorizedError('Admin access required')
-    }
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, x-mock-auth, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+        "Vary": "Origin",
+    };
 }
 
-// OPTIONS /api/admin/products/[id] - Handle preflight request
 export async function OPTIONS(request: NextRequest) {
-    return handleCorsPreflightRequest(request)
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
-// GET /api/admin/products/[id] - Get single product
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const corsHeaders = getCorsHeaders(request);
+    const { id } = await params;
+
     try {
-        const origin = request.headers.get('origin')
-        const supabase = await createClient()
-        const { id } = await params
+        const product = await prisma.product.findUnique({
+            where: { id },
+            include: {
+                category: { select: { id: true, name: true, slug: true } }
+            }
+        });
 
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to access this resource')
+        if (!product) {
+            return NextResponse.json({ error: 'Product not found' }, { status: 404, headers: corsHeaders });
         }
 
-        // Check admin role
-        await checkAdmin(supabase, user.id)
+        return NextResponse.json({ data: product }, { headers: corsHeaders });
 
-        // Get product
-        const { data: product, error } = await (supabase
-            .from('products') as any)
-            .select('*, categories(id, name, slug)')
-            .eq('id', id)
-            .single()
-
-        if (error || !product) {
-            return NextResponse.json(
-                { error: 'Product not found' },
-                { status: 404, headers: getCorsHeaders(origin) }
-            )
-        }
-
-        return NextResponse.json({ data: product }, {
-            headers: getCorsHeaders(origin)
-        })
-
-    } catch (error) {
-        const errorRes = errorResponse(error)
-        const headers = new Headers(errorRes.headers)
-        const origin = request.headers.get('origin')
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+    } catch (err) {
+        const res = errorResponse(err);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// PUT /api/admin/products/[id] - Update product
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const corsHeaders = getCorsHeaders(request);
+    const { id } = await params;
+
     try {
-        const origin = request.headers.get('origin')
-        const supabase = await createClient()
-        const { id } = await params
-        const body = await request.json()
+        const body = await request.json();
 
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to access this resource')
+        // Validation
+        const validation = validateData(productSchema.partial(), body);
+        if (!validation.success || !validation.data) {
+            return NextResponse.json({
+                error: 'Validation failed',
+                errors: formatValidationErrors(validation.errors!)
+            }, { status: 400, headers: corsHeaders });
         }
 
-        // Check admin role
-        await checkAdmin(supabase, user.id)
+        const data = validation.data;
 
-        // Check if product exists
-        const { data: existingProduct } = await (supabase
-            .from('products') as any)
-            .select('id')
-            .eq('id', id)
-            .single()
-
-        if (!existingProduct) {
-            return NextResponse.json(
-                { error: 'Product not found' },
-                { status: 404, headers: getCorsHeaders(origin) }
-            )
+        // Check existence
+        const existing = await prisma.product.findUnique({ where: { id } });
+        if (!existing) {
+            return NextResponse.json({ error: 'Product not found' }, { status: 404, headers: corsHeaders });
         }
 
-        // If SKU is being updated, check for duplicates
-        if (body.sku) {
-            const { data: duplicateSKU } = await (supabase
-                .from('products') as any)
-                .select('id')
-                .eq('sku', body.sku)
-                .neq('id', id)
-                .single()
-
-            if (duplicateSKU) {
-                return NextResponse.json(
-                    { error: 'Another product with this SKU already exists' },
-                    { status: 400, headers: getCorsHeaders(origin) }
-                )
+        // Check SKU dupes if changed
+        if (data.sku && data.sku !== existing.sku) {
+            const dupe = await prisma.product.findUnique({ where: { sku: data.sku } });
+            if (dupe) {
+                return NextResponse.json({ error: 'Duplicate SKU' }, { status: 400, headers: corsHeaders });
             }
         }
 
-        // Update product
-        const { data: product, error: updateError } = await (supabase
-            .from('products') as any)
-            .update({
-                ...body,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', id)
-            .select()
-            .single()
+        const updateData: Prisma.ProductUpdateInput = {};
+        if (data.name) updateData.name = data.name;
+        if (data.sku) updateData.sku = data.sku;
+        if (data.slug) updateData.slug = data.slug;
+        if (data.category_id) updateData.category = { connect: { id: data.category_id } };
+        if (data.brand) updateData.brand = data.brand;
+        if (data.device_model) updateData.deviceModel = data.device_model;
+        if (data.product_type) updateData.productType = data.product_type;
+        if (data.base_price !== undefined) updateData.basePrice = new Prisma.Decimal(data.base_price);
+        if (data.cost_price !== undefined) updateData.costPrice = data.cost_price ? new Prisma.Decimal(data.cost_price) : null;
 
-        if (updateError) {
-            console.error('Failed to update product:', updateError)
-            throw new Error('Failed to update product')
-        }
+        if (data.wholesale_tier1_discount !== undefined) updateData.tier1Discount = data.wholesale_tier1_discount ? new Prisma.Decimal(data.wholesale_tier1_discount) : 0;
+        if (data.wholesale_tier2_discount !== undefined) updateData.tier2Discount = data.wholesale_tier2_discount ? new Prisma.Decimal(data.wholesale_tier2_discount) : 0;
+        if (data.wholesale_tier3_discount !== undefined) updateData.tier3Discount = data.wholesale_tier3_discount ? new Prisma.Decimal(data.wholesale_tier3_discount) : 0;
+
+        if (data.total_stock !== undefined) updateData.totalStock = data.total_stock;
+        if (data.low_stock_threshold !== undefined) updateData.lowStockThreshold = data.low_stock_threshold;
+
+        if (data.images) updateData.images = data.images;
+        if (data.thumbnail) updateData.thumbnail = data.thumbnail;
+        if (data.description) updateData.description = data.description;
+        if (data.specifications) updateData.specifications = data.specifications as Prisma.InputJsonValue;
+
+        if (data.meta_title) updateData.metaTitle = data.meta_title;
+        if (data.meta_description) updateData.metaDescription = data.meta_description;
+
+        if (data.is_active !== undefined) updateData.isActive = data.is_active;
+        if (data.is_featured !== undefined) updateData.isFeatured = data.is_featured;
+        if (data.is_new !== undefined) updateData.isNew = data.is_new;
+        if (data.is_bestseller !== undefined) updateData.isBestseller = data.is_bestseller;
+
+        const product = await prisma.product.update({
+            where: { id },
+            data: updateData
+        });
 
         return NextResponse.json({
             message: 'Product updated successfully',
-            data: product,
-        }, {
-            headers: getCorsHeaders(origin)
-        })
+            data: product
+        }, { headers: corsHeaders });
 
-    } catch (error) {
-        const errorRes = errorResponse(error)
-        const headers = new Headers(errorRes.headers)
-        const origin = request.headers.get('origin')
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+    } catch (err) {
+        console.error("Update Product Error", err);
+        const res = errorResponse(err);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// DELETE /api/admin/products/[id] - Delete product
 export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const corsHeaders = getCorsHeaders(request);
+    const { id } = await params;
+
     try {
-        const origin = request.headers.get('origin')
-        const supabase = await createClient()
-        const { id } = await params
-
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to access this resource')
-        }
-
-        // Check admin role
-        await checkAdmin(supabase, user.id)
-
-        // Check if product exists
-        const { data: existingProduct } = await (supabase
-            .from('products') as any)
-            .select('id')
-            .eq('id', id)
-            .single()
-
-        if (!existingProduct) {
-            return NextResponse.json(
-                { error: 'Product not found' },
-                { status: 404, headers: getCorsHeaders(origin) }
-            )
-        }
-
-        // Instead of deleting, we'll mark as inactive (soft delete)
-        // This preserves order history and prevents broken references
-        const { error: updateError } = await (supabase
-            .from('products') as any)
-            .update({
-                is_active: false,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', id)
-
-        if (updateError) {
-            console.error('Failed to delete product:', updateError)
-            throw new Error('Failed to delete product')
-        }
+        // Soft delete
+        await prisma.product.update({
+            where: { id },
+            data: { isActive: false }
+        });
 
         return NextResponse.json({
             success: true,
-            message: 'Product deleted successfully',
-        }, {
-            headers: getCorsHeaders(origin)
-        })
+            message: 'Product deleted successfully'
+        }, { headers: corsHeaders });
 
-    } catch (error) {
-        const errorRes = errorResponse(error)
-        const headers = new Headers(errorRes.headers)
-        const origin = request.headers.get('origin')
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+    } catch (err) {
+        const res = errorResponse(err);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

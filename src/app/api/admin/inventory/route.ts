@@ -1,136 +1,74 @@
-// app/api/admin/inventory/route.ts
-// Admin Inventory Management
+import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
+import { errorResponse, ForbiddenError } from '@/lib/utils/errors'
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import {
-    errorResponse,
-    UnauthorizedError,
-    ForbiddenError,
-} from "@/lib/utils/errors";
-import type { Database } from "@/types/database";
-import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors';
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
 
-// --- DB helper types ---
-type Tables = Database["public"]["Tables"];
-
-type ProfileRow = Tables["profiles"]["Row"];
-type InventoryRow = Tables["inventory"]["Row"];
-type ProductRow = Tables["products"]["Row"];
-type StoreRow = Tables["stores"]["Row"];
-type InventoryUpdate = Tables["inventory"]["Update"];
-
-type InventoryWithRelations = InventoryRow & {
-    products: Pick<
-        ProductRow,
-        "id" | "name" | "sku" | "base_price" | "low_stock_threshold" | "is_active"
-    > | null;
-    stores: Pick<StoreRow, "id" | "name" | "city" | "state"> | null;
-};
-
-type InventoryQuantityRow = Pick<InventoryRow, "quantity">;
-
-// OPTIONS /api/admin/inventory - Handle preflight request
-export async function OPTIONS(request: NextRequest) {
-    return handleCorsPreflightRequest(request);
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,PUT,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
 }
 
-// GET /api/admin/inventory - Get inventory overview
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
+
 export async function GET(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const origin = request.headers.get('origin');
-        const supabase = await createClient();
-
-        // Get authenticated user
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-        if (authError || !user) {
-            throw new UnauthorizedError();
-        }
-
-        // Check if user is admin
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id)
-            .single<Pick<ProfileRow, "role">>();
-
-        if (!profile || (profile as any).role !== "admin") {
-            throw new ForbiddenError("Only admins can access inventory");
-        }
+        const userRole = request.headers.get('x-user-role');
+        if (userRole !== 'ADMIN') throw new ForbiddenError('Admin access required');
 
         const { searchParams } = new URL(request.url);
-        const storeId = searchParams.get("store_id");
-        const status = searchParams.get("status"); // low_stock, out_of_stock, all
+        const storeId = searchParams.get('store_id');
+        const status = searchParams.get('status');
 
-        // Build query
-        let query = supabase
-            .from("inventory")
-            .select(
-                `
-        id,
-        quantity,
-        reserved_quantity,
-        last_restocked_at,
-        product_id,
-        store_id,
-        products(id, name, sku, base_price, low_stock_threshold, is_active),
-        stores(id, name, city, state)
-      `
+        const where: Prisma.InventoryWhereInput = {};
+        if (storeId) where.storeId = storeId;
+
+        // Fetch all relevant inventory (filtering by status requires calculation usually on product threshold)
+        // Prisma allows filtering by related fields? 
+        // e.g. quantity <= product.lowStockThreshold?
+        // No, Prisma can't compare two fields in 'where' clause directly without raw query.
+        // We will fetch and filter in memory as logic is complex or use raw query.
+        // Given inventory size might be large, Raw Query is better, OR fetch and filter if pagination not strict.
+        // For now, let's fetch related data and filter in memory as per original Implementation.
+
+        const rawInventory = await prisma.inventory.findMany({
+            where,
+            include: {
+                product: { select: { id: true, name: true, sku: true, basePrice: true, lowStockThreshold: true, isActive: true } },
+                store: { select: { id: true, name: true, city: true, state: true } }
+            }
+        });
+
+        let filteredInventory = rawInventory;
+
+        if (status === 'low_stock') {
+            filteredInventory = rawInventory.filter(item =>
+                (item.quantity || 0) > 0 && (item.quantity || 0) <= (item.product.lowStockThreshold || 10)
             );
-
-        if (storeId) {
-            query = query.eq("store_id", storeId);
+        } else if (status === 'out_of_stock') {
+            filteredInventory = rawInventory.filter(item => (item.quantity || 0) === 0);
         }
 
-        const { data: rawInventory, error } = await query;
-
-        if (error) {
-            console.error("Failed to fetch inventory:", error);
-            throw new Error("Failed to fetch inventory");
-        }
-
-        const inventory: InventoryWithRelations[] = (rawInventory ??
-            []) as InventoryWithRelations[];
-
-        // Filter by status
-        let filteredInventory = inventory;
-
-        if (status === "low_stock") {
-            filteredInventory = filteredInventory.filter((item) => {
-                const product = item.products;
-                return (
-                    item.quantity > 0 &&
-                    item.quantity <= (product?.low_stock_threshold ?? 10)
-                );
-            });
-        } else if (status === "out_of_stock") {
-            filteredInventory = filteredInventory.filter(
-                (item) => item.quantity === 0
-            );
-        }
-
-        // Calculate stats
         const totalItems = filteredInventory.length;
-
-        const lowStockItems = filteredInventory.filter((item) => {
-            const product = item.products;
-            return (
-                item.quantity > 0 &&
-                item.quantity <= (product?.low_stock_threshold ?? 10)
-            );
-        }).length;
-
-        const outOfStockItems = filteredInventory.filter(
-            (item) => item.quantity === 0
-        ).length;
-
-        const totalValue = filteredInventory.reduce((sum, item) => {
-            const product = item.products;
-            return sum + item.quantity * (product?.base_price ?? 0);
-        }, 0);
+        const lowStockItems = filteredInventory.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= (item.product.lowStockThreshold || 10)).length;
+        const outOfStockItems = filteredInventory.filter(item => (item.quantity || 0) === 0).length;
+        const totalValue = filteredInventory.reduce((sum, item) => sum + ((item.quantity || 0) * Number(item.product.basePrice)), 0);
 
         return NextResponse.json({
             data: {
@@ -139,119 +77,54 @@ export async function GET(request: NextRequest) {
                     total_items: totalItems,
                     low_stock: lowStockItems,
                     out_of_stock: outOfStockItems,
-                    total_value: Number(totalValue.toFixed(2)),
-                },
-            },
-        }, {
-            headers: getCorsHeaders(origin),
-        });
+                    total_value: Number(totalValue.toFixed(2))
+                }
+            }
+        }, { headers: corsHeaders });
+
     } catch (error) {
-        const errorRes = errorResponse(error);
-        const headers = new Headers(errorRes.headers);
-        const origin = request.headers.get('origin');
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value);
-        });
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        });
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// PUT /api/admin/inventory - Update inventory
 export async function PUT(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const origin = request.headers.get('origin');
-        const supabase = await createClient();
-
-        // Get authenticated user
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-        if (authError || !user) {
-            throw new UnauthorizedError();
-        }
-
-        // Check if user is admin
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id)
-            .single<Pick<ProfileRow, "role">>();
-
-        if (!profile || (profile as any).role !== "admin") {
-            throw new ForbiddenError("Only admins can update inventory");
-        }
+        const userRole = request.headers.get('x-user-role');
+        if (userRole !== 'ADMIN') throw new ForbiddenError('Admin access required');
 
         const body = await request.json();
         const { inventory_id, quantity, action } = body;
 
-        if (!inventory_id) {
-            return NextResponse.json(
-                { error: "inventory_id is required" },
-                { status: 400, headers: getCorsHeaders(origin) }
-            );
-        }
+        if (!inventory_id) return NextResponse.json({ error: 'Missing inventory_id' }, { status: 400, headers: corsHeaders });
 
-        // Get current inventory
-        const { data: currentInventory, error: fetchError } = await supabase
-            .from("inventory")
-            .select("quantity")
-            .eq("id", inventory_id)
-            .single<InventoryQuantityRow>();
+        const current = await prisma.inventory.findUnique({ where: { id: inventory_id } });
+        if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: corsHeaders });
 
-        if (fetchError || !currentInventory) {
-            return NextResponse.json(
-                { error: "Inventory not found" },
-                { status: 404, headers: getCorsHeaders(origin) }
-            );
-        }
+        let newQuantity = current.quantity || 0;
+        if (action === 'add') newQuantity += (quantity || 0);
+        else if (action === 'subtract') newQuantity = Math.max(0, newQuantity - (quantity || 0));
+        else newQuantity = quantity; // set directly if no action?
 
-        let newQuantity: number = quantity;
-
-        if (action === "add") {
-            newQuantity = currentInventory.quantity + quantity;
-        } else if (action === "subtract") {
-            newQuantity = Math.max(0, currentInventory.quantity - quantity);
-        }
-
-        const updatePayload = {
-            quantity: newQuantity,
-            ...(action === "add" && { last_restocked_at: new Date().toISOString() }),
-            updated_at: new Date().toISOString(),
-        };
-
-        // Update inventory
-        // @ts-ignore - Supabase inventory table type seems broken, using type assertion
-        const { data: updated, error: updateError } = await (supabase
-            .from("inventory") as any)
-            .update(updatePayload)
-            .eq("id", inventory_id)
-            .select()
-            .single();
-
-        if (updateError) {
-            throw new Error("Failed to update inventory");
-        }
+        const updated = await prisma.inventory.update({
+            where: { id: inventory_id },
+            data: {
+                quantity: newQuantity,
+                lastRestockedAt: action === 'add' ? new Date() : current.lastRestockedAt
+            }
+        });
 
         return NextResponse.json({
-            message: "Inventory updated successfully",
-            data: updated,
-        }, {
-            headers: getCorsHeaders(origin),
-        });
+            message: 'Inventory updated',
+            data: updated
+        }, { headers: corsHeaders });
+
     } catch (error) {
-        const errorRes = errorResponse(error);
-        const headers = new Headers(errorRes.headers);
-        const origin = request.headers.get('origin');
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value);
-        });
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        });
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

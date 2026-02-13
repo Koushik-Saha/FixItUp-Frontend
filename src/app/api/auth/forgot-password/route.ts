@@ -2,8 +2,10 @@
 // Forgot password endpoint
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 import { z } from 'zod'
+import { sendPasswordResetEmail } from '@/lib/email'
+import crypto from 'crypto'
 
 const forgotPasswordSchema = z.object({
     email: z.string().email('Invalid email address'),
@@ -28,23 +30,45 @@ export async function POST(request: NextRequest) {
 
         const { email } = validation.data
 
-        const supabase = await createClient()
-
-        // Send password reset email
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`,
+        // Find user
+        const user = await prisma.user.findUnique({
+            where: { email }
         })
 
-        if (error) {
+        // Always return success even if email not found (security best practice)
+        if (!user) {
             return NextResponse.json(
-                { error: error.message },
-                { status: 400 }
+                {
+                    message: 'If an account exists with this email, we have sent a password reset link.',
+                },
+                { status: 200 }
             )
+        }
+
+        // Generate Reset Token
+        const resetToken = crypto.randomUUID()
+        const expiry = new Date()
+        expiry.setHours(expiry.getHours() + 1) // 1 hour expiry
+
+        // Save token to user
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                resetToken,
+                resetTokenExpiry: expiry
+            }
+        })
+
+        // Send password reset email
+        const emailResult = await sendPasswordResetEmail(email, resetToken)
+
+        if (!emailResult.success) {
+            throw new Error('Failed to send email')
         }
 
         return NextResponse.json(
             {
-                message: 'Password reset email sent. Please check your inbox.',
+                message: 'If an account exists with this email, we have sent a password reset link.',
             },
             { status: 200 }
         )

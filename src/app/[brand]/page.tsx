@@ -197,7 +197,7 @@ export default function BrandModelsPage() {
                 {filteredModels.length === 0 && (
                     <div className="text-center py-12">
                         <p className="text-neutral-600 dark:text-neutral-400 text-lg">
-                            No models found matching "{searchQuery}"
+                            No models found matching &quot;{searchQuery}&quot;
                         </p>
                     </div>
                 )}

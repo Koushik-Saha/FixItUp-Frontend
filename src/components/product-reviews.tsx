@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Star, ThumbsUp, ThumbsDown, Image as ImageIcon, Video, Filter, ChevronDown } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, Video, Filter } from 'lucide-react'
 import Image from 'next/image'
 import { ReviewSkeleton } from './skeleton'
 import ReviewSubmissionForm from './review-submission-form'
@@ -41,8 +41,10 @@ export default function ProductReviews({
     averageRating,
     totalReviews
 }: ProductReviewsProps) {
-    const [reviews, setReviews] = useState<Review[]>([])
-    const [loading, setLoading] = useState(false)
+    // Reviews state (using sample data for now)
+    // const [reviews, setReviews] = useState<Review[]>([])
+    const [loading] = useState(false)
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     const [showReviewForm, setShowReviewForm] = useState(false)
 
     // Filters
@@ -53,7 +55,7 @@ export default function ProductReviews({
 
     // Pagination
     const [page, setPage] = useState(1)
-    const [hasMore, setHasMore] = useState(true)
+    const [hasMore] = useState(true)
 
     // Sample data - replace with actual API call
     const sampleReviews: Review[] = [
@@ -122,11 +124,10 @@ export default function ProductReviews({
                             {[...Array(5)].map((_, i) => (
                                 <Star
                                     key={i}
-                                    className={`h-5 w-5 ${
-                                        i < Math.floor(averageRating)
-                                            ? 'fill-yellow-500 text-yellow-500'
-                                            : 'text-neutral-300 dark:text-neutral-600'
-                                    }`}
+                                    className={`h-5 w-5 ${i < Math.floor(averageRating)
+                                        ? 'fill-yellow-500 text-yellow-500'
+                                        : 'text-neutral-300 dark:text-neutral-600'
+                                        }`}
                                 />
                             ))}
                         </div>
@@ -148,9 +149,8 @@ export default function ProductReviews({
                             <button
                                 key={item.stars}
                                 onClick={() => setFilterRating(filterRating === item.stars ? null : item.stars)}
-                                className={`w-full flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded p-2 transition-colors ${
-                                    filterRating === item.stars ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                                }`}
+                                className={`w-full flex items-center gap-3 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded p-2 transition-colors ${filterRating === item.stars ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                                    }`}
                             >
                                 <div className="flex items-center gap-1 w-16">
                                     <span className="text-sm font-medium">{item.stars}</span>
@@ -223,7 +223,7 @@ export default function ProductReviews({
                     <span className="text-sm text-neutral-600 dark:text-neutral-400">Sort by:</span>
                     <select
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
+                        onChange={(e) => setSortBy(e.target.value as 'recent' | 'helpful' | 'rating_high' | 'rating_low')}
                         className="px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm"
                     >
                         <option value="recent">Most Recent</option>
@@ -269,11 +269,10 @@ export default function ProductReviews({
                                                     {[...Array(5)].map((_, i) => (
                                                         <Star
                                                             key={i}
-                                                            className={`h-4 w-4 ${
-                                                                i < review.rating
-                                                                    ? 'fill-yellow-500 text-yellow-500'
-                                                                    : 'text-neutral-300 dark:text-neutral-600'
-                                                            }`}
+                                                            className={`h-4 w-4 ${i < review.rating
+                                                                ? 'fill-yellow-500 text-yellow-500'
+                                                                : 'text-neutral-300 dark:text-neutral-600'
+                                                                }`}
                                                         />
                                                     ))}
                                                 </div>

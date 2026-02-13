@@ -5,20 +5,16 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Mail } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('')
     const [isLoading, setIsLoading] = useState(false)
-    const [message, setMessage] = useState('')
-    const [error, setError] = useState('')
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
-        setError('')
-        setMessage('')
 
         try {
             const response = await fetch('/api/auth/forgot-password', {
@@ -32,13 +28,13 @@ export default function ForgotPasswordPage() {
             const data = await response.json()
 
             if (response.ok) {
-                setMessage(data.message)
+                toast.success(data.message || 'If an account exists, a reset link has been sent.')
                 setEmail('')
             } else {
-                setError(data.error || 'Failed to send reset email')
+                toast.error(data.error || 'Failed to send reset email')
             }
-        } catch (err) {
-            setError('Something went wrong. Please try again.')
+        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-unused-vars
+            toast.error('Something went wrong. Please try again.')
         } finally {
             setIsLoading(false)
         }
@@ -48,7 +44,7 @@ export default function ForgotPasswordPage() {
         <div className="min-h-screen bg-slate-50 dark:bg-neutral-900 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 <div className="mb-6">
-                    <Link 
+                    <Link
                         href="/auth/login"
                         className="inline-flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-300 transition-colors"
                     >
@@ -66,26 +62,12 @@ export default function ForgotPasswordPage() {
                             Forgot Password?
                         </CardTitle>
                         <CardDescription>
-                            Enter your email address and we'll send you a link to reset your password.
+                            Enter your email address and we&apos;ll send you a link to reset your password.
                         </CardDescription>
                     </CardHeader>
-                    
+
                     <CardContent className="space-y-6">
-                        {message && (
-                            <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
-                                <AlertDescription className="text-green-800 dark:text-green-400">
-                                    {message}
-                                </AlertDescription>
-                            </Alert>
-                        )}
-                        
-                        {error && (
-                            <Alert className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
-                                <AlertDescription className="text-red-800 dark:text-red-400">
-                                    {error}
-                                </AlertDescription>
-                            </Alert>
-                        )}
+                        {/* Alerts removed in favor of Toasts */}
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
@@ -104,8 +86,8 @@ export default function ForgotPasswordPage() {
                                 />
                             </div>
 
-                            <Button 
-                                type="submit" 
+                            <Button
+                                type="submit"
                                 className="w-full h-11"
                                 disabled={isLoading}
                             >
@@ -123,8 +105,8 @@ export default function ForgotPasswordPage() {
                         <div className="text-center">
                             <p className="text-sm text-neutral-600 dark:text-neutral-400">
                                 Remember your password?{' '}
-                                <Link 
-                                    href="/auth/login" 
+                                <Link
+                                    href="/auth/login"
                                     className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
                                 >
                                     Sign in

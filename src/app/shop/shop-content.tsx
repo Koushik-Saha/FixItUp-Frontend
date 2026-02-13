@@ -1,21 +1,26 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, SlidersHorizontal, Grid, List, ShoppingCart, Loader2, AlertCircle } from 'lucide-react'
-import Image from 'next/image'
+import { Grid, List, Loader2, AlertCircle, SlidersHorizontal, Search } from 'lucide-react' // Keeping Search/Sliders for empty state if needed
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { getProducts, Product } from '@/lib/api/products'
+import { getProducts, Product, GetProductsParams } from '@/lib/api/products'
 import { addToCart } from '@/lib/api/cart'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import StockIndicator from '@/components/stock-indicator'
+import { useCartStore } from '@/store'
+
+// Imports
+import { ProductCard } from '@/components/shop/product-card'
+import { ShopSidebar } from '@/components/shop/shop-sidebar'
 
 const SORT_OPTIONS = [
     { value: 'created_at', label: 'Most Recent' },
-    { value: 'base_price', label: 'Price: Low to High', order: 'asc' },
-    { value: 'base_price', label: 'Price: High to Low', order: 'desc' },
+    { value: 'basePrice', label: 'Price: Low to High', order: 'asc' },
+    { value: 'basePrice', label: 'Price: High to Low', order: 'desc' },
     { value: 'name', label: 'Name: A to Z', order: 'asc' }
 ]
 
@@ -30,7 +35,13 @@ export default function ShopContent() {
     const [error, setError] = useState<string | null>(null)
     const [cartLoading, setCartLoading] = useState<string | null>(null)
     const [addToCartMessage, setAddToCartMessage] = useState<string | null>(null)
-    
+
+    // Metadata State (for filters)
+    const [categories, setCategories] = useState<string[]>([])
+    const [brands, setBrands] = useState<string[]>([])
+    const [globalMinPrice, setGlobalMinPrice] = useState(0)
+    const [globalMaxPrice, setGlobalMaxPrice] = useState(1000)
+
     // Filter states
     const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '')
     const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || '')
@@ -40,40 +51,67 @@ export default function ShopContent() {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [showFilters, setShowFilters] = useState(false)
-    
+
     // Pagination
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
-    const [totalProducts, setTotalProducts] = useState(0)
     const limit = 20
+
+    // Load Metadata (Brands, Price Range) & Categories
+    useEffect(() => {
+        const fetchMetadata = async () => {
+            try {
+                // 1. Fetch Categories
+                const catRes = await fetch('/api/categories')
+                const catJson = await catRes.json()
+                if (catJson.data) {
+                    setCategories(catJson.data.map((c: { name: string }) => c.name))
+                }
+
+                // 2. Fetch Product Metadata
+                const metaRes = await fetch('/api/products/metadata')
+                const metaJson = await metaRes.json()
+                if (metaJson.brands) {
+                    setBrands(metaJson.brands)
+                    setGlobalMinPrice(metaJson.minPrice)
+                    setGlobalMaxPrice(metaJson.maxPrice)
+                    // Only update max price if it hasn't been touched by user
+                    if (priceRange[1] === 1000) {
+                        setPriceRange([metaJson.minPrice, metaJson.maxPrice])
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load shop metadata", err)
+            }
+        }
+        fetchMetadata()
+    }, [])
 
     // Load products
     const loadProducts = async () => {
         try {
             setLoading(true)
             setError(null)
-            
-            const params: any = {
+
+            const params: Record<string, string | number> = {
                 page: currentPage,
                 limit,
                 sort: sortBy,
                 order: sortOrder,
+                minPrice: priceRange[0],
+                maxPrice: priceRange[1],
             }
-            
+
             if (searchQuery) params.search = searchQuery
             if (selectedCategory) params.category = selectedCategory
             if (selectedBrand) params.brand = selectedBrand
-            
+            // Add device filter
+            const deviceParam = searchParams?.get('device')
+            if (deviceParam) params.device = deviceParam
+
             const response = await getProducts(params)
-            
-            // Filter by price range on client side (since API doesn't support this directly)
-            const filteredProducts = response.data.filter(product => {
-                const price = product.displayPrice || product.base_price
-                return price >= priceRange[0] && price <= priceRange[1]
-            })
-            
-            setProducts(filteredProducts)
-            setTotalProducts(response.pagination.total)
+
+            setProducts(response.data)
             setTotalPages(response.pagination.totalPages)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load products')
@@ -88,10 +126,17 @@ export default function ShopContent() {
             router.push('/auth/login')
             return
         }
-        
+
         try {
             setCartLoading(productId)
             await addToCart(productId, 1)
+
+            // Sync with local store
+            const product = products.find(p => p.id === productId)
+            if (product) {
+                useCartStore.getState().addItem(product as any, 1)
+            }
+
             setAddToCartMessage('Item added to cart successfully!')
             setTimeout(() => setAddToCartMessage(null), 3000)
         } catch (err) {
@@ -101,14 +146,14 @@ export default function ShopContent() {
         }
     }
 
-    // Load products on mount and when filters change
+    // Load products when filters change
     useEffect(() => {
         loadProducts()
     }, [currentPage, sortBy, sortOrder, searchQuery, selectedCategory, selectedBrand, priceRange])
 
     // Handle sort change
     const handleSortChange = (value: string) => {
-        const option = SORT_OPTIONS.find(opt => 
+        const option = SORT_OPTIONS.find(opt =>
             value === `${opt.value}-${opt.order || 'desc'}`
         )
         if (option) {
@@ -123,16 +168,12 @@ export default function ShopContent() {
         setSearchQuery('')
         setSelectedCategory('')
         setSelectedBrand('')
-        setPriceRange([0, 1000])
+        setPriceRange([globalMinPrice, globalMaxPrice])
         setCurrentPage(1)
         router.push('/shop')
     }
 
-    // Get unique categories and brands from products
-    const categories = [...new Set(products.map(p => p.category?.name).filter(Boolean))]
-    const brands = [...new Set(products.map(p => p.brand).filter(Boolean))]
-    
-    const hasActiveFilters = searchQuery || selectedCategory || selectedBrand || priceRange[0] > 0 || priceRange[1] < 1000
+    const hasActiveFilters = searchQuery || selectedCategory || selectedBrand || priceRange[0] > globalMinPrice || priceRange[1] < globalMaxPrice
 
     if (loading && products.length === 0) {
         return (
@@ -152,10 +193,10 @@ export default function ShopContent() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                         {error}
-                        <Button 
-                            onClick={loadProducts} 
-                            variant="outline" 
-                            size="sm" 
+                        <Button
+                            onClick={loadProducts}
+                            variant="outline"
+                            size="sm"
                             className="mt-2 w-full"
                         >
                             Try Again
@@ -209,97 +250,24 @@ export default function ShopContent() {
                 <div className="grid lg:grid-cols-[280px_1fr] gap-8">
 
                     {/* Filters Sidebar */}
-                    <aside className={`${showFilters ? 'block' : 'hidden lg:block'}`}>
-                        <div className="bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 p-6 sticky top-4">
-                            {/* Filter Header */}
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                    <SlidersHorizontal className="h-5 w-5" />
-                                    Filters
-                                </h2>
-                                {hasActiveFilters && (
-                                    <button
-                                        onClick={clearFilters}
-                                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                                    >
-                                        Clear All
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Search */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                                    Search
-                                </label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                                    <input
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder="Search products..."
-                                        className="w-full pl-10 pr-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Category Filter */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                                    Category
-                                </label>
-                                <select
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white"
-                                >
-                                    <option value="">All Categories</option>
-                                    {categories.map(category => (
-                                        <option key={category} value={category}>{category}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Brand Filter */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                                    Brand
-                                </label>
-                                <select
-                                    value={selectedBrand}
-                                    onChange={(e) => setSelectedBrand(e.target.value)}
-                                    className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white"
-                                >
-                                    <option value="">All Brands</option>
-                                    {brands.map(brand => (
-                                        <option key={brand} value={brand}>{brand}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Price Range */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                                    Price Range
-                                </label>
-                                <div className="space-y-3">
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="1000"
-                                        value={priceRange[1]}
-                                        onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
-                                        className="w-full"
-                                    />
-                                    <div className="flex items-center justify-between text-sm text-neutral-600 dark:text-neutral-400">
-                                        <span>${priceRange[0]}</span>
-                                        <span>${priceRange[1]}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </aside>
+                    <ShopSidebar
+                        showFilters={showFilters}
+                        setShowFilters={setShowFilters}
+                        categories={categories}
+                        brands={brands}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        selectedCategory={selectedCategory}
+                        setSelectedCategory={setSelectedCategory}
+                        selectedBrand={selectedBrand}
+                        setSelectedBrand={setSelectedBrand}
+                        priceRange={priceRange}
+                        setPriceRange={setPriceRange}
+                        minPrice={globalMinPrice}
+                        maxPrice={globalMaxPrice}
+                        hasActiveFilters={!!hasActiveFilters}
+                        clearFilters={clearFilters}
+                    />
 
                     {/* Products Area */}
                     <main>
@@ -321,8 +289,8 @@ export default function ShopContent() {
                                         className="px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-sm"
                                     >
                                         {SORT_OPTIONS.map(option => (
-                                            <option 
-                                                key={`${option.value}-${option.order || 'desc'}`} 
+                                            <option
+                                                key={`${option.value}-${option.order || 'desc'}`}
                                                 value={`${option.value}-${option.order || 'desc'}`}
                                             >
                                                 {option.label}
@@ -416,11 +384,11 @@ export default function ShopContent() {
                                     >
                                         Previous
                                     </Button>
-                                    
+
                                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                         const page = currentPage <= 3 ? i + 1 : currentPage - 2 + i
                                         if (page > totalPages) return null
-                                        
+
                                         return (
                                             <Button
                                                 key={page}
@@ -432,7 +400,7 @@ export default function ShopContent() {
                                             </Button>
                                         )
                                     })}
-                                    
+
                                     <Button
                                         variant="outline"
                                         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
@@ -445,186 +413,6 @@ export default function ShopContent() {
                         )}
                     </main>
                 </div>
-            </div>
-        </div>
-    )
-}
-
-// Product Card Component
-interface ProductCardProps {
-    product: Product
-    viewMode: 'grid' | 'list'
-    onAddToCart: (productId: string) => void
-    isLoading: boolean
-    user: any
-}
-
-function ProductCard({ product, viewMode, onAddToCart, isLoading, user }: ProductCardProps) {
-    const price = product.displayPrice || product.base_price
-    const originalPrice = product.originalPrice || product.base_price
-    const discountPercentage = product.discountPercentage || 0
-    const isWholesale = product.isWholesale || false
-
-    if (viewMode === 'list') {
-        return (
-            <div className="bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 hover:shadow-lg transition-shadow">
-                <div className="flex gap-4">
-                    {/* Image */}
-                    <Link href={`/products/${product.id}`} className="flex-shrink-0">
-                        <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-lg flex items-center justify-center overflow-hidden">
-                            {product.thumbnail ? (
-                                <Image
-                                    src={product.thumbnail}
-                                    alt={product.name}
-                                    width={128}
-                                    height={128}
-                                    className="object-cover w-full h-full"
-                                />
-                            ) : (
-                                <span className="text-4xl">{product.brand?.[0] || 'P'}</span>
-                            )}
-                        </div>
-                    </Link>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4 mb-2">
-                            <div className="flex-1">
-                                <Link href={`/products/${product.id}`}>
-                                    <h3 className="font-semibold text-neutral-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 mb-1">
-                                        {product.name}
-                                    </h3>
-                                </Link>
-                                <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                                    SKU: {product.sku} | {product.brand} | {product.device_model}
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-2xl font-bold text-neutral-900 dark:text-white">
-                                    ${price.toFixed(2)}
-                                    {isWholesale && (
-                                        <span className="text-xs text-green-600"> (Wholesale)</span>
-                                    )}
-                                </p>
-                                {discountPercentage > 0 && (
-                                    <p className="text-sm text-neutral-500 line-through">
-                                        ${originalPrice.toFixed(2)}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 mb-3">
-                            {/* Stock */}
-                            <StockIndicator stock={product.total_stock} showCount={true} size="sm" />
-
-                            {/* Badges */}
-                            {product.is_new && (
-                                <span className="bg-green-500 text-white text-xs px-2 py-1 rounded font-bold">NEW</span>
-                            )}
-                            {product.is_featured && (
-                                <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded font-bold">FEATURED</span>
-                            )}
-                        </div>
-
-                        <Button 
-                            onClick={() => onAddToCart(product.id)}
-                            disabled={isLoading || product.total_stock <= 0 || !user}
-                            className="w-full md:w-auto"
-                        >
-                            {isLoading ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                                <ShoppingCart className="h-4 w-4 mr-2" />
-                            )}
-                            {!user ? 'Login to Purchase' : 'Add to Cart'}
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    // Grid View
-    return (
-        <div className="bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-xl transition-shadow group">
-            {/* Image */}
-            <Link href={`/products/${product.id}`} className="block relative aspect-square bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900">
-                {product.thumbnail ? (
-                    <Image
-                        src={product.thumbnail}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                    />
-                ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-6xl">{product.brand?.[0] || 'P'}</span>
-                    </div>
-                )}
-                
-                {/* Badges */}
-                <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    {product.is_new && (
-                        <span className="bg-green-500 text-white text-xs px-2 py-1 rounded font-bold">NEW</span>
-                    )}
-                    {product.is_featured && (
-                        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded font-bold">FEATURED</span>
-                    )}
-                    {discountPercentage > 0 && (
-                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded font-bold">
-                            -{Math.round(discountPercentage)}%
-                        </span>
-                    )}
-                </div>
-            </Link>
-
-            {/* Info */}
-            <div className="p-4">
-                <Link href={`/products/${product.id}`}>
-                    <h3 className="font-semibold text-neutral-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 mb-1 line-clamp-2 min-h-[48px]">
-                        {product.name}
-                    </h3>
-                </Link>
-
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
-                    {product.brand} | {product.device_model}
-                </p>
-
-                {/* Price */}
-                <div className="flex items-baseline gap-1 mb-2">
-                    <span className="text-2xl font-bold text-neutral-900 dark:text-white">
-                        ${price.toFixed(2)}
-                    </span>
-                    {isWholesale && (
-                        <span className="text-xs text-green-600">(Wholesale)</span>
-                    )}
-                </div>
-
-                {discountPercentage > 0 && (
-                    <p className="text-sm text-neutral-500 line-through mb-2">
-                        ${originalPrice.toFixed(2)}
-                    </p>
-                )}
-
-                {/* Stock */}
-                <div className="mb-3">
-                    <StockIndicator stock={product.total_stock} showCount={true} size="sm" />
-                </div>
-
-                {/* Add to Cart */}
-                <Button 
-                    onClick={() => onAddToCart(product.id)}
-                    disabled={isLoading || product.total_stock <= 0 || !user}
-                    className="w-full"
-                >
-                    {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                    )}
-                    {!user ? 'Login to Purchase' : 'Add to Cart'}
-                </Button>
             </div>
         </div>
     )

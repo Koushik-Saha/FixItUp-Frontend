@@ -27,20 +27,11 @@ export function ProductCard({ product, showQuickView = true, className }: Produc
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore()
 
   const isWishlisted = isInWishlist(product.id)
-  
+
   // Calculate pricing based on user type
-  const getPrice = () => {
-    if (!user || user.role === 'retail' || user.role === 'guest') {
-      return product.retailPrice
-    }
-    if (user.role === 'business') {
-      return product.wholesalePrice
-    }
-    return product.retailPrice
-  }
+  // Pricing helper removed (unused)
 
   const showBusinessPricing = user?.role === 'business'
-  const showBusinessTeaser = !user || user.role === 'retail'
   const discount = showBusinessPricing
     ? calculateDiscount(product.retailPrice, product.wholesalePrice)
     : 0
@@ -55,7 +46,7 @@ export function ProductCard({ product, showQuickView = true, className }: Produc
     if (isWishlisted) {
       removeFromWishlist(product.id)
     } else {
-      addToWishlist(product.id)
+      addToWishlist(product)
     }
   }
 
@@ -159,8 +150,8 @@ export function ProductCard({ product, showQuickView = true, className }: Produc
                   product.qualityGrade === 'oem'
                     ? 'success'
                     : product.qualityGrade === 'premium'
-                    ? 'info'
-                    : 'default'
+                      ? 'info'
+                      : 'default'
                 }
                 size="sm"
               >

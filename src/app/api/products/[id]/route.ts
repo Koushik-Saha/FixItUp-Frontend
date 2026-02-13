@@ -1,220 +1,187 @@
-// app/api/products/[id]/route.ts
-// Products API - Get, Update, Delete single product
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import {
-    errorResponse,
-    NotFoundError,
-    UnauthorizedError,
-    ForbiddenError,
-} from '@/lib/utils/errors'
-import {
-    productSchema,
-    validateData,
-    formatValidationErrors,
-} from '@/utils/validation'
+import prisma from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
+import { errorResponse, NotFoundError, ForbiddenError, ValidationError } from '@/lib/utils/errors'
+import { productSchema, validateData, formatValidationErrors } from '@/utils/validation'
 
-// GET /api/products/[id] - Get single product
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
+
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
+}
+
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
+
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
+        const { id } = await params;
+        const userId = request.headers.get('x-user-id');
+        const userRole = request.headers.get('x-user-role'); // Passed from middleware
 
-        // ✅ Next 15: resolve params
-        const { id } = await params
+        const product = await prisma.product.findUnique({
+            where: { id },
+            include: { category: true }
+        });
 
-        // Fetch product with category
-        const { data: product, error } = await (supabase
-            .from('products') as any)
-            .select('*, category:categories(id, name, slug)')
-            .eq('id', id)
-            .single()
+        if (!product) throw new NotFoundError('Product');
 
-        if (error || !product) {
-            throw new NotFoundError('Product')
+        // Check if active (admins can see inactive)
+        const isAdmin = userRole === 'ADMIN';
+        if (!product.isActive && !isAdmin) {
+            throw new NotFoundError('Product');
         }
 
-        // Check if product is active (unless user is admin)
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-        let isAdmin = false
-
-        if (user) {
-            const { data: profile } = await (supabase
-                .from('profiles') as any)
-                .select('role')
-                .eq('id', user.id)
-                .single()
-
-            isAdmin = profile?.role === 'admin'
+        // Pricing
+        let wholesaleTier = null;
+        if (userId) {
+            const user = await prisma.user.findUnique({ where: { id: userId }, select: { wholesaleTier: true } });
+            wholesaleTier = user?.wholesaleTier;
         }
 
-        if (!product.is_active && !isAdmin) {
-            throw new NotFoundError('Product')
+        let displayPrice = Number(product.basePrice);
+        let discountPercentage = 0;
+
+        if (userRole === 'WHOLESALE' && wholesaleTier) {
+            if (wholesaleTier === 'TIER1') discountPercentage = Number(product.tier1Discount);
+            else if (wholesaleTier === 'TIER2') discountPercentage = Number(product.tier2Discount);
+            else if (wholesaleTier === 'TIER3') discountPercentage = Number(product.tier3Discount);
+            displayPrice = displayPrice * (1 - discountPercentage / 100);
         }
 
-        // Get user profile for pricing
-        let userProfile: { role: string; wholesale_tier: string | null } | null =
-            null
-
-        if (user) {
-            const { data: profile } = await (supabase
-                .from('profiles') as any)
-                .select('role, wholesale_tier')
-                .eq('id', user.id)
-                .single()
-
-            userProfile = profile
-        }
-
-        // Calculate pricing
-        let displayPrice: number = product.base_price
-        let discountPercentage = 0
-
-        if (userProfile?.role === 'wholesale') {
-            switch (userProfile.wholesale_tier) {
-                case 'tier1':
-                    discountPercentage = product.wholesale_tier1_discount
-                    break
-                case 'tier2':
-                    discountPercentage = product.wholesale_tier2_discount
-                    break
-                case 'tier3':
-                    discountPercentage = product.wholesale_tier3_discount
-                    break
-            }
-            displayPrice = product.base_price * (1 - discountPercentage / 100)
-        }
-
-        // Get inventory across all stores
-        const { data: inventory } = await (supabase
-            .from('inventory') as any)
-            .select('store_id, quantity, stores(name, city, state)')
-            .eq('product_id', id)
+        // Inventory (Assuming Inventory model exists or using totalStock from Product)
+        // Schema shows Inventory model linked to Store and Product.
+        const inventory = await prisma.inventory.findMany({
+            where: { productId: id },
+            include: { store: true }
+        });
 
         return NextResponse.json({
             data: {
                 ...product,
                 displayPrice: Number(displayPrice.toFixed(2)),
                 discountPercentage,
-                originalPrice: product.base_price,
-                isWholesale: userProfile?.role === 'wholesale',
-                inventory: inventory || [],
-            },
-        })
+                originalPrice: Number(product.basePrice),
+                isWholesale: userRole === 'WHOLESALE',
+                inventory: inventory || []
+            }
+        }, { headers: corsHeaders });
+
     } catch (error) {
-        return errorResponse(error)
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// PUT /api/products/[id] - Update product (Admin only)
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
+        const { id } = await params;
+        const userRole = request.headers.get('x-user-role');
 
-        // ✅ resolve params
-        const { id } = await params
-
-        // Check authentication and admin role
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError()
+        if (userRole !== 'ADMIN') {
+            throw new ForbiddenError('Only admins can update products');
         }
 
-        const { data: profile } = await (supabase
-            .from('profiles') as any)
-            .select('role')
-            .eq('id', user.id)
-            .single()
+        const body = await request.json();
+        const output = validateData(productSchema.partial(), body);
 
-        if (!profile || (profile as any).role !== 'admin') {
-            throw new ForbiddenError('Only admins can update products')
+        if (!output.success) {
+            return NextResponse.json({
+                error: 'Validation failed',
+                errors: formatValidationErrors(output.errors!)
+            }, { status: 400, headers: corsHeaders });
         }
 
-        // Parse and validate request body
-        const body = await request.json()
-        const validation = validateData(productSchema.partial(), body)
+        const data = output.data!;
 
-        if (!validation.success) {
-            return NextResponse.json(
-                {
-                    error: 'Validation failed',
-                    errors: formatValidationErrors(validation.errors!),
-                },
-                { status: 400 }
-            )
+        const updateData: Prisma.ProductUpdateInput = {};
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.sku !== undefined) updateData.sku = data.sku;
+        if (data.slug !== undefined) updateData.slug = data.slug;
+        if (data.description !== undefined) updateData.description = data.description;
+        if (data.brand !== undefined) updateData.brand = data.brand;
+        if (data.device_model !== undefined) updateData.deviceModel = data.device_model;
+        if (data.category_id !== undefined) {
+            updateData.category = { connect: { id: data.category_id } };
         }
+        if (data.base_price !== undefined) updateData.basePrice = new Prisma.Decimal(data.base_price);
+        if (data.cost_price !== undefined) updateData.costPrice = new Prisma.Decimal(data.cost_price);
+        if (data.total_stock !== undefined) updateData.totalStock = data.total_stock;
+        if (data.is_active !== undefined) updateData.isActive = data.is_active;
+        if (data.is_featured !== undefined) updateData.isFeatured = data.is_featured;
+        if (data.is_new !== undefined) updateData.isNew = data.is_new;
+        if (data.images !== undefined) updateData.images = data.images;
+        if (data.thumbnail !== undefined) updateData.thumbnail = data.thumbnail;
+        if (data.specifications !== undefined) updateData.specifications = data.specifications as Prisma.InputJsonValue;
+        // Wholesale discounts
+        if (data.wholesale_tier1_discount !== undefined) updateData.tier1Discount = new Prisma.Decimal(data.wholesale_tier1_discount);
+        if (data.wholesale_tier2_discount !== undefined) updateData.tier2Discount = new Prisma.Decimal(data.wholesale_tier2_discount);
+        if (data.wholesale_tier3_discount !== undefined) updateData.tier3Discount = new Prisma.Decimal(data.wholesale_tier3_discount);
 
-        // Update product
-        const { data: product, error: updateError } = await (supabase
-            .from('products') as any)
-            .update(validation.data)
-            .eq('id', id)
-            .select()
-            .single()
 
-        if (updateError || !product) {
-            throw new NotFoundError('Product')
-        }
+        const product = await prisma.product.update({
+            where: { id },
+            data: updateData
+        });
 
-        return NextResponse.json({ data: product })
+        return NextResponse.json({ data: product }, { headers: corsHeaders });
+
     } catch (error) {
-        return errorResponse(error)
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// DELETE /api/products/[id] - Delete product (Admin only)
 export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
+        const { id } = await params;
+        const userRole = request.headers.get('x-user-role');
 
-        // ✅ resolve params
-        const { id } = await params
-
-        // Check authentication and admin role
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError()
+        if (userRole !== 'ADMIN') {
+            throw new ForbiddenError('Only admins can delete products');
         }
 
-        const { data: profile } = await (supabase
-            .from('profiles') as any)
-            .select('role')
-            .eq('id', user.id)
-            .single()
+        // Soft Delete
+        await prisma.product.update({
+            where: { id },
+            data: { isActive: false }
+        });
 
-        if (!profile || (profile as any).role !== 'admin') {
-            throw new ForbiddenError('Only admins can delete products')
-        }
+        return NextResponse.json({ message: 'Product deleted successfully' }, { headers: corsHeaders });
 
-        // Soft delete (set is_active to false)
-        const { error: deleteError } = await (supabase
-            .from('products') as any)
-            .update({ is_active: false })
-            .eq('id', id)
-
-        if (deleteError) {
-            throw new NotFoundError('Product')
-        }
-
-        return NextResponse.json({ message: 'Product deleted successfully' })
     } catch (error) {
-        return errorResponse(error)
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

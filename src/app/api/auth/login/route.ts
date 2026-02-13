@@ -1,111 +1,69 @@
-// app/api/auth/login/route.ts
-// Login endpoint
-
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { z } from 'zod'
-import {Database} from "@/types/database";
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { verifyPassword } from "@/lib/auth";
+import { signJWT } from "@/lib/jwt";
+import { z } from "zod";
+import { cookies } from "next/headers";
+import { rateLimit } from "@/lib/ratelimit";
 
 const loginSchema = z.object({
-    email: z.string().email('Invalid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
-})
+    email: z.string().email(),
+    password: z.string(),
+});
 
-// Helper function to add CORS headers
-function corsHeaders(origin: string | null) {
-    const allowedOrigins = [
-        'https://fix-it-admin-pearl.vercel.app',
-        'http://localhost:5001',
-        'http://localhost:3001',
-        'http://localhost:3000',
-    ]
-
-    const headers: Record<string, string> = {}
-    if (origin && allowedOrigins.includes(origin)) {
-        headers['Access-Control-Allow-Origin'] = origin
-        headers['Access-Control-Allow-Credentials'] = 'true'
-        headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-    }
-    return headers
-}
-
-// OPTIONS /api/auth/login - Handle preflight requests
-export async function OPTIONS(request: NextRequest) {
-    const origin = request.headers.get('origin')
-    return new NextResponse(null, {
-        status: 200,
-        headers: {
-            ...corsHeaders(origin),
-            'Access-Control-Max-Age': '86400',
-        },
-    })
-}
-
-// POST /api/auth/login - User login
-export async function POST(request: NextRequest) {
-    const origin = request.headers.get('origin')
+export async function POST(req: Request) {
     try {
-        const body = await request.json()
+        console.log("Login Request Received");
+        // Rate Limiting
+        const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+        const { success } = await rateLimit(`login_${ip}`);
 
-        type Profile = Database['public']['Tables']['profiles']['Row']
-
-        // Validate input
-        const validation = loginSchema.safeParse(body)
-        if (!validation.success) {
-            return NextResponse.json(
-                {
-                    error: 'Validation failed',
-                    errors: validation.error.flatten().fieldErrors,
-                },
-                { status: 400, headers: corsHeaders(origin) }
-            )
+        if (!success) {
+            return NextResponse.json({ error: "Too many login attempts. Please try again later." }, { status: 429 });
         }
 
-        const { email, password } = validation.data
+        const body = await req.json();
+        const validated = loginSchema.safeParse(body);
 
-        const supabase = await createClient()
-
-        // Sign in with Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        })
-
-        if (error) {
-            return NextResponse.json(
-                { error: error.message },
-                { status: 401, headers: corsHeaders(origin) }
-            )
+        if (!validated.success) {
+            return NextResponse.json({ error: "Invalid input" }, { status: 400 });
         }
 
-        // Get user profile
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .maybeSingle<Profile>()
+        const { email, password } = validated.data;
 
-        // Transform response to match admin panel format
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (!user || !user.password) {
+            return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+        }
+
+        const isValid = await verifyPassword(password, user.password);
+
+        if (!isValid) {
+            return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+        }
+
+        const token = await signJWT({ id: user.id, email: email, role: user.role || 'CUSTOMER' });
+        const cookieStore = await cookies();
+
+        cookieStore.set("auth_token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+            path: "/",
+        });
+
         return NextResponse.json({
-            user: {
-                id: data.user.id,
-                email: data.user.email || '',
-                name: profile?.full_name ?? '',
-                role: profile?.role ?? 'customer',
-                createdAt: data.user.created_at || new Date().toISOString(),
-                lastLoginAt: data.user.last_sign_in_at || undefined,
-                // Also include full profile for frontend use
-                ...profile ?? {},
-            },
-            message: 'Login successful',
-        }, { headers: corsHeaders(origin) })
+            data: {
+                user: { id: user.id, email: user.email, role: user.role, fullName: user.fullName }
+            }
+        });
 
     } catch (error) {
-        console.error('Login error:', error)
-        return NextResponse.json(
-            { error: 'Login failed' },
-            { status: 500, headers: corsHeaders(origin) }
-        )
+        console.error("Login Error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

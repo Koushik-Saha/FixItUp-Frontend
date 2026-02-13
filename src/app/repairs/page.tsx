@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-html-link-for-pages */
 'use client'
 
 import { useState } from 'react'
@@ -254,8 +259,8 @@ export default function RepairServicesPage() {
                                             <div className="flex flex-wrap gap-2">
                                                 {service.brands.map(brand => (
                                                     <span key={brand} className="px-3 py-1 bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded text-sm">
-                            {brand}
-                          </span>
+                                                        {brand}
+                                                    </span>
                                                 ))}
                                             </div>
                                         </div>

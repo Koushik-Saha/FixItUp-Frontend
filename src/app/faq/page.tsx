@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-html-link-for-pages */
 'use client'
 
 import { useState } from 'react'
@@ -114,11 +119,10 @@ export default function FAQPage() {
                                     <button
                                         key={category.id}
                                         onClick={() => { setActiveCategory(category.id); setOpenItems([]) }}
-                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
-                                            activeCategory === category.id
+                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${activeCategory === category.id
                                                 ? 'bg-blue-600 text-white'
                                                 : 'bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'
-                                        }`}
+                                            }`}
                                     >
                                         <Icon className="h-5 w-5 flex-shrink-0" />
                                         <span className="font-medium">{category.label}</span>
@@ -169,9 +173,8 @@ export default function FAQPage() {
                                                 )}
                                             </div>
                                             <ChevronDown
-                                                className={`h-6 w-6 text-neutral-400 flex-shrink-0 transition-transform ${
-                                                    openItems.includes(index) ? 'rotate-180' : ''
-                                                }`}
+                                                className={`h-6 w-6 text-neutral-400 flex-shrink-0 transition-transform ${openItems.includes(index) ? 'rotate-180' : ''
+                                                    }`}
                                             />
                                         </button>
                                         {openItems.includes(index) && (

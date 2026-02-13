@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, CheckCircle, AlertCircle, Building2, User, Mail, Phone, MapPin, Package, FileText } from 'lucide-react'
+import { Upload, CheckCircle, Building2, User, MapPin, Package, FileText } from 'lucide-react'
+import Link from 'next/link'
 
 export default function WholesaleApplicationPage() {
     const [formData, setFormData] = useState({
@@ -111,7 +112,7 @@ export default function WholesaleApplicationPage() {
                         <div className="flex items-start gap-3">
                             <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                             <p className="text-neutral-700 dark:text-neutral-300">
-                                You'll receive an email confirmation at <span className="font-semibold">{formData.email}</span>
+                                You&apos;ll receive an email confirmation at <span className="font-semibold">{formData.email}</span>
                             </p>
                         </div>
                         <div className="flex items-start gap-3">
@@ -123,7 +124,7 @@ export default function WholesaleApplicationPage() {
                         <div className="flex items-start gap-3">
                             <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                             <p className="text-neutral-700 dark:text-neutral-300">
-                                Once approved, you'll receive login credentials to access the wholesale portal.
+                                Once approved, you&apos;ll receive login credentials to access the wholesale portal.
                             </p>
                         </div>
                     </div>
@@ -139,12 +140,12 @@ export default function WholesaleApplicationPage() {
                             >
                                 Contact Us
                             </a>
-                            <a
+                            <Link
                                 href="/"
                                 className="px-6 py-3 border border-neutral-300 dark:border-neutral-600 text-neutral-700 dark:text-neutral-300 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors font-medium"
                             >
                                 Back to Home
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>

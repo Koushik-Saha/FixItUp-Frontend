@@ -128,9 +128,10 @@ export default function ReviewSubmissionForm({
 
             onSuccess?.()
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Review submission error:', error)
-            toast.error(error.message || 'Failed to submit review')
+            const message = error instanceof Error ? error.message : 'Failed to submit review'
+            toast.error(message)
         } finally {
             setSubmitting(false)
         }
@@ -164,11 +165,10 @@ export default function ReviewSubmissionForm({
                             className="transition-transform hover:scale-110"
                         >
                             <Star
-                                className={`h-8 w-8 ${
-                                    star <= (hoveredRating || rating)
+                                className={`h-8 w-8 ${star <= (hoveredRating || rating)
                                         ? 'fill-yellow-500 text-yellow-500'
                                         : 'text-neutral-300 dark:text-neutral-600'
-                                }`}
+                                    }`}
                             />
                         </button>
                     ))}

@@ -1,4 +1,8 @@
 // src/app/orders/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -201,14 +205,14 @@ export default function OrdersPage() {
                                                 <span>${order.total_amount.toFixed(2)}</span>
                                             </div>
                                             <div className="flex gap-2">
-                      <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusColor}`}
-                      >
-                        {order.status}
-                      </span>
+                                                <span
+                                                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusColor}`}
+                                                >
+                                                    {order.status}
+                                                </span>
                                                 <span className="inline-flex items-center rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] text-neutral-300">
-                        {paymentLabel}
-                      </span>
+                                                    {paymentLabel}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

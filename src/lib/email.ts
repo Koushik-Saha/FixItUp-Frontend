@@ -55,8 +55,69 @@ export async function sendEmail(options: EmailOptions) {
 }
 
 // Order confirmation email
-export async function sendOrderConfirmationEmail(order: any) {
-    const subject = `Order Confirmation #${order.order_number}`
+// Interfaces for email data
+// Order confirmation email
+// Interfaces for email data
+export interface OrderItem {
+    productName: string
+    quantity: number
+    unitPrice: number
+    subtotal: number
+}
+
+export interface ShippingAddress {
+    full_name: string
+    address_line1: string
+    address_line2?: string | null
+    city: string
+    state: string
+    zip_code: string
+}
+
+export interface EmailOrder {
+    id: string
+    orderNumber: string
+    customerName: string
+    customerEmail: string
+    createdAt: Date | string
+    status: string
+    subtotal: number
+    discountAmount: number
+    taxAmount: number
+    shippingCost: number
+    totalAmount: number
+    orderItems: OrderItem[]
+    shippingAddress: ShippingAddress
+    trackingNumber?: string | null
+    carrier?: string | null
+}
+
+interface EmailTicket {
+    id: string
+    ticketNumber: string
+    customerName: string
+    customerEmail: string
+    deviceBrand: string
+    deviceModel: string
+    issueDescription: string
+    status: string
+    appointmentDate?: Date | string | null
+    estimatedCost?: number | null
+    actualCost?: number | null
+    technicianNotes?: string | null
+}
+
+interface EmailApplication {
+    businessName: string
+    businessEmail: string
+    businessType: string
+    requestedTier?: string
+    approvedTier?: string
+}
+
+// Order confirmation email
+export async function sendOrderConfirmationEmail(order: EmailOrder) {
+    const subject = `Order Confirmation #${order.orderNumber}`
 
     const html = `
         <!DOCTYPE html>
@@ -82,36 +143,36 @@ export async function sendOrderConfirmationEmail(order: any) {
                 </div>
 
                 <div class="content">
-                    <p>Hi ${order.customer_name},</p>
+                    <p>Hi ${order.customerName},</p>
                     <p>We've received your order and are processing it now. Here are your order details:</p>
 
                     <div class="order-details">
-                        <h2>Order #${order.order_number}</h2>
-                        <p><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
+                        <h2>Order #${order.orderNumber}</h2>
+                        <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
                         <p><strong>Status:</strong> ${order.status}</p>
 
                         <h3>Items:</h3>
-                        ${order.items?.map((item: any) => `
+                        ${order.orderItems?.map((item) => `
                             <div class="item">
-                                <strong>${item.product_name}</strong><br>
-                                Quantity: ${item.quantity} × $${item.unit_price.toFixed(2)} = $${item.subtotal.toFixed(2)}
+                                <strong>${item.productName}</strong><br>
+                                Quantity: ${item.quantity} × $${Number(item.unitPrice).toFixed(2)} = $${Number(item.subtotal).toFixed(2)}
                             </div>
                         `).join('') || '<p>No items</p>'}
 
                         <div class="total">
-                            <p>Subtotal: $${order.subtotal.toFixed(2)}</p>
-                            ${order.discount_amount > 0 ? `<p>Discount: -$${order.discount_amount.toFixed(2)}</p>` : ''}
-                            <p>Tax: $${order.tax_amount.toFixed(2)}</p>
-                            <p>Shipping: $${order.shipping_cost.toFixed(2)}</p>
-                            <p style="color: #2563eb;">Total: $${order.total_amount.toFixed(2)}</p>
+                            <p>Subtotal: $${Number(order.subtotal).toFixed(2)}</p>
+                            ${Number(order.discountAmount) > 0 ? `<p>Discount: -$${Number(order.discountAmount).toFixed(2)}</p>` : ''}
+                            <p>Tax: $${Number(order.taxAmount).toFixed(2)}</p>
+                            <p>Shipping: $${Number(order.shippingCost).toFixed(2)}</p>
+                            <p style="color: #2563eb;">Total: $${Number(order.totalAmount).toFixed(2)}</p>
                         </div>
 
                         <h3>Shipping Address:</h3>
                         <p>
-                            ${order.shipping_address.full_name}<br>
-                            ${order.shipping_address.address_line1}<br>
-                            ${order.shipping_address.address_line2 ? order.shipping_address.address_line2 + '<br>' : ''}
-                            ${order.shipping_address.city}, ${order.shipping_address.state} ${order.shipping_address.zip_code}
+                            ${order.shippingAddress.full_name}<br>
+                            ${order.shippingAddress.address_line1}<br>
+                            ${order.shippingAddress.address_line2 ? order.shippingAddress.address_line2 + '<br>' : ''}
+                            ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.zip_code}
                         </p>
                     </div>
 
@@ -130,14 +191,14 @@ export async function sendOrderConfirmationEmail(order: any) {
     `
 
     return sendEmail({
-        to: order.customer_email,
+        to: order.customerEmail,
         subject,
         html
     })
 }
 
 // Order status update email
-export async function sendOrderStatusUpdateEmail(order: any, newStatus: string) {
+export async function sendOrderStatusUpdateEmail(order: EmailOrder, newStatus: string) {
     const statusMessages = {
         processing: 'Your order is being prepared',
         shipped: 'Your order has been shipped',
@@ -146,7 +207,7 @@ export async function sendOrderStatusUpdateEmail(order: any, newStatus: string) 
         refunded: 'Your order has been refunded'
     }
 
-    const subject = `Order #${order.order_number} - ${statusMessages[newStatus as keyof typeof statusMessages] || 'Status Update'}`
+    const subject = `Order #${order.orderNumber} - ${statusMessages[newStatus as keyof typeof statusMessages] || 'Status Update'}`
 
     const html = `
         <!DOCTYPE html>
@@ -170,12 +231,12 @@ export async function sendOrderStatusUpdateEmail(order: any, newStatus: string) 
                 </div>
 
                 <div class="content">
-                    <p>Hi ${order.customer_name},</p>
+                    <p>Hi ${order.customerName},</p>
 
                     <div class="status-box">
                         <h2>${statusMessages[newStatus as keyof typeof statusMessages]}</h2>
-                        <p>Order #${order.order_number}</p>
-                        ${order.tracking_number ? `<p><strong>Tracking Number:</strong> ${order.tracking_number}</p>` : ''}
+                        <p>Order #${order.orderNumber}</p>
+                        ${order.trackingNumber ? `<p><strong>Tracking Number:</strong> ${order.trackingNumber}</p>` : ''}
                         ${order.carrier ? `<p><strong>Carrier:</strong> ${order.carrier}</p>` : ''}
                     </div>
 
@@ -202,14 +263,15 @@ export async function sendOrderStatusUpdateEmail(order: any, newStatus: string) 
     `
 
     return sendEmail({
-        to: order.customer_email,
+        to: order.customerEmail,
         subject,
         html
     })
 }
 
-// Password reset email
+// Password reset email (unchanged)
 export async function sendPasswordResetEmail(email: string, resetToken: string) {
+    // ... existing implementation ...
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${resetToken}`
     const subject = 'Reset Your Password'
 
@@ -268,7 +330,7 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
 }
 
 // Wholesale application confirmation
-export async function sendWholesaleApplicationEmail(application: any) {
+export async function sendWholesaleApplicationEmail(application: EmailApplication) {
     const subject = 'Wholesale Application Received'
 
     const html = `
@@ -292,7 +354,7 @@ export async function sendWholesaleApplicationEmail(application: any) {
                 </div>
 
                 <div class="content">
-                    <p>Hi ${application.business_name},</p>
+                    <p>Hi ${application.businessName},</p>
                     <p>Thank you for applying for a wholesale account with ${COMPANY_NAME}!</p>
 
                     <div class="info-box">
@@ -301,9 +363,9 @@ export async function sendWholesaleApplicationEmail(application: any) {
 
                         <p><strong>Application Details:</strong></p>
                         <ul>
-                            <li>Business Name: ${application.business_name}</li>
-                            <li>Business Type: ${application.business_type}</li>
-                            <li>Requested Tier: ${application.requested_tier || 'Standard'}</li>
+                            <li>Business Name: ${application.businessName}</li>
+                            <li>Business Type: ${application.businessType}</li>
+                            <li>Requested Tier: ${application.requestedTier || 'Standard'}</li>
                             <li>Status: Pending Review</li>
                         </ul>
                     </div>
@@ -321,14 +383,14 @@ export async function sendWholesaleApplicationEmail(application: any) {
     `
 
     return sendEmail({
-        to: application.business_email,
+        to: application.businessEmail,
         subject,
         html
     })
 }
 
 // Wholesale application approval
-export async function sendWholesaleApprovalEmail(application: any, credentials?: { username: string; temporaryPassword: string }) {
+export async function sendWholesaleApprovalEmail(application: EmailApplication, credentials?: { username: string; temporaryPassword: string }) {
     const subject = 'Wholesale Application Approved!'
 
     const html = `
@@ -354,11 +416,11 @@ export async function sendWholesaleApprovalEmail(application: any, credentials?:
                 </div>
 
                 <div class="content">
-                    <p>Congratulations ${application.business_name}!</p>
+                    <p>Congratulations ${application.businessName}!</p>
 
                     <div class="success-box">
                         <h2>Your wholesale account has been approved!</h2>
-                        <p><strong>Approved Tier:</strong> ${application.approved_tier || 'Tier 1'}</p>
+                        <p><strong>Approved Tier:</strong> ${application.approvedTier || 'Tier 1'}</p>
                     </div>
 
                     ${credentials ? `
@@ -393,14 +455,14 @@ export async function sendWholesaleApprovalEmail(application: any, credentials?:
     `
 
     return sendEmail({
-        to: application.business_email,
+        to: application.businessEmail,
         subject,
         html
     })
 }
 
 // Wholesale application rejection
-export async function sendWholesaleRejectionEmail(application: any, reason: string) {
+export async function sendWholesaleRejectionEmail(application: EmailApplication, reason: string) {
     const subject = 'Wholesale Application Update'
 
     const html = `
@@ -425,7 +487,7 @@ export async function sendWholesaleRejectionEmail(application: any, reason: stri
                 </div>
 
                 <div class="content">
-                    <p>Hi ${application.business_name},</p>
+                    <p>Hi ${application.businessName},</p>
                     <p>Thank you for your interest in becoming a wholesale partner with ${COMPANY_NAME}.</p>
 
                     <div class="reason-box">
@@ -450,15 +512,15 @@ export async function sendWholesaleRejectionEmail(application: any, reason: stri
     `
 
     return sendEmail({
-        to: application.business_email,
+        to: application.businessEmail,
         subject,
         html
     })
 }
 
 // Repair ticket confirmation
-export async function sendRepairConfirmationEmail(ticket: any) {
-    const subject = `Repair Ticket #${ticket.ticket_number} - Confirmed`
+export async function sendRepairConfirmationEmail(ticket: EmailTicket) {
+    const subject = `Repair Ticket #${ticket.ticketNumber} - Confirmed`
 
     const html = `
         <!DOCTYPE html>
@@ -482,16 +544,16 @@ export async function sendRepairConfirmationEmail(ticket: any) {
                 </div>
 
                 <div class="content">
-                    <p>Hi ${ticket.customer_name},</p>
+                    <p>Hi ${ticket.customerName},</p>
                     <p>Your repair request has been confirmed. Here are the details:</p>
 
                     <div class="ticket-box">
-                        <h2>Ticket #${ticket.ticket_number}</h2>
-                        <p><strong>Device:</strong> ${ticket.device_brand} ${ticket.device_model}</p>
-                        <p><strong>Issue:</strong> ${ticket.issue_description}</p>
+                        <h2>Ticket #${ticket.ticketNumber}</h2>
+                        <p><strong>Device:</strong> ${ticket.deviceBrand} ${ticket.deviceModel}</p>
+                        <p><strong>Issue:</strong> ${ticket.issueDescription}</p>
                         <p><strong>Status:</strong> ${ticket.status}</p>
-                        ${ticket.appointment_date ? `<p><strong>Appointment:</strong> ${new Date(ticket.appointment_date).toLocaleString()}</p>` : ''}
-                        ${ticket.estimated_cost ? `<p><strong>Estimated Cost:</strong> $${ticket.estimated_cost.toFixed(2)}</p>` : ''}
+                        ${ticket.appointmentDate ? `<p><strong>Appointment:</strong> ${new Date(ticket.appointmentDate).toLocaleString()}</p>` : ''}
+                        ${ticket.estimatedCost ? `<p><strong>Estimated Cost:</strong> $${Number(ticket.estimatedCost).toFixed(2)}</p>` : ''}
                     </div>
 
                     <p>We'll send you updates as your repair progresses.</p>
@@ -511,14 +573,14 @@ export async function sendRepairConfirmationEmail(ticket: any) {
     `
 
     return sendEmail({
-        to: ticket.customer_email,
+        to: ticket.customerEmail,
         subject,
         html
     })
 }
 
 // Repair status update email
-export async function sendRepairStatusUpdateEmail(ticket: any, newStatus: string) {
+export async function sendRepairStatusUpdateEmail(ticket: EmailTicket, newStatus: string) {
     const statusMessages = {
         confirmed: 'Your repair has been confirmed',
         in_progress: 'Your repair is in progress',
@@ -528,7 +590,7 @@ export async function sendRepairStatusUpdateEmail(ticket: any, newStatus: string
         customer_pickup: 'Your device is ready for pickup'
     }
 
-    const subject = `Repair #${ticket.ticket_number} - ${statusMessages[newStatus as keyof typeof statusMessages] || 'Status Update'}`
+    const subject = `Repair #${ticket.ticketNumber} - ${statusMessages[newStatus as keyof typeof statusMessages] || 'Status Update'}`
 
     const html = `
         <!DOCTYPE html>
@@ -552,21 +614,21 @@ export async function sendRepairStatusUpdateEmail(ticket: any, newStatus: string
                 </div>
 
                 <div class="content">
-                    <p>Hi ${ticket.customer_name},</p>
+                    <p>Hi ${ticket.customerName},</p>
 
                     <div class="status-box">
                         <h2>${statusMessages[newStatus as keyof typeof statusMessages]}</h2>
-                        <p>Ticket #${ticket.ticket_number}</p>
-                        <p>${ticket.device_brand} ${ticket.device_model}</p>
+                        <p>Ticket #${ticket.ticketNumber}</p>
+                        <p>${ticket.deviceBrand} ${ticket.deviceModel}</p>
                     </div>
 
                     ${newStatus === 'completed' || newStatus === 'customer_pickup' ? `
-                        <p><strong>Final Cost:</strong> $${ticket.actual_cost?.toFixed(2) || ticket.estimated_cost?.toFixed(2)}</p>
+                        <p><strong>Final Cost:</strong> $${Number(ticket.actualCost || ticket.estimatedCost).toFixed(2)}</p>
                         <p>Your device is ready for pickup! Please bring your ticket number when you come.</p>
                     ` : ''}
 
-                    ${ticket.technician_notes ? `
-                        <p><strong>Technician Notes:</strong><br>${ticket.technician_notes}</p>
+                    ${ticket.technicianNotes ? `
+                        <p><strong>Technician Notes:</strong><br>${ticket.technicianNotes}</p>
                     ` : ''}
 
                     <center>
@@ -584,20 +646,20 @@ export async function sendRepairStatusUpdateEmail(ticket: any, newStatus: string
     `
 
     return sendEmail({
-        to: ticket.customer_email,
+        to: ticket.customerEmail,
         subject,
         html
     })
 }
 
 // Payment success email
-export async function sendPaymentSuccessEmail(order: any) {
+export async function sendPaymentSuccessEmail(order: EmailOrder) {
     return sendOrderConfirmationEmail(order)
 }
 
 // Payment failed email
-export async function sendPaymentFailedEmail(order: any) {
-    const subject = `Payment Failed - Order #${order.order_number}`
+export async function sendPaymentFailedEmail(order: EmailOrder) {
+    const subject = `Payment Failed - Order #${order.orderNumber}`
 
     const html = `
         <!DOCTYPE html>
@@ -621,12 +683,12 @@ export async function sendPaymentFailedEmail(order: any) {
                 </div>
 
                 <div class="content">
-                    <p>Hi ${order.customer_name},</p>
+                    <p>Hi ${order.customerName},</p>
 
                     <div class="warning-box">
                         <h2>⚠️ Payment Processing Failed</h2>
-                        <p>We were unable to process your payment for order #${order.order_number}.</p>
-                        <p><strong>Total Amount:</strong> $${order.total_amount.toFixed(2)}</p>
+                        <p>We were unable to process your payment for order #${order.orderNumber}.</p>
+                        <p><strong>Total Amount:</strong> $${Number(order.totalAmount).toFixed(2)}</p>
                     </div>
 
                     <h3>What to do next:</h3>
@@ -654,15 +716,15 @@ export async function sendPaymentFailedEmail(order: any) {
     `
 
     return sendEmail({
-        to: order.customer_email,
+        to: order.customerEmail,
         subject,
         html
     })
 }
 
 // Refund confirmation email
-export async function sendRefundConfirmationEmail(order: any, refundAmount: number) {
-    const subject = `Refund Processed - Order #${order.order_number}`
+export async function sendRefundConfirmationEmail(order: EmailOrder, refundAmount: number) {
+    const subject = `Refund Processed - Order #${order.orderNumber}`
 
     const html = `
         <!DOCTYPE html>
@@ -685,11 +747,11 @@ export async function sendRefundConfirmationEmail(order: any, refundAmount: numb
                 </div>
 
                 <div class="content">
-                    <p>Hi ${order.customer_name},</p>
+                    <p>Hi ${order.customerName},</p>
 
                     <div class="refund-box">
                         <h2>✅ Your refund has been processed</h2>
-                        <p>Order #${order.order_number}</p>
+                        <p>Order #${order.orderNumber}</p>
                         <p style="font-size: 24px; font-weight: bold; color: #10b981;">$${refundAmount.toFixed(2)}</p>
                     </div>
 
@@ -708,7 +770,7 @@ export async function sendRefundConfirmationEmail(order: any, refundAmount: numb
     `
 
     return sendEmail({
-        to: order.customer_email,
+        to: order.customerEmail,
         subject,
         html
     })

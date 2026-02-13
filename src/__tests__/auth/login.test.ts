@@ -172,12 +172,7 @@ describe('Login System', () => {
         })
 
         it('should use secure cookies in production', async () => {
-            const original = process.env.NODE_ENV
-
-            Object.defineProperty(process.env, 'NODE_ENV', {
-                value: 'production',
-                configurable: true,
-            })
+            vi.stubEnv('NODE_ENV', 'production')
 
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
@@ -191,11 +186,7 @@ describe('Login System', () => {
             const setCookieHeader = response.headers.get('set-cookie')
             expect(setCookieHeader).toContain('Secure')
 
-            // restore
-            Object.defineProperty(process.env, 'NODE_ENV', {
-                value: original,
-                configurable: true,
-            })
+            vi.unstubAllEnvs()
         })
 
         it('should use SameSite=Lax for CSRF protection', async () => {

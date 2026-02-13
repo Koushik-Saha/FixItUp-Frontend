@@ -1,73 +1,43 @@
-// app/api/cart/route.ts
-// Cart API - Get and Add to cart
+import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
+import { z } from 'zod'
 
-import {NextRequest, NextResponse} from 'next/server'
-import {createClient} from '@/lib/supabase/server'
-import {errorResponse, UnauthorizedError} from '@/lib/utils/errors'
-import {z} from 'zod'
-
-// Helper to format error messages for frontend
-function formatError(error: any) {
-    // Foreign key violation (missing profile)
-    if (error.code === '23503' && error.message.includes('profiles')) {
-        return {
-            error: 'Profile not found. Please complete your registration.',
-            code: 'PROFILE_NOT_FOUND',
-            statusCode: 400
-        }
-    }
-
-    // Foreign key violation (missing product)
-    if (error.code === '23503' && error.message.includes('products')) {
-        return {
-            error: 'Product not found.',
-            code: 'PRODUCT_NOT_FOUND',
-            statusCode: 404
-        }
-    }
-
-    // Unique constraint violation (already in cart)
-    if (error.code === '23505') {
-        return {
-            error: 'Item already in cart.',
-            code: 'DUPLICATE_ITEM',
-            statusCode: 400
-        }
-    }
-
-    // RLS policy violation
-    if (error.code === '42501' || error.message?.includes('policy')) {
-        return {
-            error: 'Unauthorized. Please login again.',
-            code: 'UNAUTHORIZED',
-            statusCode: 401
-        }
-    }
-
-    // Default error
-    return {
-        error: error.message || 'Failed to add to cart',
-        code: 'UNKNOWN_ERROR',
-        statusCode: 500
-    }
-}
-
-// Validation schema
 const addToCartSchema = z.object({
     product_id: z.string().uuid(),
     quantity: z.number().int().positive().min(1).max(100),
 })
 
-// GET /api/cart - Get user's cart
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
+
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
+}
+
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
+
 export async function GET(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
+        const userId = request.headers.get('x-user-id');
 
-        // Get authenticated user
-        const {data: {user}, error: authError} = await supabase.auth.getUser()
-
-        // Guest users - return empty cart (they'll use localStorage)
-        if (authError || !user) {
+        // Guest: return empty (frontend handles localStorage)
+        if (!userId) {
             return NextResponse.json({
                 data: {
                     items: [],
@@ -79,81 +49,42 @@ export async function GET(request: NextRequest) {
                         wholesale_tier: null,
                     },
                 },
-            })
+            }, { headers: corsHeaders });
         }
 
-        // Get user's cart items with product details
-        const {data: cartItems, error} = await supabase
-            .from('cart_items')
-            .select(`
-        id,
-        product_id,
-        quantity,
-        created_at,
-        products (
-          id,
-          sku,
-          name,
-          slug,
-          brand,
-          device_model,
-          base_price,
-          wholesale_tier1_discount,
-          wholesale_tier2_discount,
-          wholesale_tier3_discount,
-          images,
-          thumbnail,
-          total_stock,
-          is_active
-        )
-      `)
-            .eq('user_id', user.id)
-            .order('created_at', {ascending: false})
+        // Auth User: Fetch Cart
+        const cartItems = await prisma.cartItem.findMany({
+            where: { userId },
+            include: { product: true },
+            orderBy: { createdAt: 'desc' }
+        });
 
-        if (error) {
-            console.error('Failed to fetch cart:', error)
-            throw new Error('Failed to fetch cart')
-        }
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true, wholesaleTier: true }
+        });
 
-        // Get user profile for pricing
-        const {data: profile} = await (supabase
-            .from('profiles') as any)
-            .select('role, wholesale_tier')
-            .eq('id', user.id)
-            .single()
+        // Calculate Pricing
+        const cartWithPricing = cartItems.map(item => {
+            const product = item.product;
+            if (!product) return null; // Should not happen due to integrity
 
-        // Calculate prices for each item
-        const cartWithPricing = (cartItems as any[]).map((item: any) => {
-            const product = item.products as any
+            let unitPrice = Number(product.basePrice);
+            let discountPercentage = 0;
 
-            if (!product) {
-                return null
+            if (user?.role === 'WHOLESALE' && user.wholesaleTier) {
+                if (user.wholesaleTier === 'TIER1') discountPercentage = Number(product.tier1Discount);
+                else if (user.wholesaleTier === 'TIER2') discountPercentage = Number(product.tier2Discount);
+                else if (user.wholesaleTier === 'TIER3') discountPercentage = Number(product.tier3Discount);
+
+                unitPrice = unitPrice * (1 - discountPercentage / 100);
             }
 
-            let unitPrice = product.base_price
-            let discountPercentage = 0
-
-            // Apply wholesale discount
-            if (((profile as any))?.role === 'wholesale') {
-                switch (profile.wholesale_tier) {
-                    case 'tier1':
-                        discountPercentage = product.wholesale_tier1_discount
-                        break
-                    case 'tier2':
-                        discountPercentage = product.wholesale_tier2_discount
-                        break
-                    case 'tier3':
-                        discountPercentage = product.wholesale_tier3_discount
-                        break
-                }
-                unitPrice = product.base_price * (1 - discountPercentage / 100)
-            }
-
-            const subtotal = unitPrice * item.quantity
+            const subtotal = unitPrice * item.quantity;
 
             return {
                 id: item.id,
-                product_id: item.product_id,
+                product_id: item.productId,
                 quantity: item.quantity,
                 product: {
                     id: product.id,
@@ -161,27 +92,28 @@ export async function GET(request: NextRequest) {
                     name: product.name,
                     slug: product.slug,
                     brand: product.brand,
-                    device_model: product.device_model,
-                    image: product.thumbnail || product.images?.[0],
-                    in_stock: product.total_stock > 0,
-                    available_quantity: product.total_stock,
+                    device_model: product.deviceModel,
+                    image: product.thumbnail || product.images[0],
+                    in_stock: (product.totalStock || 0) > 0,
+                    available_quantity: product.totalStock || 0
                 },
                 pricing: {
                     unit_price: Number(unitPrice.toFixed(2)),
-                    original_price: product.base_price,
+                    original_price: Number(product.basePrice),
                     discount_percentage: discountPercentage,
-                    subtotal: Number(subtotal.toFixed(2)),
-                },
-            }
-        }).filter(Boolean) // Remove null items (deleted products)
+                    subtotal: Number(subtotal.toFixed(2))
+                }
+            };
+        }).filter(Boolean);
 
-        // Calculate cart totals
-        const subtotal = cartWithPricing.reduce((sum, item) => sum + (item?.pricing.subtotal || 0), 0)
-        const totalItems = cartWithPricing.reduce((sum, item) => sum + (item?.quantity || 0), 0)
+        // Totals
+        const subtotal = cartWithPricing.reduce((sum, item) => sum + (item?.pricing.subtotal || 0), 0);
+        const totalItems = cartWithPricing.reduce((sum, item) => sum + (item?.quantity || 0), 0);
         const totalSavings = cartWithPricing.reduce((sum, item) => {
-            const savings = ((item?.pricing.original_price || 0) - (item?.pricing.unit_price || 0)) * (item?.quantity || 0)
-            return sum + savings
-        }, 0)
+            const original = (item?.pricing.original_price || 0);
+            const current = (item?.pricing.unit_price || 0);
+            return sum + ((original - current) * (item?.quantity || 0));
+        }, 0);
 
         return NextResponse.json({
             data: {
@@ -190,170 +122,83 @@ export async function GET(request: NextRequest) {
                     subtotal: Number(subtotal.toFixed(2)),
                     total_items: totalItems,
                     total_savings: Number(totalSavings.toFixed(2)),
-                    is_wholesale: ((profile as any))?.role === 'wholesale',
-                    wholesale_tier: ((profile as any))?.wholesale_tier,
-                },
-            },
-        })
+                    is_wholesale: user?.role === 'WHOLESALE',
+                    wholesale_tier: user?.wholesaleTier
+                }
+            }
+        }, { headers: corsHeaders });
 
     } catch (error) {
-        console.error('Cart GET error:', error)
-        const formattedError = formatError(error)
-        return NextResponse.json(formattedError, { status: formattedError.statusCode })
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// POST /api/cart - Add item to cart
 export async function POST(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
-
-        // Get authenticated user
-        const {data: {user}, error: authError} = await supabase.auth.getUser()
-
-        // Guest users - return success (they'll use localStorage cart)
-        if (authError || !user) {
-            // Parse request to validate format
-            const body = await request.json()
-            const validation = addToCartSchema.safeParse(body)
-
-            if (!validation.success) {
-                return NextResponse.json(
-                    {
-                        error: 'Invalid request',
-                        details: validation.error.flatten().fieldErrors,
-                    },
-                    {status: 400}
-                )
-            }
-
-            // Return success for guests (cart managed client-side)
-            return NextResponse.json({
-                message: 'Item added to cart successfully',
-                data: {
-                    guest: true,
-                    product_id: validation.data.product_id,
-                    quantity: validation.data.quantity,
-                },
-            }, {status: 201})
-        }
-
-        // Parse and validate request
-        const body = await request.json()
-        const validation = addToCartSchema.safeParse(body)
+        const body = await request.json();
+        const validation = addToCartSchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json(
-                {
-                    error: 'Invalid request',
-                    details: validation.error.flatten().fieldErrors,
-                },
-                {status: 400}
-            )
+            return NextResponse.json({
+                error: 'Invalid request',
+                details: validation.error.flatten().fieldErrors
+            }, { status: 400, headers: corsHeaders });
         }
 
-        const {product_id, quantity} = validation.data
+        const { product_id, quantity } = validation.data;
+        const userId = request.headers.get('x-user-id');
 
-        // Check if product exists and is active
-        const {data: product, error: productError} = await (supabase
-            .from('products') as any)
-            .select('id, name, total_stock, is_active')
-            .eq('id', product_id)
-            .single()
-
-        if (productError || !product) {
-            return NextResponse.json(
-                {error: 'Product not found'},
-                {status: 404}
-            )
+        // Guest: Return success
+        if (!userId) {
+            return NextResponse.json({
+                message: 'Item added to cart successfully',
+                data: { guest: true, product_id, quantity }
+            }, { status: 201, headers: corsHeaders });
         }
 
-        if (!product.is_active) {
-            return NextResponse.json(
-                {error: 'Product is not available'},
-                {status: 400}
-            )
-        }
+        // Auth User
+        const product = await prisma.product.findUnique({
+            where: { id: product_id }
+        });
 
-        // Check stock availability
-        if (product.total_stock < quantity) {
-            return NextResponse.json(
-                {
-                    error: 'Insufficient stock',
-                    available: product.total_stock,
-                },
-                {status: 400}
-            )
-        }
+        if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404, headers: corsHeaders });
+        if (!product.isActive) return NextResponse.json({ error: 'Product unavailable' }, { status: 400, headers: corsHeaders });
+        if ((product.totalStock || 0) < quantity) return NextResponse.json({ error: 'Insufficient stock', available: product.totalStock || 0 }, { status: 400, headers: corsHeaders });
 
-        // Check if item already in cart
-        const {data: existingItem} = await (supabase
-            .from('cart_items') as any)
-            .select('id, quantity')
-            .eq('user_id', user.id)
-            .eq('product_id', product_id)
-            .single()
+        // Upsert logic manually to check stock on specific item
+        const existingItem = await prisma.cartItem.findFirst({
+            where: { userId, productId: product_id }
+        });
 
         if (existingItem) {
-            // Update quantity
-            const newQuantity = existingItem.quantity + quantity
-
-            if (product.total_stock < newQuantity) {
-                return NextResponse.json(
-                    {
-                        error: 'Cannot add more items. Maximum available quantity reached.',
-                        available: product.total_stock,
-                        current_in_cart: existingItem.quantity,
-                    },
-                    {status: 400}
-                )
+            const newQuantity = existingItem.quantity + quantity;
+            if ((product.totalStock || 0) < newQuantity) {
+                return NextResponse.json({
+                    error: 'Cannot add more items. Max available reached.',
+                    available: product.totalStock || 0,
+                    current_in_cart: existingItem.quantity
+                }, { status: 400, headers: corsHeaders });
             }
 
-            const {data: updated, error: updateError} = await (supabase
-                .from('cart_items') as any)
-                .update({quantity: newQuantity, updated_at: new Date().toISOString()})
-                .eq('id', existingItem.id)
-                .select()
-                .single()
-
-            if (updateError) {
-                console.error('Failed to update cart:', updateError)
-                throw new Error('Failed to update cart')
-            }
-
-            return NextResponse.json({
-                message: 'Cart updated successfully',
-                data: updated,
-            })
+            const updated = await prisma.cartItem.update({
+                where: { id: existingItem.id },
+                data: { quantity: newQuantity }
+            });
+            return NextResponse.json({ message: 'Cart updated', data: updated }, { headers: corsHeaders });
+        } else {
+            const newItem = await prisma.cartItem.create({
+                data: { userId, productId: product_id, quantity }
+            });
+            return NextResponse.json({ message: 'Item added to cart', data: newItem }, { status: 201, headers: corsHeaders });
         }
-
-        // Add new item to cart
-        const {data: newItem, error: insertError} = await (supabase
-            .from('cart_items') as any)
-            .insert({
-                user_id: user.id,
-                product_id,
-                quantity,
-            })
-            .select()
-            .single()
-
-        if (insertError) {
-            console.error('Failed to add to cart:', insertError)
-            throw new Error('Failed to add to cart')
-        }
-
-        return NextResponse.json(
-            {
-                message: 'Item added to cart successfully',
-                data: newItem,
-            },
-            {status: 201}
-        )
 
     } catch (error) {
-        console.error('Cart POST error:', error)
-        const formattedError = formatError(error)
-        return NextResponse.json(formattedError, { status: formattedError.statusCode })
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
