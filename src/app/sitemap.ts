@@ -3,6 +3,9 @@ import prisma from '@/lib/prisma'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://maxphonerepair.com'
 
+
+export const dynamic = 'force-dynamic'
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Static Routes
     const routes = [
