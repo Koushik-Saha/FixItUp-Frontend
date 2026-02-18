@@ -1,222 +1,194 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import {
-    errorResponse,
-    UnauthorizedError,
-    ForbiddenError,
-} from "@/lib/utils/errors";
-import type { Database } from "@/types/database";
-import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors';
+import prisma from "@/lib/prisma";
+import { errorResponse } from "@/lib/utils/errors";
 
-// --- DB row helpers ---
-type Tables = Database["public"]["Tables"];
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
 
-type ProfileRow = Tables["profiles"]["Row"];
-type OrderRow = Tables["orders"]["Row"];
-type ProductRow = Tables["products"]["Row"];
-type RepairTicketRow = Tables["repair_tickets"]["Row"];
-type WholesaleApplicationRow = Tables["wholesale_applications"]["Row"];
-
-type DashboardOrder = Pick<OrderRow, "id" | "status">;
-type RevenueOrder = Pick<OrderRow, "total_amount" | "status">;
-type DashboardProduct = Pick<ProductRow, "id" | "is_active">;
-type DashboardRepair = Pick<RepairTicketRow, "id" | "status">;
-type DashboardWholesale = Pick<WholesaleApplicationRow, "id" | "status">;
-type LowStockProduct = Pick<
-    ProductRow,
-    "id" | "name" | "sku" | "total_stock" | "low_stock_threshold"
->;
-
-// OPTIONS /api/admin/dashboard - Handle preflight request
-export async function OPTIONS(request: NextRequest) {
-    return handleCorsPreflightRequest(request);
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
 }
 
-// GET /api/admin/dashboard - Get dashboard overview stats
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
+
 export async function GET(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const origin = request.headers.get('origin');
-        const supabase = await createClient();
-
-        // Get authenticated user
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-        if (authError || !user) {
-            throw new UnauthorizedError();
+        // Strict Auth Check (Defense in Depth)
+        const userRole = request.headers.get("x-user-role");
+        if (userRole !== "ADMIN") {
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401, headers: corsHeaders }
+            );
         }
 
-        // Check if user is admin
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id)
-            .single<Pick<ProfileRow, "role">>();
-
-        if (!profile || (profile as any).role !== "admin") {
-            throw new ForbiddenError("Only admins can access dashboard");
-        }
-
-        // Get date range from query params (default: last 30 days)
         const { searchParams } = new URL(request.url);
         const days = parseInt(searchParams.get("days") || "30", 10);
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
 
-        // Fetch all stats in parallel
         const [
-            ordersResult,
-            revenueResult,
-            productsResult,
-            repairsResult,
-            wholesaleResult,
-            recentOrdersResult,
-            lowStockResult,
+            orders,
+            revenueStats,
+            productStats,
+            repairStats,
+            wholesaleStats,
+            recentOrders,
+            lowStock
         ] = await Promise.all([
-            // Total orders
-            supabase
-                .from("orders")
-                .select("id, status", { count: "exact", head: false })
-                .gte("created_at", startDate.toISOString()),
+            // Orders Overview
+            prisma.order.groupBy({
+                by: ['status'],
+                where: { createdAt: { gte: startDate } },
+                _count: { id: true }
+            }),
 
             // Revenue
-            supabase
-                .from("orders")
-                .select("total_amount, status")
-                .eq("payment_status", "paid")
-                .gte("created_at", startDate.toISOString()),
+            prisma.order.aggregate({
+                where: {
+                    status: { not: 'CANCELLED' }, // Assuming only completed/paid counts? Or check paymentStatus
+                    paymentStatus: 'PAID',
+                    createdAt: { gte: startDate }
+                },
+                _sum: { totalAmount: true },
+                _count: { id: true }
+            }),
 
             // Products
-            supabase
-                .from("products")
-                .select("id, is_active", { count: "exact", head: false }),
+            prisma.product.groupBy({
+                by: ['isActive'],
+                _count: { id: true }
+            }),
 
-            // Repair tickets
-            supabase
-                .from("repair_tickets")
-                .select("id, status", { count: "exact", head: false })
-                .gte("created_at", startDate.toISOString()),
+            // Repairs
+            prisma.repairTicket.groupBy({
+                by: ['status'],
+                where: { createdAt: { gte: startDate } },
+                _count: { id: true }
+            }),
 
-            // Wholesale applications
-            supabase
-                .from("wholesale_applications")
-                .select("id, status", { count: "exact", head: false }),
+            // Wholesale
+            prisma.wholesaleApplication.groupBy({
+                by: ['status'],
+                _count: { id: true }
+            }),
 
-            // Recent orders
-            supabase
-                .from("orders")
-                .select(
-                    "id, order_number, customer_name, total_amount, status, created_at"
-                )
-                .order("created_at", { ascending: false })
-                .limit(5),
+            // Recent Orders
+            prisma.order.findMany({
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+                select: {
+                    id: true,
+                    orderNumber: true,
+                    customerName: true,
+                    totalAmount: true,
+                    status: true,
+                    createdAt: true
+                }
+            }),
 
-            // Low stock products (simple threshold, adjust as needed)
-            supabase
-                .from("products")
-                .select("id, name, sku, total_stock, low_stock_threshold")
-                .lte("total_stock", 5) // TODO: use a DB function or view if you want per-product thresholds
-                .limit(10),
+            // Low Stock
+            prisma.product.findMany({
+                where: {
+                    // Simple check: active and stock <= threshold (or fixed 10)
+                    isActive: true,
+                    totalStock: { lte: 10 }
+                },
+                take: 10,
+                select: {
+                    id: true, name: true, sku: true, totalStock: true, lowStockThreshold: true
+                }
+            })
         ]);
 
-        // Typed data arrays
-        const orders: DashboardOrder[] =
-            (ordersResult.data ?? []) as DashboardOrder[];
-        const paidOrders: RevenueOrder[] =
-            (revenueResult.data ?? []) as RevenueOrder[];
-        const products: DashboardProduct[] =
-            (productsResult.data ?? []) as DashboardProduct[];
-        const repairs: DashboardRepair[] =
-            (repairsResult.data ?? []) as DashboardRepair[];
-        const wholesale: DashboardWholesale[] =
-            (wholesaleResult.data ?? []) as DashboardWholesale[];
-        const lowStock: LowStockProduct[] =
-            (lowStockResult.data ?? []) as LowStockProduct[];
+        // Process data
+        const totalOrders = orders.reduce((sum, g) => sum + g._count.id, 0);
+        const revenue = Number(revenueStats._sum.totalAmount || 0);
 
-        // Process orders stats
-        const orderStats = {
-            total: orders.length,
-            pending: orders.filter((o) => o.status === "pending").length,
-            processing: orders.filter((o) => o.status === "processing").length,
-            shipped: orders.filter((o) => o.status === "shipped").length,
-            delivered: orders.filter((o) => o.status === "delivered").length,
-            cancelled: orders.filter((o) => o.status === "cancelled").length,
-        };
+        // Orders Breakdown
+        const orderCounts: Record<string, number> = {};
+        orders.forEach(g => {
+            if (g.status) {
+                orderCounts[g.status.toLowerCase()] = g._count.id;
+            }
+        });
 
-        // Process revenue
-        const revenue = {
-            total: paidOrders.reduce(
-                (sum, o) => sum + Number(o.total_amount),
-                0
-            ),
-            orders: paidOrders.length,
-            average:
-                paidOrders.length > 0
-                    ? paidOrders.reduce(
-                    (sum, o) => sum + Number(o.total_amount),
-                    0
-                ) / paidOrders.length
-                    : 0,
-        };
-
-        // Process products
-        const productStats = {
-            total: products.length,
-            active: products.filter((p) => p.is_active).length,
-            inactive: products.filter((p) => !p.is_active).length,
-        };
-
-        // Process repair tickets
-        const repairStats = {
-            total: repairs.length,
-            submitted: repairs.filter((r) => r.status === "submitted").length,
-            in_progress: repairs.filter((r) => r.status === "in_progress").length,
-            completed: repairs.filter((r) => r.status === "completed").length,
-        };
-
-        // Process wholesale applications
-        const wholesaleStats = {
-            total: wholesale.length,
-            pending: wholesale.filter((w) => w.status === "pending").length,
-            approved: wholesale.filter((w) => w.status === "approved").length,
-            rejected: wholesale.filter((w) => w.status === "rejected").length,
-        };
-
-        return NextResponse.json({
-            data: {
-                overview: {
-                    orders: orderStats,
-                    revenue: {
-                        total: Number(revenue.total.toFixed(2)),
-                        orders: revenue.orders,
-                        average: Number(revenue.average.toFixed(2)),
-                    },
-                    products: productStats,
-                    repairs: repairStats,
-                    wholesale: wholesaleStats,
+        const data = {
+            overview: {
+                orders: {
+                    total: totalOrders,
+                    pending: orderCounts.pending || 0,
+                    processing: orderCounts.processing || 0,
+                    shipped: orderCounts.shipped || 0,
+                    delivered: orderCounts.delivered || 0,
+                    cancelled: orderCounts.cancelled || 0,
                 },
-                recent_orders: recentOrdersResult.data || [],
-                low_stock: lowStock,
-                period: {
-                    days,
-                    start_date: startDate.toISOString(),
-                    end_date: new Date().toISOString(),
+                revenue: {
+                    total: revenue,
+                    orders: revenueStats._count.id,
+                    average: revenueStats._count.id ? revenue / revenueStats._count.id : 0
                 },
+                products: {
+                    total: productStats.reduce((sum, g) => sum + g._count.id, 0),
+                    active: productStats.find(g => g.isActive)?._count.id || 0,
+                    inactive: productStats.find(g => !g.isActive)?._count.id || 0,
+                },
+                repairs: {
+                    total: repairStats.reduce((sum, g) => sum + g._count.id, 0),
+                    submitted: repairStats.find(g => g.status === 'SUBMITTED')?._count.id || 0,
+                    in_progress: repairStats.find(g => g.status === 'IN_PROGRESS')?._count.id || 0,
+                    completed: repairStats.find(g => g.status === 'COMPLETED')?._count.id || 0,
+                },
+                wholesale: {
+                    total: wholesaleStats.reduce((sum, g) => sum + g._count.id, 0),
+                    pending: wholesaleStats.find(g => g.status === 'PENDING')?._count.id || 0,
+                    approved: wholesaleStats.find(g => g.status === 'APPROVED')?._count.id || 0,
+                    rejected: wholesaleStats.find(g => g.status === 'REJECTED')?._count.id || 0,
+                }
             },
-        }, {
-            headers: getCorsHeaders(origin),
-        });
+            recent_orders: recentOrders.map(o => ({
+                id: o.id,
+                order_number: o.orderNumber,
+                customer_name: o.customerName,
+                total_amount: o.totalAmount,
+                status: o.status,
+                created_at: o.createdAt
+            })),
+            low_stock: lowStock.map(p => ({
+                id: p.id,
+                name: p.name,
+                sku: p.sku,
+                total_stock: p.totalStock,
+                low_stock_threshold: p.lowStockThreshold
+            })),
+            period: {
+                days,
+                start_date: startDate.toISOString(),
+                end_date: new Date().toISOString()
+            }
+        };
+
+        return NextResponse.json({ data }, { headers: corsHeaders });
+
     } catch (error) {
-        const errorRes = errorResponse(error);
-        const headers = new Headers(errorRes.headers);
-        const origin = request.headers.get('origin');
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value);
-        });
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        });
+        console.error("Dashboard Error", error);
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

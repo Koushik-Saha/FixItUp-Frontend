@@ -1,149 +1,124 @@
-// app/api/products/search/route.ts
-// Dedicated product search endpoint
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 import { errorResponse } from '@/lib/utils/errors'
+import { Prisma } from '@prisma/client'
 
-// GET /api/products/search - Search products
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
+
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
+}
+
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
+
 export async function GET(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
-        const { searchParams } = new URL(request.url)
+        const { searchParams } = new URL(request.url);
+        const query = searchParams.get('q') || searchParams.get('query') || '';
+        const category = searchParams.get('category');
+        const brand = searchParams.get('brand');
+        const minPrice = searchParams.get('min_price');
+        const maxPrice = searchParams.get('max_price');
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const skip = (page - 1) * limit;
 
-        // Get search parameters
-        const query = searchParams.get('q') || searchParams.get('query') || ''
-        const category = searchParams.get('category')
-        const brand = searchParams.get('brand')
-        const minPrice = searchParams.get('min_price')
-        const maxPrice = searchParams.get('max_price')
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '20')
+        const where: Prisma.ProductWhereInput = {
+            isActive: true
+        };
 
-        // Calculate pagination
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-
-        // Check authentication for wholesale pricing
-        const { data: { user } } = await supabase.auth.getUser()
-
-        let userRole = null
-        let wholesaleTier = null
-
-        if (user) {
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role, wholesale_tier')
-                .eq('id', user.id)
-                .single()
-
-            userRole = (profile as any)?.role
-            wholesaleTier = (profile as any)?.wholesale_tier
-        }
-
-        // Build query
-        let dbQuery = supabase
-            .from('products')
-            .select(`
-        *,
-        categories(id, name, slug)
-      `, { count: 'exact' })
-            .eq('is_active', true)
-
-        // Apply search filter
         if (query) {
-            dbQuery = dbQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%,sku.ilike.%${query}%`)
+            where.OR = [
+                { name: { contains: query, mode: 'insensitive' } },
+                { description: { contains: query, mode: 'insensitive' } },
+                { sku: { contains: query, mode: 'insensitive' } }
+            ];
         }
 
-        // Apply category filter
         if (category) {
-            const { data: categoryData } = await supabase
-                .from('categories')
-                .select('id')
-                .eq('slug', category)
-                .single()
-
-            if (categoryData) {
-                dbQuery = dbQuery.eq('category_id', (categoryData as any).id)
-            }
+            const cat = await prisma.category.findUnique({ where: { slug: category } });
+            if (cat) where.categoryId = cat.id;
         }
 
-        // Apply brand filter
-        if (brand) {
-            dbQuery = dbQuery.ilike('brand', brand)
+        if (brand) where.brand = { contains: brand, mode: 'insensitive' };
+
+        if (minPrice || maxPrice) {
+            where.basePrice = {};
+            if (minPrice) where.basePrice.gte = parseFloat(minPrice);
+            if (maxPrice) where.basePrice.lte = parseFloat(maxPrice);
         }
 
-        // Apply price range
-        if (minPrice) {
-            dbQuery = dbQuery.gte('base_price', parseFloat(minPrice))
-        }
-        if (maxPrice) {
-            dbQuery = dbQuery.lte('base_price', parseFloat(maxPrice))
-        }
-
-        // Apply sorting and pagination
-        dbQuery = dbQuery
-            .order('created_at', { ascending: false })
-            .range(from, to)
-
-        const { data: products, error, count } = await dbQuery
-
-        if (error) {
-            console.error('Search error:', error)
-            throw new Error('Failed to search products')
+        // Pricing Context
+        const userId = request.headers.get('x-user-id');
+        let userRole = null;
+        let wholesaleTier = null;
+        if (userId) {
+            const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, wholesaleTier: true } });
+            if (user) { userRole = user.role; wholesaleTier = user.wholesaleTier; }
         }
 
-        // Calculate pricing for each product
-        const productsWithPricing = products?.map((product: any) => {
-            let displayPrice = product.base_price
-            let discountPercentage = 0
+        const [products, count] = await Promise.all([
+            prisma.product.findMany({
+                where,
+                include: { category: true },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit
+            }),
+            prisma.product.count({ where })
+        ]);
 
-            // Apply wholesale pricing
-            if (userRole === 'wholesale') {
-                switch (wholesaleTier) {
-                    case 'tier1':
-                        discountPercentage = product.wholesale_tier1_discount
-                        break
-                    case 'tier2':
-                        discountPercentage = product.wholesale_tier2_discount
-                        break
-                    case 'tier3':
-                        discountPercentage = product.wholesale_tier3_discount
-                        break
-                }
-                displayPrice = product.base_price * (1 - discountPercentage / 100)
+        const productsWithPricing = products.map(product => {
+            let displayPrice = Number(product.basePrice);
+            let discountPercentage = 0;
+
+            if (userRole === 'WHOLESALE' && wholesaleTier) {
+                if (wholesaleTier === 'TIER1') discountPercentage = Number(product.tier1Discount);
+                else if (wholesaleTier === 'TIER2') discountPercentage = Number(product.tier2Discount);
+                else if (wholesaleTier === 'TIER3') discountPercentage = Number(product.tier3Discount);
+                displayPrice = displayPrice * (1 - discountPercentage / 100);
             }
 
             return {
                 ...product,
                 displayPrice: Number(displayPrice.toFixed(2)),
-                originalPrice: product.base_price,
+                originalPrice: Number(product.basePrice),
                 discountPercentage,
-                isWholesale: userRole === 'wholesale',
-            }
-        }) || []
+                isWholesale: userRole === 'WHOLESALE'
+            };
+        });
 
         return NextResponse.json({
             data: productsWithPricing,
             pagination: {
-                page,
-                limit,
-                total: count || 0,
-                totalPages: Math.ceil((count || 0) / limit),
+                page, limit, total: count, totalPages: Math.ceil(count / limit)
             },
             search: {
                 query,
-                filters: {
-                    category,
-                    brand,
-                    min_price: minPrice,
-                    max_price: maxPrice,
-                },
-                results: productsWithPricing.length,
-            },
-        })
+                filters: { category, brand, min_price: minPrice, max_price: maxPrice },
+                results: count
+            }
+        }, { headers: corsHeaders });
 
     } catch (error) {
-        return errorResponse(error)
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

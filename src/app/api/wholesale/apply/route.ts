@@ -1,98 +1,104 @@
-// app/api/wholesale/apply/route.ts
-// Wholesale Applications API - Apply for wholesale account
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/jwt";
+import * as z from "zod";
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError, ConflictError } from '@/lib/utils/errors'
-import { wholesaleApplicationSchema, validateData, formatValidationErrors } from '@/utils/validation'
-import { sendWholesaleApplicationEmail } from '@/lib/email'
+const wholesaleApplicationSchema = z.object({
+    businessName: z.string().min(1, "Business name is required"),
+    businessType: z.string().min(1, "Business type is required"),
+    taxId: z.string().min(1, "Tax ID is required"),
+    website: z.string().optional(),
+    businessPhone: z.string().min(1, "Business phone is required"),
+    businessEmail: z.string().email("Invalid email"),
+    businessAddress: z.object({
+        street1: z.string().min(1, "Street address is required"),
+        street2: z.string().optional(),
+        city: z.string().min(1, "City is required"),
+        state: z.string().min(1, "State is required"),
+        zipCode: z.string().min(1, "Zip code is required"),
+        country: z.string().default("US"),
+    }),
+});
 
-// POST /api/wholesale/apply - Submit wholesale application
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
     try {
-        const supabase = await createClient()
-
-        // Get authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to apply for wholesale account')
+        const session = await getSession();
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Check if user already has pending or approved application
-        const { data: existingApp } = await (supabase
-            .from('wholesale_applications') as any)
-            .select('id, status')
-            .eq('user_id', user.id)
-            .in('status', ['pending', 'approved'])
-            .single()
+        const body = await req.json();
+        const result = wholesaleApplicationSchema.safeParse(body);
 
-        if (existingApp) {
-            if (existingApp.status === 'approved') {
-                throw new ConflictError('You already have an approved wholesale account')
-            }
-            if (existingApp.status === 'pending') {
-                throw new ConflictError('You already have a pending application')
-            }
-        }
-
-        // Parse and validate request
-        const body = await request.json()
-        const validation = validateData(wholesaleApplicationSchema, body)
-
-        if (!validation.success) {
+        if (!result.success) {
             return NextResponse.json(
-                {
-                    error: 'Validation failed',
-                    errors: formatValidationErrors(validation.errors!),
-                },
+                { error: "Validation error", details: result.error.flatten() },
                 { status: 400 }
-            )
+            );
         }
 
-        const applicationData = validation.data!
+        // Check if user already has a pending or approved application
+        const existing = await prisma.wholesaleApplication.findFirst({
+            where: {
+                userId: session.id,
+                status: {
+                    in: ["PENDING", "APPROVED"]
+                }
+            }
+        });
 
-        // Create application
-        const { data: application, error: createError } = await (supabase
-            .from('wholesale_applications') as any)
-            .insert({
-                user_id: user.id,
-                business_name: applicationData.business_name,
-                business_type: applicationData.business_type,
-                tax_id: applicationData.tax_id,
-                website: applicationData.website,
-                business_phone: applicationData.business_phone,
-                business_email: applicationData.business_email,
-                business_address: applicationData.business_address,
-                requested_tier: applicationData.requested_tier || 'tier1',
-                status: 'pending',
-            })
-            .select()
-            .single()
-
-        if (createError) {
-            console.error('Failed to create application:', createError)
-            throw new Error('Failed to submit application')
+        if (existing) {
+            return NextResponse.json(
+                { error: "You already have a pending or approved application." },
+                { status: 400 }
+            );
         }
 
-        // Send confirmation email to applicant
-        await sendWholesaleApplicationEmail(application).catch(err =>
-            console.error('Failed to send wholesale application confirmation email:', err)
-        )
-
-        // TODO: Send notification to admin for review (requires admin email configuration)
-
-        return NextResponse.json(
-            {
-                message: 'Application submitted successfully. We will review it within 2-3 business days.',
-                data: {
-                    application_id: application.id,
-                    status: application.status,
-                },
+        const application = await prisma.wholesaleApplication.create({
+            data: {
+                userId: session.id,
+                ...result.data,
+                businessAddress: result.data.businessAddress as any, // Json type casting
+                status: "PENDING",
             },
-            { status: 201 }
-        )
+        });
 
+        // Optionally update user status to indicate pending review if needed, 
+        // but schema usually keeps user role as CUSTOMER until Approved.
+        // We can check `wholesaleStatus` on User model.
+        await prisma.user.update({
+            where: { id: session.id },
+            data: { wholesaleStatus: "PENDING" }
+        });
+
+        return NextResponse.json(application, { status: 201 });
     } catch (error) {
-        return errorResponse(error)
+        console.error("Error submitting wholesale application:", error);
+        return NextResponse.json(
+            { error: "Failed to submit application" },
+            { status: 500 }
+        );
+    }
+}
+
+export async function GET() {
+    try {
+        const session = await getSession();
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const application = await prisma.wholesaleApplication.findFirst({
+            where: { userId: session.id },
+            orderBy: { createdAt: 'desc' } // Get latest
+        });
+
+        return NextResponse.json(application);
+    } catch (error) {
+        console.error("Error fetching application:", error);
+        return NextResponse.json(
+            { error: "Failed to fetch application" },
+            { status: 500 }
+        );
     }
 }

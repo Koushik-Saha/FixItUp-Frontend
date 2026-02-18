@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import prisma from "@/lib/prisma";
 
 type PhoneModelRow = {
     id: string;
-    model_name: string;
-    model_slug: string;
-    release_year: number | null;
-    category_id: string;
+    modelName: string;
+    modelSlug: string;
+    releaseYear: number | null;
+    categoryId: string;
 };
 
 type CategoryRow = {
     id: string
     name: string
     slug: string
-    parent_id: string | null
-    is_active: boolean
-    sort_order: number | null
+    parentId: string | null
+    isActive: boolean
+    displayOrder: number | 0 // mapped from display_order
 }
 
 function toShopLink(categorySlug: string, modelName: string) {
@@ -26,7 +26,6 @@ function toShopLink(categorySlug: string, modelName: string) {
 
 /**
  * Simple rule to infer "series" / subcategory from model_name.
- * You can improve this later by adding a "series" column in DB.
  */
 function inferSubcategory(brandSlug: string, modelName: string): string {
     const name = modelName.toLowerCase();
@@ -73,118 +72,144 @@ function inferSubcategory(brandSlug: string, modelName: string): string {
 }
 
 export async function GET() {
-    const supabase = await createClient();
+    try {
+        // 1) Load brand categories (top-level)
+        const brandSlugs = ["apple", "samsung", "motorola", "google"];
 
-    const { data: ping, error: pingErr } = await supabase
-        .from('categories')
-        .select('id')
-        .limit(1)
+        const brandCategories = await prisma.category.findMany({
+            where: {
+                slug: { in: brandSlugs },
+                isActive: true
+            },
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+                icon: true, // Fetch icon
+                isActive: true,
+                displayOrder: true
+            }
+        });
 
-    // 1) Load brand categories (top-level)
-    // You already have these slugs in your UI
-    const brandSlugs = ["apple", "samsung", "motorola", "google"];
+        const brandById = new Map<string, any>();
+        brandCategories.forEach(c => brandById.set(c.id, c));
 
-    const { data: brandCategories, error: catErr } = await supabase
-        .from("categories")
-        .select('id,name,slug,parent_id,is_active,sort_order')
-        .in('slug', ['apple', 'samsung', 'motorola', 'google'])
-        .eq('is_active', true)
+        // 2) Load phone models for those brands
+        const models = await prisma.phoneModel.findMany({
+            where: {
+                categoryId: { in: Array.from(brandById.keys()) },
+                isActive: true
+            },
+            select: {
+                id: true,
+                modelName: true,
+                modelSlug: true,
+                releaseYear: true,
+                categoryId: true
+            },
+            orderBy: [
+                { releaseYear: 'desc' },
+                { modelName: 'asc' }
+            ]
+        });
 
-    if (catErr) {
-        return NextResponse.json({ success: false, error: catErr.message }, { status: 500 });
-    }
+        // 3) Group -> brand -> subcategory -> items
+        const grouped: Record<
+            string,
+            {
+                id: string;
+                slug: string;
+                icon: string | null;
+                subcategories: string[];
+                bySubcategory: Record<
+                    string,
+                    {
+                        columns: Array<{ title: string; items: Array<{ name: string; link: string; new?: boolean }>; viewAll?: string }>;
+                    }
+                >;
+            }
+        > = {};
 
-    const brandById = new Map<string, CategoryRow>();
-    (brandCategories || []).forEach((c: any) => brandById.set(c.id, c));
-
-    // 2) Load phone models for those brands
-    const { data: models, error: modelErr } = await supabase
-        .from("phone_models")
-        .select("id, model_name, model_slug, release_year, category_id")
-        .in("category_id", Array.from(brandById.keys()))
-        .eq("is_active", true)
-        .order("release_year", { ascending: false })
-        .order("model_name", { ascending: true });
-
-    if (modelErr) {
-        return NextResponse.json({ success: false, error: modelErr.message }, { status: 500 });
-    }
-
-    // 3) Group -> brand -> subcategory -> items
-    const grouped: Record<
-        string,
-        {
-            subcategories: string[];
-            bySubcategory: Record<
-                string,
-                {
-                    columns: Array<{ title: string; items: Array<{ name: string; link: string; new?: boolean }> ; viewAll?: string }>;
-                }
-            >;
-        }
-    > = {};
-
-    const brandCategoriesData: CategoryRow[] = (brandCategories ?? []) as CategoryRow[]
-
-    for (const bc of brandCategoriesData) {
-        grouped[bc.name] = { subcategories: [], bySubcategory: {} };
-    }
-
-    for (const row of (models || []) as PhoneModelRow[]) {
-        const brand = brandById.get(row.category_id);
-        if (!brand) continue;
-
-        const brandName = brand.name;     // "Apple"
-        const brandSlug = brand.slug;     // "apple"
-
-        const subcat = inferSubcategory(brandSlug, row.model_name);
-        if (!grouped[brandName]) grouped[brandName] = { subcategories: [], bySubcategory: {} };
-
-        if (!grouped[brandName].subcategories.includes(subcat)) {
-            grouped[brandName].subcategories.push(subcat);
-        }
-
-        if (!grouped[brandName].bySubcategory[subcat]) {
-            grouped[brandName].bySubcategory[subcat] = {
-                columns: [
-                    { title: subcat, items: [], viewAll: `/shop?brand=${brandSlug}&type=${encodeURIComponent(subcat)}` },
-                    { title: "", items: [] },
-                    { title: "", items: [] },
-                ],
+        for (const bc of brandCategories) {
+            grouped[bc.name] = {
+                id: bc.id,
+                slug: bc.slug,
+                icon: bc.icon,
+                subcategories: [],
+                bySubcategory: {}
             };
         }
 
-        const isNew = row.release_year != null && row.release_year >= 2024;
+        for (const row of models) {
+            const brand = brandById.get(row.categoryId);
+            if (!brand) continue;
 
-        // spread items into 3 columns (simple round-robin)
-        const cols = grouped[brandName].bySubcategory[subcat].columns;
-        const allCount = cols[0].items.length + cols[1].items.length + cols[2].items.length;
-        const colIndex = allCount % 3;
+            const brandName = brand.name;
+            const brandSlug = brand.slug;
 
-        cols[colIndex].items.push({
-            name: row.model_name,
-            link: toShopLink(brandSlug, row.model_name),
-            ...(isNew ? { new: true } : {}),
-        });
-    }
+            const subcat = inferSubcategory(brandSlug, row.modelName);
+            if (!grouped[brandName]) {
+                grouped[brandName] = {
+                    id: brand.id,
+                    slug: brandSlug,
+                    icon: (brand as any).icon || null, // Cast to any if type is not inferred correctly, or check schema
+                    subcategories: [],
+                    bySubcategory: {}
+                };
+            }
 
-    // Optional: sort subcategories in a nice order
-    const preferredOrder: Record<string, string[]> = {
-        Apple: ["iPhone", "iPad", "Watch", "AirPods", "iPod", "MacBook Pro", "MacBook Air", "MacBook", "iMac", "Mac Mini", "Mac Pro", "Mac Studio", "Studio Display", "Other"],
-        Samsung: ["S Series", "Note Series", "A Series", "Z Series", "Other"],
-        Motorola: ["Moto G Series", "Razr Series", "Edge Series", "Other"],
-        Google: ["Pixel", "Pixelbook", "Other"],
-    };
+            if (!grouped[brandName].subcategories.includes(subcat)) {
+                grouped[brandName].subcategories.push(subcat);
+            }
 
-    for (const brandName of Object.keys(grouped)) {
-        const pref = preferredOrder[brandName];
-        if (pref) {
-            grouped[brandName].subcategories.sort((a, b) => pref.indexOf(a) - pref.indexOf(b));
-        } else {
-            grouped[brandName].subcategories.sort();
+            if (!grouped[brandName].bySubcategory[subcat]) {
+                grouped[brandName].bySubcategory[subcat] = {
+                    columns: [
+                        { title: subcat, items: [], viewAll: `/shop?brand=${brandSlug}&type=${encodeURIComponent(subcat)}` },
+                        { title: "", items: [] },
+                        { title: "", items: [] },
+                    ],
+                };
+            }
+
+            const isNew = row.releaseYear != null && row.releaseYear >= 2024;
+
+            // spread items into 3 columns (simple round-robin)
+            const cols = grouped[brandName].bySubcategory[subcat].columns;
+            const allCount = cols[0].items.length + cols[1].items.length + cols[2].items.length;
+            const colIndex = allCount % 3;
+
+            cols[colIndex].items.push({
+                name: row.modelName,
+                link: toShopLink(brandSlug, row.modelName),
+                ...(isNew ? { new: true } : {}),
+            });
         }
-    }
 
-    return NextResponse.json({ success: true, data: grouped });
+        // Optional: sort subcategories in a nice order
+        const preferredOrder: Record<string, string[]> = {
+            Apple: ["iPhone", "iPad", "Watch", "AirPods", "iPod", "MacBook Pro", "MacBook Air", "MacBook", "iMac", "Mac Mini", "Mac Pro", "Mac Studio", "Studio Display", "Other"],
+            Samsung: ["S Series", "Note Series", "A Series", "Z Series", "Other"],
+            Motorola: ["Moto G Series", "Razr Series", "Edge Series", "Other"],
+            Google: ["Pixel", "Pixelbook", "Other"],
+        };
+
+        for (const brandName of Object.keys(grouped)) {
+            const pref = preferredOrder[brandName];
+            if (pref) {
+                grouped[brandName].subcategories.sort((a, b) => pref.indexOf(a) - pref.indexOf(b));
+            } else {
+                grouped[brandName].subcategories.sort();
+            }
+        }
+
+        return NextResponse.json({ success: true, data: grouped });
+
+    } catch (error) {
+        return NextResponse.json(
+            { success: false, error: 'Internal server error' },
+            { status: 500 }
+        );
+    }
 }
 

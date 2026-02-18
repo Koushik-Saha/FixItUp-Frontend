@@ -11,6 +11,7 @@ export interface User {
     role: UserRole;
     wholesale_status?: WholesaleStatus;
     wholesale_tier?: WholesaleTier;
+    company_name?: string;
 }
 
 export interface AuthResponse {

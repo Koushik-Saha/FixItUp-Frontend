@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { User, Cart, CartItem, Product } from '@/types'
+import type { User, CartItem, Product } from '@/types'
 
 // Auth Store
 interface AuthState {
@@ -18,19 +18,19 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
-      
+
       login: (user) =>
         set({
           user,
           isAuthenticated: true,
         }),
-      
+
       logout: () =>
         set({
           user: null,
           isAuthenticated: false,
         }),
-      
+
       updateUser: (userData) =>
         set((state) => ({
           user: state.user ? { ...state.user, ...userData } : null,
@@ -50,6 +50,7 @@ interface CartState {
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
+  setItems: (items: CartItem[]) => void
   getItemCount: () => number
   getSubtotal: () => number
 }
@@ -58,13 +59,13 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
-      
+
       addItem: (product, quantity) =>
         set((state) => {
           const existingItem = state.items.find(
             (item) => item.productId === product.id
           )
-          
+
           if (existingItem) {
             return {
               items: state.items.map((item) =>
@@ -74,7 +75,7 @@ export const useCartStore = create<CartState>()(
               ),
             }
           }
-          
+
           return {
             items: [
               ...state.items,
@@ -87,26 +88,28 @@ export const useCartStore = create<CartState>()(
             ],
           }
         }),
-      
+
       removeItem: (productId) =>
         set((state) => ({
           items: state.items.filter((item) => item.productId !== productId),
         })),
-      
+
       updateQuantity: (productId, quantity) =>
         set((state) => ({
           items: state.items.map((item) =>
             item.productId === productId ? { ...item, quantity } : item
           ),
         })),
-      
+
       clearCart: () => set({ items: [] }),
-      
+
+      setItems: (items: CartItem[]) => set({ items }),
+
       getItemCount: () => {
         const { items } = get()
         return items.reduce((total, item) => total + item.quantity, 0)
       },
-      
+
       getSubtotal: () => {
         const { items } = get()
         return items.reduce(
@@ -142,22 +145,22 @@ export const useUIStore = create<UIState>()((set) => ({
   isCartDrawerOpen: false,
   isQuickViewOpen: false,
   quickViewProduct: null,
-  
+
   toggleMobileMenu: () =>
     set((state) => ({ isMobileMenuOpen: !state.isMobileMenuOpen })),
-  
+
   toggleSearch: () =>
     set((state) => ({ isSearchOpen: !state.isSearchOpen })),
-  
+
   toggleCartDrawer: () =>
     set((state) => ({ isCartDrawerOpen: !state.isCartDrawerOpen })),
-  
+
   openQuickView: (product) =>
     set({
       isQuickViewOpen: true,
       quickViewProduct: product,
     }),
-  
+
   closeQuickView: () =>
     set({
       isQuickViewOpen: false,
@@ -167,8 +170,8 @@ export const useUIStore = create<UIState>()((set) => ({
 
 // Wishlist Store
 interface WishlistState {
-  items: string[] // Product IDs
-  addItem: (productId: string) => void
+  items: Product[] // Changed from string[] to Product[]
+  addItem: (product: Product) => void
   removeItem: (productId: string) => void
   isInWishlist: (productId: string) => boolean
   clearWishlist: () => void
@@ -178,25 +181,25 @@ export const useWishlistStore = create<WishlistState>()(
   persist(
     (set, get) => ({
       items: [],
-      
-      addItem: (productId) =>
+
+      addItem: (product) =>
         set((state) => {
-          if (!state.items.includes(productId)) {
-            return { items: [...state.items, productId] }
+          if (!state.items.find((item) => item.id === product.id)) {
+            return { items: [...state.items, product] }
           }
           return state
         }),
-      
+
       removeItem: (productId) =>
         set((state) => ({
-          items: state.items.filter((id) => id !== productId),
+          items: state.items.filter((item) => item.id !== productId),
         })),
-      
+
       isInWishlist: (productId) => {
         const { items } = get()
-        return items.includes(productId)
+        return items.some((item) => item.id === productId)
       },
-      
+
       clearWishlist: () => set({ items: [] }),
     }),
     {
@@ -217,7 +220,7 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()(
   persist(
     (set) => ({
       products: [],
-      
+
       addProduct: (product) =>
         set((state) => {
           // Remove if already exists
@@ -227,7 +230,7 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()(
             products: [product, ...filtered].slice(0, 10),
           }
         }),
-      
+
       clearHistory: () => set({ products: [] }),
     }),
     {
@@ -267,7 +270,7 @@ export const useFiltersStore = create<FiltersState>()((set) => ({
   inStock: false,
   rating: 0,
   search: '',
-  
+
   setCategories: (categories) => set({ categories }),
   setBrands: (brands) => set({ brands }),
   setModels: (models) => set({ models }),
@@ -276,7 +279,7 @@ export const useFiltersStore = create<FiltersState>()((set) => ({
   setInStock: (inStock) => set({ inStock }),
   setRating: (rating) => set({ rating }),
   setSearch: (search) => set({ search }),
-  
+
   clearFilters: () =>
     set({
       categories: [],

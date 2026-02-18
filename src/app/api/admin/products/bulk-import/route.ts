@@ -1,161 +1,121 @@
-// app/api/admin/products/bulk-import/route.ts
-// Admin Products API - Bulk import products
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { errorResponse, UnauthorizedError } from '@/lib/utils/errors'
-import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
+import prisma from '@/lib/prisma'
+import { errorResponse, ForbiddenError } from '@/lib/utils/errors'
+import { Prisma } from '@prisma/client'
 
-// Helper to check if user is admin
-async function checkAdmin(supabase: any, userId: string) {
-    const { data: profile } = await (supabase
-        .from('products') as any)
-        .select('role')
-        .eq('id', userId)
-        .single()
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
 
-    if (!profile || profile.role !== 'admin') {
-        throw new UnauthorizedError('Admin access required')
-    }
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
 }
 
-// OPTIONS /api/admin/products/bulk-import - Handle preflight request
 export async function OPTIONS(request: NextRequest) {
-    return handleCorsPreflightRequest(request)
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
-// POST /api/admin/products/bulk-import - Bulk import products
 export async function POST(request: NextRequest) {
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const origin = request.headers.get('origin')
-        const supabase = await createClient()
-        const body = await request.json()
+        const userRole = request.headers.get('x-user-role');
+        if (userRole !== 'ADMIN') throw new ForbiddenError('Admin access required');
 
-        // Check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to access this resource')
-        }
-
-        // Check admin role
-        await checkAdmin(supabase, user.id)
-
-        const { products } = body
+        const body = await request.json();
+        const { products } = body;
 
         if (!products || !Array.isArray(products) || products.length === 0) {
-            return NextResponse.json(
-                { error: 'Products array is required and must not be empty' },
-                { status: 400, headers: getCorsHeaders(origin) }
-            )
+            return NextResponse.json({ error: 'No products provided' }, { status: 400, headers: corsHeaders });
         }
 
-        let imported = 0
-        let failed = 0
-        const errors: string[] = []
+        let imported = 0;
+        let failed = 0;
+        const errors: string[] = [];
 
-        // Get existing SKUs to check for duplicates
-        const skus = products.map(p => p.sku).filter(Boolean)
-        const { data: existingProducts } = await (supabase
-            .from('products') as any)
-            .select('sku')
-            .in('sku', skus)
+        // Check for duplicates in DB
+        const skus = products.map(p => p.sku).filter(Boolean);
+        const existingProducts = await prisma.product.findMany({
+            where: { sku: { in: skus } },
+            select: { sku: true }
+        });
+        const existingSKUs = new Set(existingProducts.map(p => p.sku));
 
-        const existingSKUs = new Set(existingProducts?.map((p: any) => p.sku) || [])
-
-        // Process each product
-        const productsToInsert = []
+        const productsToInsert: Prisma.ProductCreateManyInput[] = [];
 
         for (const product of products) {
             try {
-                // Validate required fields
-                if (!product.name || !product.sku || !product.slug || !product.brand || product.base_price === undefined) {
-                    errors.push(`Product "${product.name || product.sku || 'unknown'}": Missing required fields`)
-                    failed++
-                    continue
+                if (!product.sku || !product.name || !product.slug || product.base_price === undefined) {
+                    errors.push(`Invalid product data for ${product.name || product.sku}`);
+                    failed++;
+                    continue;
                 }
 
-                // Check for duplicate SKU
                 if (existingSKUs.has(product.sku)) {
-                    errors.push(`Product "${product.name}": SKU "${product.sku}" already exists`)
-                    failed++
-                    continue
+                    errors.push(`SKU ${product.sku} already exists`);
+                    failed++;
+                    continue;
                 }
 
-                // Prepare product data
+                // Add to set to prevent internal duplicates in same batch
+                existingSKUs.add(product.sku);
+
                 productsToInsert.push({
                     name: product.name,
                     sku: product.sku,
                     slug: product.slug,
-                    category_id: product.category_id || null,
-                    brand: product.brand,
-                    device_model: product.device_model || null,
-                    product_type: product.product_type || null,
-                    base_price: product.base_price,
-                    cost_price: product.cost_price || null,
-                    wholesale_tier1_discount: product.wholesale_tier1_discount || 0,
-                    wholesale_tier2_discount: product.wholesale_tier2_discount || 0,
-                    wholesale_tier3_discount: product.wholesale_tier3_discount || 0,
-                    total_stock: product.total_stock || 0,
-                    low_stock_threshold: product.low_stock_threshold || 10,
+                    brand: product.brand || 'Generic',
+                    deviceModel: product.device_model || 'Universal',
+                    categoryId: product.category_id,
+                    basePrice: product.base_price,
+                    costPrice: product.cost_price,
+                    description: product.description,
+                    totalStock: product.total_stock || 0,
+                    lowStockThreshold: product.low_stock_threshold || 10,
+                    isActive: product.is_active !== false,
+                    isFeatured: product.is_featured,
+                    isNew: product.is_new,
                     images: product.images || [],
-                    thumbnail: product.thumbnail || null,
-                    description: product.description || null,
-                    specifications: product.specifications || null,
-                    meta_title: product.meta_title || null,
-                    meta_description: product.meta_description || null,
-                    is_active: product.is_active !== false,
-                    is_featured: product.is_featured || false,
-                    is_new: product.is_new || false,
-                    is_bestseller: product.is_bestseller || false,
-                })
-
-                // Add to existing SKUs to prevent duplicates within the batch
-                existingSKUs.add(product.sku)
-
+                    thumbnail: product.thumbnail,
+                    productType: product.product_type || 'Part',
+                    metaTitle: product.meta_title,
+                    metaDescription: product.meta_description,
+                    tier1Discount: product.wholesale_tier1_discount || 0,
+                    tier2Discount: product.wholesale_tier2_discount || 0,
+                    tier3Discount: product.wholesale_tier3_discount || 0,
+                });
             } catch (err: any) {
-                errors.push(`Product "${product.name || product.sku}": ${err.message}`)
-                failed++
+                errors.push(`Error processing ${product.sku}: ${err.message}`);
+                failed++;
             }
         }
 
-        // Bulk insert products
         if (productsToInsert.length > 0) {
-            const { data: insertedProducts, error: insertError } = await (supabase
-                .from('products') as any)
-                .insert(productsToInsert)
-                .select()
-
-            if (insertError) {
-                console.error('Bulk insert error:', insertError)
-                errors.push(`Bulk insert failed: ${insertError.message}`)
-                failed += productsToInsert.length
-            } else {
-                imported = insertedProducts?.length || 0
-            }
+            const result = await prisma.product.createMany({
+                data: productsToInsert,
+                skipDuplicates: true // Should be safe given our check, but extra safety
+            });
+            imported = result.count;
         }
 
         return NextResponse.json({
-            message: `Bulk import completed: ${imported} imported, ${failed} failed`,
-            data: {
-                imported,
-                failed,
-                total: products.length,
-                errors: errors.length > 0 ? errors : undefined,
-            },
-        }, {
-            headers: getCorsHeaders(origin)
-        })
+            message: `Import complete. ${imported} imported, ${failed} failed.`,
+            data: { imported, failed, errors }
+        }, { headers: corsHeaders });
 
     } catch (error) {
-        const errorRes = errorResponse(error)
-        const headers = new Headers(errorRes.headers)
-        const origin = request.headers.get('origin')
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

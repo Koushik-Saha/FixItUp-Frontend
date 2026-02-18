@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ShoppingCart, Loader2, Check, AlertCircle } from 'lucide-react'
+import { ShoppingCart, Loader2, Check } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface QuickReorderButtonProps {
@@ -48,7 +48,7 @@ export default function QuickReorderButton({
                     {
                         duration: 5000,
                         description: data.unavailable_products
-                            .map((p: any) => `${p.name}: ${p.reason}`)
+                            .map((p: { name: string; reason: string }) => `${p.name}: ${p.reason}`)
                             .join(', ')
                     }
                 )

@@ -1,7 +1,6 @@
 // src/lib/auth-client.ts
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import {
     AuthResponse,
     LoginPayload,
@@ -49,31 +48,17 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
 
 export async function getCurrentUser(): Promise<User | null> {
     try {
-        const supabase = createClient();
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const response = await fetch(`${API_BASE}/me`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
 
-        if (error || !user) return null;
+        if (!response.ok) return null;
 
-        // Get full profile
-        const { data: profile, error: profileError } = await (supabase
-            .from('profiles') as any)
-            .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (profileError || !profile) return null;
-
-        const profileData = profile as any;
-
-        return {
-            id: user.id,
-            email: user.email!,
-            full_name: profileData.full_name || '',
-            phone: profileData.phone || undefined,
-            role: profileData.role || 'customer',
-            wholesale_status: profileData.wholesale_status || undefined,
-            wholesale_tier: profileData.wholesale_tier || undefined,
-        };
+        const { user } = await response.json();
+        return user;
     } catch (error) {
         console.error('Error getting current user:', error);
         return null;
@@ -81,33 +66,19 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 export async function updateProfile(updates: Partial<User>): Promise<User> {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const response = await fetch(`${API_BASE}/me`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+    });
 
-    if (!user) throw new Error("Not authenticated");
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update profile");
+    }
 
-    // Update profile in database
-    const { data, error } = await (supabase
-        .from('profiles') as any)
-        .update({
-            full_name: updates.full_name,
-            phone: updates.phone,
-        })
-        .eq('id', user.id)
-        .select()
-        .single();
-
-    if (error) throw new Error(error.message);
-
-    return {
-        id: user.id,
-        email: user.email!,
-        full_name: data.full_name || '',
-        phone: data.phone || undefined,
-        role: data.role || 'customer',
-        wholesale_status: data.wholesale_status || undefined,
-        wholesale_tier: data.wholesale_tier || undefined,
-    };
+    const { user } = await response.json();
+    return user;
 }
 
 export async function applyForWholesale(): Promise<User> {
@@ -129,8 +100,5 @@ export async function logoutApi(): Promise<void> {
     await fetch(`${API_BASE}/logout`, {
         method: "POST",
     });
-    
-    // Also clear Supabase session
-    const supabase = createClient();
-    await supabase.auth.signOut();
 }
+

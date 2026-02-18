@@ -1,404 +1,354 @@
-// src/app/api/homepage/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { errorResponse } from '@/lib/utils/errors'
 
-import {NextRequest, NextResponse} from "next/server";
-import {createClient} from "@/lib/supabase/server";
-
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
     try {
-        const supabase = await createClient();
+        const [
+            heroSlides,
+            categories,
+            flashProducts,
+            newProducts,
+            phoneModels,
+            stores
+        ] = await Promise.all([
+            // 1. Hero Slides
+            prisma.heroSlide.findMany({
+                where: { isActive: true },
+                orderBy: { sortOrder: 'asc' },
+                take: 10
+            }),
 
-        // ======================
-        // 1) HERO (static demo)
-        // ======================
-        const hero = [
-            {
-                id: 1,
-                badge: "New Arrivals",
-                badgeColor: "bg-yellow-500",
-                title: "Latest Tech at Unbeatable Prices",
-                description:
-                    "Shop the newest smartphones, laptops, and accessories from top brands. Free shipping on orders over $50!",
-                ctaPrimary: {text: "Shop Now", link: "/shop"},
-                ctaSecondary: {text: "View All Deals", link: "/deals"},
-                image: "/images/phone_repair.jpg",
-                gradient: "from-blue-600 via-purple-600 to-pink-600",
-                trustBadges: [
-                    {icon: "🚚", text: "Free Shipping"},
-                    {icon: "🛡️", text: "2-Year Warranty"},
-                    {icon: "💳", text: "Secure Payment"},
-                ],
-                discount: "-20% OFF",
-            },
-            {
-                id: 2,
-                badge: "Smartphones",
-                badgeColor: "bg-blue-500",
-                title: "iPhone 15 Series Now Available",
-                description:
-                    "Get the latest iPhone 15 Pro Max with all accessories. Complete protection with cases, screen protectors, and chargers.",
-                ctaPrimary: {text: "Shop iPhones", link: "/phones/apple"},
-                ctaSecondary: {
-                    text: "View Accessories",
-                    link: "/phones/apple/iphone-15-pro-max",
+            // 2. Categories (Top-level only - Brands)
+            prisma.category.findMany({
+                where: {
+                    isActive: true,
+                    parentId: null,
+                    slug: { in: ['apple', 'samsung', 'google', 'motorola', 'oneplus', 'ipad', 'macbook', 'watch'] }
                 },
-                image: "/images/phone_repair.jpg",
-                gradient: "from-cyan-600 via-blue-600 to-indigo-600",
-                trustBadges: [
-                    {icon: "✅", text: "Authentic Products"},
-                    {icon: "⚡", text: "Same Day Shipping"},
-                    {icon: "💰", text: "Best Price Guarantee"},
-                ],
-                discount: "-15% OFF",
-            },
-            {
-                id: 3,
-                badge: "Laptops & Tablets",
-                badgeColor: "bg-purple-500",
-                title: "Powerful Laptops for Work & Play",
-                description:
-                    "Discover high-performance laptops from Dell, HP, Lenovo, and more. Perfect for work, gaming, or creative projects.",
-                ctaPrimary: {text: "Shop Laptops", link: "/laptops"},
-                ctaSecondary: {text: "View Tablets", link: "/tablets"},
-                image: "/images/phone_repair.jpg",
-                gradient: "from-purple-600 via-pink-600 to-red-600",
-                trustBadges: [
-                    {icon: "🎮", text: "Gaming Ready"},
-                    {icon: "💻", text: "Professional Grade"},
-                    {icon: "🔧", text: "Free Setup"},
-                ],
-                discount: "-25% OFF",
-            },
-            {
-                id: 4,
-                badge: "Audio & Accessories",
-                badgeColor: "bg-green-500",
-                title: "Premium Audio Experience",
-                description:
-                    "AirPods, headphones, and speakers from top brands. Crystal clear sound for music, calls, and gaming.",
-                ctaPrimary: {text: "Shop Audio", link: "/category/audio"},
-                ctaSecondary: {text: "View Deals", link: "/deals/audio"},
-                image: "/images/phone_repair.jpg",
-                gradient: "from-green-600 via-emerald-600 to-teal-600",
-                trustBadges: [
-                    {icon: "🎧", text: "Studio Quality"},
-                    {icon: "🔋", text: "Long Battery Life"},
-                    {icon: "🎵", text: "Noise Canceling"},
-                ],
-                discount: "-30% OFF",
-            },
-            {
-                id: 5,
-                badge: "Wholesale B2B & B2C",
-                badgeColor: "bg-orange-500",
-                title: "Bulk Orders & Wholesale Pricing",
-                description:
-                    "Special pricing for businesses, repair shops, and resellers. Get the best wholesale rates on all products.",
-                ctaPrimary: {text: "Contact Sales", link: "/wholesale"},
-                ctaSecondary: {text: "View Catalog", link: "/wholesale/catalog"},
-                image: "/images/phone_repair.jpg",
-                gradient: "from-orange-600 via-red-600 to-pink-600",
-                trustBadges: [
-                    {icon: "📦", text: "Bulk Discounts"},
-                    {icon: "🤝", text: "B2B Support"},
-                    {icon: "🚛", text: "Free Shipping"},
-                ],
-                discount: "Up to 40% OFF",
-            },
-        ];
+                orderBy: { displayOrder: 'asc' },
+                take: 8
+            }),
 
-        // ======================
-        // 2) HERO SLIDES (DB)
-        // ======================
-        const {
-            data: heroSlidesDb,
-            error: heroSlidesError,
-        } = await supabase
-            .from("hero_slides")
-            .select(
-                `
-        id,
-        badge,
-        badge_color,
-        title,
-        description,
-        cta_primary,
-        cta_secondary,
-        image,
-        gradient,
-        trust_badges,
-        discount,
-        sort_order,
-        is_active
-      `
-            )
-            .eq("is_active", true)
-            .order("sort_order", {ascending: true})
-            .limit(10);
-
-        const heroSlides =
-            (heroSlidesDb || []).map((s: any) => ({
-                id: s.id,
-                badge: s.badge,
-                badgeColor: s.badge_color,
-                title: s.title,
-                description: s.description,
-                ctaPrimary: s.cta_primary,
-                ctaSecondary: s.cta_secondary,
-                image: s.image,
-                gradient: s.gradient,
-                trustBadges: s.trust_badges,
-                discount: s.discount,
-            })) || [];
-
-        // ======================
-// PHONE MODELS (by brand)
-// ======================
-        const {data: phoneModelsData, error: phoneModelsError} = await supabase
-            .from("phone_models")
-            .select(`
-                    id,
-                    model_name,
-                    model_slug,
-                    release_year,
-                    category:categories (
-                      id,
-                      name,
-                      slug
-                    )
-                  `)
-            .eq("is_active", true)
-            .order("release_year", {ascending: false});
-
-        if (phoneModelsError) {
-            console.error("Phone models error:", phoneModelsError);
-        }
-
-        console.log("phoneModels rows:", phoneModelsData?.length, phoneModelsError);
-
-
-        const phoneModelsByBrand = (phoneModelsData || []).reduce(
-            (acc: any, model: any) => {
-                const brandSlug = model.category.slug;
-
-                if (!acc[brandSlug]) {
-                    acc[brandSlug] = {
-                        brand: model.category.name,
-                        slug: brandSlug,
-                        models: [],
-                    };
+            // 3. Flash Deals (Featured)
+            prisma.product.findMany({
+                where: { isActive: true, isFeatured: true },
+                orderBy: { updatedAt: 'desc' }, // Updated recently = likely a new deal
+                take: 8,
+                select: {
+                    id: true, name: true, slug: true, thumbnail: true, images: true, basePrice: true, tier1Discount: true
                 }
+            }),
 
-                acc[brandSlug].models.push({
-                    id: model.id,
-                    name: model.model_name,
-                    slug: model.model_slug,
-                    releaseYear: model.release_year,
-                });
+            // 4. New Arrivals
+            prisma.product.findMany({
+                where: { isActive: true, isNew: true },
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+                select: {
+                    id: true, name: true, slug: true, thumbnail: true, images: true, basePrice: true
+                }
+            }),
 
-                return acc;
+            // 5. Phone Models (Grouped by Category/Brand)
+            prisma.phoneModel.findMany({
+                where: { isActive: true },
+                include: { category: true },
+                orderBy: { releaseYear: 'desc' }
+            }),
+
+            // 6. Stores
+            prisma.store.findMany({
+                where: { isActive: true },
+                take: 6,
+                select: {
+                    id: true,
+                    name: true,
+                    address: true,
+                    city: true,
+                    state: true,
+                    zipCode: true,
+                    phone: true,
+                    email: true,
+                    operatingHours: true,
+                    isActive: true
+                }
+            })
+        ]);
+
+        // Fallback Mock Data if DB is empty (Development Mode / Initial Setup)
+        const mockHeroSlides = heroSlides.length > 0 ? heroSlides : [
+            {
+                id: 'mock-1',
+                title: 'Expert Phone Repair',
+                description: 'Fast, reliable repairs for iPhone, Samsung, and Google Pixel.',
+                image: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=1200',
+                badge: 'Trusted Service',
+                badgeColor: 'bg-blue-600',
+                gradient: 'from-blue-900 to-slate-900',
+                ctaPrimary: { text: "Book Repair", link: "/repair" },
+                ctaSecondary: { text: "View Pricing", link: "/repair/pricing" },
+                trustBadges: [
+                    { icon: "🛡️", text: "Lifetime Warranty" },
+                    { icon: "⚡", text: "Same Day Service" }
+                ],
+                isActive: true,
+                sortOrder: 1,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                discount: null
             },
-            {}
-        );
-
-
-
-        // ======================
-        // 3) CATEGORIES
-        // ======================
-        const {data: categoriesData, error: categoriesError} = await supabase
-            .from("categories")
-            .select("id, name, slug, icon, sort_order")
-            .is("parent_id", null)
-            .eq("is_active", true)
-            .order("sort_order", {ascending: true})
-            .limit(8);
-
-        const colors = [
-            "red",
-            "blue",
-            "orange",
-            "cyan",
-            "purple",
-            "pink",
-            "green",
-            "indigo",
+            {
+                id: 'mock-2',
+                title: 'Premium Parts Store',
+                description: 'Upgrade your device with high-quality parts.',
+                image: 'https://images.unsplash.com/photo-1598327773204-6e82f5b66d79?w=1200',
+                badge: 'New Arrivals',
+                badgeColor: 'bg-green-600',
+                gradient: 'from-green-900 to-emerald-900',
+                ctaPrimary: { text: "Shop Parts", link: "/shop" },
+                ctaSecondary: { text: "Wholesale", link: "/wholesale/apply" },
+                discount: "10% OFF",
+                isActive: true,
+                sortOrder: 2,
+                trustBadges: [] as any,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
         ];
 
-        const categories = (categoriesData || []).map((cat: any, index: number) => ({
+        const mockNewProducts = newProducts.length > 0 ? newProducts : [
+            {
+                id: 'mock-p1',
+                name: 'iPhone 13 Pro Max Screen',
+                slug: 'iphone-13-screen',
+                basePrice: 129.99 as any,
+                thumbnail: 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=500',
+                images: [],
+                isActive: true,
+                isNew: true
+            },
+            {
+                id: 'mock-p2',
+                name: 'Samsung S22 Battery',
+                slug: 's22-battery',
+                basePrice: 39.99 as any,
+                thumbnail: 'https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=500',
+                images: [],
+                isActive: true,
+                isNew: true
+            },
+            {
+                id: 'mock-p3',
+                name: 'USB-C Charging Port',
+                slug: 'usb-c-port',
+                basePrice: 19.99 as any,
+                thumbnail: 'https://images.unsplash.com/photo-1618414902340-2b4742468725?w=500',
+                images: [],
+                isActive: true,
+                isNew: true
+            },
+            {
+                id: 'mock-p4',
+                name: 'Pixel 6 Screen Kit',
+                slug: 'pixel-6-screen',
+                basePrice: 149.99 as any,
+                thumbnail: 'https://images.unsplash.com/photo-1592434134753-a70baf7979d5?w=500',
+                images: [],
+                isActive: true,
+                isNew: true
+            }
+        ];
+
+        // Transform Data
+
+        // Categories Fallback
+        const mockCategories = categories.length > 0 ? categories : [
+            { id: 'cat-1', name: 'Screens', slug: 'screens', icon: '📱', description: 'Replacement Screens' },
+            { id: 'cat-2', name: 'Batteries', slug: 'batteries', icon: '🔋', description: 'High Capacity Batteries' },
+            { id: 'cat-3', name: 'Charging Ports', slug: 'charging', icon: '⚡', description: 'Fix Charging Issues' },
+            { id: 'cat-4', name: 'Cameras', slug: 'cameras', icon: '📸', description: 'Crystal Clear Photos' },
+        ];
+
+        const finalCategories = mockCategories;
+
+        // Categories Colors
+        const colors = ["red", "blue", "orange", "cyan", "purple", "pink", "green", "indigo"];
+        const formattedCategories = finalCategories.map((cat, i) => ({
             id: cat.id,
             name: cat.name,
             slug: cat.slug,
             icon: cat.icon || cat.name?.charAt(0) || "•",
-            color: colors[index % colors.length],
+            color: colors[i % colors.length],
+            count: (cat as any).product_count ? `${(cat as any).product_count} Products` : "Top Quality"
         }));
 
-        // ======================
-        // 4) FLASH DEALS
-        // ======================
-        const {data: flashProducts, error: flashError} = await supabase
-            .from("products")
-            .select("id, name, slug, thumbnail, images, base_price, wholesale_tier1_discount")
-            .eq("is_active", true)
-            .eq("is_featured", true)
-            .order("created_at", {ascending: false})
-            .limit(8);
+        // Stores Fallback
+        const finalStores = stores.length > 0 ? stores : [
+            {
+                id: 'store-1',
+                name: 'Max Phone Repair - Downtown',
+                address: '123 Main St',
+                city: 'New York',
+                state: 'NY',
+                zipCode: '10001',
+                phone: '(212) 555-0123',
+                email: 'downtown@maxphonerepair.com',
+                operatingHours: { "Mon-Fri": "9AM-7PM", "Sat": "10AM-6PM", "Sun": "Closed" },
+                isActive: true
+            }
+        ];
 
-        const flashDealsProducts = (flashProducts || []).map((product: any) => {
-            const discount = Number(product.wholesale_tier1_discount ?? 10);
-            const basePrice = Number(product.base_price ?? 0);
+        // Flash Deals
+        const formattedFlashDeals = flashProducts.map(p => {
+            const discount = Number(p.tier1Discount || 10);
+            const basePrice = Number(p.basePrice);
             const discountedPrice = basePrice * (1 - discount / 100);
-
-            const imageUrl =
-                product.thumbnail ||
-                (Array.isArray(product.images) ? product.images[0] : null) ||
-                "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400";
-
             return {
-                id: product.id,
-                name: product.name,
-                slug: product.slug,
-                image: imageUrl,
+                id: p.id,
+                name: p.name,
+                slug: p.slug,
+                image: p.thumbnail || p.images[0] || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400",
                 price: Number(discountedPrice.toFixed(2)),
                 originalPrice: basePrice,
                 discount,
-                rating: 4.5, // demo
-                reviews: Math.floor(Math.random() * 400) + 100, // demo
+                badge: "Save " + Math.round(discount) + "%",
+                badgeColor: "bg-red-500",
+                rating: 4.5,
+                reviews: 150
             };
         });
 
-        const flashDeals = {
-            title: "Flash Deals",
-            subtitle: "Limited Time Offers",
-            endsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            products: flashDealsProducts,
-        };
+        // Hero Slides
+        // Use mock data if available
+        const finalHeroSlides = mockHeroSlides;
 
-        // ======================
-        // 5) NEW ARRIVALS
-        // ======================
-        const {data: newProducts, error: newError} = await supabase
-            .from("products")
-            .select("id, name, slug, thumbnail, images, base_price")
-            .eq("is_active", true)
-            .eq("is_new", true)
-            .order("created_at", {ascending: false})
-            .limit(10);
+        // New Arrivals
+        const formattedNewArrivals = mockNewProducts.map(p => ({
+            id: p.id,
+            name: p.name,
+            slug: p.slug,
+            image: p.thumbnail || p.images[0] || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400",
+            price: Number(p.basePrice),
+            isNew: true
+        }));
 
-        const newArrivals = (newProducts || []).map((product: any) => {
-            const imageUrl =
-                product.thumbnail ||
-                (Array.isArray(product.images) ? product.images[0] : null) ||
-                "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400";
+        // Phone Models grouped by Brand (Category Slug)
+        interface PhoneModelGroup {
+            brand: string;
+            slug: string;
+            models: { id: string; name: string; slug: string; releaseYear: number }[];
+        }
 
-            return {
-                id: product.id,
-                name: product.name,
-                slug: product.slug,
-                image: imageUrl,
-                price: Number(product.base_price ?? 0),
-                isNew: true,
-            };
+        const phoneModelsByBrand = phoneModels.reduce((acc: Record<string, PhoneModelGroup>, model) => {
+            const brandSlug = model.category.slug;
+            if (!acc[brandSlug]) {
+                acc[brandSlug] = {
+                    brand: model.category.name,
+                    slug: brandSlug,
+                    models: []
+                };
+            }
+            acc[brandSlug].models.push({
+                id: model.id,
+                name: model.modelName,
+                slug: model.modelSlug,
+                releaseYear: model.releaseYear || 0
+            });
+            return acc;
+        }, {} as Record<string, PhoneModelGroup>);
+
+        // Hero Slides (Map snake_case/json to frontend expectations if needed, but Prisma result is camelCase)
+        // Frontend likely expects camelCase if I updated it, or I need to map.
+        // The original API code mapped snake_case to camelCase manually.
+        // Prisma gives camelCase. So I should be good passing it directly OR map if frontend expects specific structure not matching model.
+        // Original: ctaPrimary: s.cta_primary
+        // Model: ctaPrimary
+        // So direct map is fine.
+
+        // Static Data
+        const hero = [/* ... same static demo if needed, or replace with DB slides entirely */];
+        // 7. Top Brands (Dynamic)
+        // We filter for specific popular brands to populate this section, or sorted by some metric
+        const topBrandSlugs = ['apple', 'samsung', 'google', 'motorola', 'sony', 'oneplus'];
+        const dbBrands = await prisma.category.findMany({
+            where: {
+                slug: { in: topBrandSlugs },
+                isActive: true
+            },
+            select: { name: true, slug: true, icon: true }
         });
 
-        // ======================
-        // 6) BRANDS (static)
-        // ======================
-        const brands = [
-            {name: "Apple", logo: "🍎"},
-            {name: "Samsung", logo: "📱"},
-            {name: "Sony", logo: "S"},
-            {name: "Dell", logo: "D"},
-            {name: "Canon", logo: "📷"},
-            {name: "Microsoft", logo: "M"},
-        ];
+        // Static Emoji Map for Fallback (since DB icons are currently null)
+        const brandEco: Record<string, string> = {
+            'Apple': '🍎',
+            'Samsung': '📱',
+            'Google': 'G',
+            'Motorola': 'M', // Motorola doesn't have a perfect emoji, using char or generic
+            'Sony': 'S',
+            'OnePlus': '1+',
+        }
 
-        // ======================
-        // 7) STORES
-        // ======================
-        const {data: storesData, error: storesError} = await supabase
-            .from("stores")
-            .select("id, name, address, city, state, zip_code, phone, email, operating_hours")
-            .eq("is_active", true)
-            .limit(6);
+        const brands = dbBrands.map(b => ({
+            name: b.name,
+            logo: b.icon || brandEco[b.name] || '📱',
+            products: "View All" // Could count products later
+        }));
 
-        const stores = (storesData || []).map((store: any) => {
-            const hours = store.operating_hours || {};
-
-            // If your JSON is like {"monday":{"open":"09:00","close":"19:00"}}
-            const mon = hours.monday ? `${hours.monday.open} - ${hours.monday.close}` : "09:00 - 19:00";
-            const sat = hours.saturday ? `${hours.saturday.open} - ${hours.saturday.close}` : "10:00 - 18:00";
-            const sun = hours.sunday ? `${hours.sunday.open} - ${hours.sunday.close}` : "11:00 - 17:00";
-
-            return {
-                id: store.id,
-                name: store.name,
-                badge: "POPULAR",
-                address: store.address,
-                city: `${store.city}, ${store.state} ${store.zip_code}`,
-                phone: store.phone,
-                email: store.email || "",
-                hours: {
-                    weekday: `Mon-Fri: ${mon}`,
-                    saturday: `Saturday: ${sat}`,
-                    sunday: `Sunday: ${sun}`,
-                },
-            };
-        });
-
-        // ======================
-        // 8) FEATURES + CTA
-        // ======================
+        // Fill if empty (Fallback)
+        if (brands.length === 0) {
+            brands.push(
+                { name: "Apple", logo: "🍎", products: "View All" },
+                { name: "Samsung", logo: "📱", products: "View All" }
+            )
+        }
         const features = [
-            {icon: "🚚", title: "Free Shipping", description: "On all orders over $50"},
-            {icon: "🛡️", title: "180 Day Warranty", description: "On all repairs & parts"},
-            {icon: "⭐", title: "Top Quality", description: "OEM & premium parts only"},
-            {icon: "💰", title: "Best Price", description: "Guaranteed lowest prices"},
+            { icon: "🚚", title: "Free Shipping", description: "On all orders over $50" },
+            { icon: "🛡️", title: "180 Day Warranty", description: "On all repairs & parts" },
+            { icon: "⭐", title: "Top Quality", description: "OEM & premium parts only" },
+            { icon: "💰", title: "Best Price", description: "Guaranteed lowest prices" },
         ];
-
         const cta = {
             title: "Can't Visit a Store? We Ship Nationwide!",
             subtitle: "Order online and get your phone parts delivered anywhere in the US.",
             buttons: [
-                {text: "Shop Online", link: "/shop", variant: "primary" as const},
-                {text: "Contact Us", link: "/contact", variant: "secondary" as const},
+                { text: "Shop Online", link: "/shop", variant: "primary" },
+                { text: "Contact Us", link: "/contact", variant: "secondary" },
             ],
         };
 
-        // ======================
-        // RETURN
-        // ======================
         return NextResponse.json({
             success: true,
             data: {
-                hero,
-                heroSlides,
-                categories,
-                flashDeals,
-                newArrivals,
+                hero: finalHeroSlides, // Replacing static hero with DB slides if frontend handles array
+                heroSlides: finalHeroSlides,
+                categories: formattedCategories,
+                flashDeals: {
+                    title: "Flash Deals",
+                    subtitle: "Limited Time Offers",
+                    endsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    products: formattedFlashDeals
+                },
+                newArrivals: formattedNewArrivals,
                 brands,
-                stores,
+                stores: finalStores.map(s => ({
+                    id: s.id,
+                    name: s.name,
+                    badge: "POPULAR",
+                    address: s.address,
+                    city: `${s.city}, ${s.state} ${s.zipCode}`,
+                    phone: s.phone,
+                    email: s.email,
+                    hours: s.operatingHours
+                })),
                 features,
                 cta,
-                phoneModels: phoneModelsByBrand,
-
-            },
-            errors: {
-                heroSlidesError: heroSlidesError?.message ?? null,
-                categoriesError: categoriesError?.message ?? null,
-                flashError: flashError?.message ?? null,
-                newError: newError?.message ?? null,
-                storesError: storesError?.message ?? null,
-            },
+                phoneModels: phoneModelsByBrand
+            }
         });
-    } catch (err) {
-        console.error("Homepage API error:", err);
-        return NextResponse.json(
-            {
-                success: false,
-                error: "Failed to load homepage data",
-                message: err instanceof Error ? err.message : "Unknown error",
-            },
-            {status: 500}
-        );
+
+    } catch (error) {
+        console.error("Homepage API Error", error);
+        return errorResponse(error);
     }
 }

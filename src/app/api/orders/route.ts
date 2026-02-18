@@ -1,364 +1,271 @@
-// app/api/orders/route.ts
-// Orders API - List and Create orders
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 import { errorResponse, UnauthorizedError, ValidationError } from '@/lib/utils/errors'
-import { createOrderSchema, validateData, formatValidationErrors } from '@/utils/validation'
-import { handleCorsPreflightRequest, getCorsHeaders } from '@/lib/cors'
+import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
-// OPTIONS /api/orders - Handle CORS preflight
-export async function OPTIONS(request: NextRequest) {
-    return handleCorsPreflightRequest(request)
+// Schema for creating an order
+const createOrderSchema = z.object({
+    shipping_address: z.object({
+        full_name: z.string().min(1),
+        address_line_1: z.string().min(1),
+        address_line_2: z.string().optional(),
+        city: z.string().min(1),
+        state: z.string().min(1),
+        postal_code: z.string().min(1),
+        country: z.string().min(1),
+        phone: z.string().optional(),
+    }),
+    billing_address: z.object({
+        full_name: z.string().min(1),
+        address_line_1: z.string().min(1),
+        address_line_2: z.string().optional(),
+        city: z.string().min(1),
+        state: z.string().min(1),
+        postal_code: z.string().min(1),
+        country: z.string().min(1),
+        phone: z.string().optional(),
+    }).optional(),
+    customer_notes: z.string().optional()
+})
+
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5001",
+    process.env.NEXT_PUBLIC_SITE_URL,
+].filter(Boolean) as string[];
+
+function getCorsHeaders(request: NextRequest) {
+    const origin = request.headers.get("origin") || "";
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-user-id, x-user-role",
+        "Access-Control-Allow-Credentials": "true",
+    };
 }
 
-// GET /api/orders - List user's orders
+export async function OPTIONS(request: NextRequest) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
+}
+
 export async function GET(request: NextRequest) {
-    const origin = request.headers.get('origin')
+    const corsHeaders = getCorsHeaders(request);
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = parseInt(searchParams.get('page') || '1');
+    const status = searchParams.get('status');
+
     try {
-        const supabase = await createClient()
-        const { searchParams } = new URL(request.url)
+        const userId = request.headers.get('x-user-id');
+        const userRole = request.headers.get('x-user-role');
+        if (!userId) throw new UnauthorizedError();
 
-        // Get authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError('Please login to view orders')
+        const skip = (page - 1) * limit;
+        const where: Prisma.OrderWhereInput = {};
+
+        // Admin can see all, Users only see their own
+        if (userRole !== 'ADMIN') {
+            where.userId = userId;
         }
 
-        // Get query parameters
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '10')
-        const status = searchParams.get('status')
-
-        // Calculate pagination
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-
-        // Check if user is admin
-        const { data: profile } = await (supabase
-            .from('profiles') as any)
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        const isAdmin = ((profile as any))?.role === 'admin'
-
-        // Build query
-        let query = (supabase
-            .from('orders') as any)
-            .select('*', { count: 'exact' })
-
-        // Admins see all orders, users see only their own
-        if (!isAdmin) {
-            query = query.eq('user_id', user.id)
+        if (status && status !== 'ALL') {
+            where.status = status;
         }
 
-        // Apply status filter
-        if (status) {
-            query = query.eq('status', status)
-        }
-
-        // Apply sorting and pagination
-        query = query
-            .order('created_at', { ascending: false })
-            .range(from, to)
-
-        const { data: orders, error, count } = await query
-
-        if (error) {
-            console.error('Failed to fetch orders:', error)
-            throw new Error('Failed to fetch orders')
-        }
+        const [orders, total] = await Promise.all([
+            prisma.order.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: { orderItems: true }
+            }),
+            prisma.order.count({ where })
+        ]);
 
         return NextResponse.json({
             data: orders,
             pagination: {
                 page,
                 limit,
-                total: count || 0,
-                totalPages: Math.ceil((count || 0) / limit),
-            },
-        }, { headers: getCorsHeaders(origin) })
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        }, { headers: corsHeaders });
 
     } catch (error) {
-        const errorRes = errorResponse(error)
-        const headers = new Headers(errorRes.headers)
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }
 
-// POST /api/orders - Create new order
 export async function POST(request: NextRequest) {
-    const origin = request.headers.get('origin')
+    const corsHeaders = getCorsHeaders(request);
+
     try {
-        const supabase = await createClient()
+        const userId = request.headers.get('x-user-id');
+        if (!userId) throw new UnauthorizedError('Must be logged in to place an order');
 
-        // Parse request body first
-        const body = await request.json()
+        const body = await request.json();
+        const validation = createOrderSchema.safeParse(body);
 
-        // Get authenticated user (optional for guest checkout)
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        const isGuest = !user || authError
-
-        // Guest checkout requires reCAPTCHA verification
-        if (isGuest) {
-            const recaptchaToken = body.recaptcha_token
-
-            if (!recaptchaToken) {
-                return NextResponse.json(
-                    { error: 'reCAPTCHA verification required for guest checkout' },
-                    { status: 400, headers: getCorsHeaders(origin) }
-                )
-            }
-
-            // Verify reCAPTCHA token
-            const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY
-            if (!recaptchaSecret) {
-                console.error('RECAPTCHA_SECRET_KEY not configured')
-                return NextResponse.json(
-                    { error: 'Server configuration error' },
-                    { status: 500, headers: getCorsHeaders(origin) }
-                )
-            }
-
-            const recaptchaResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `secret=${recaptchaSecret}&response=${recaptchaToken}`,
-            })
-
-            const recaptchaResult = await recaptchaResponse.json()
-
-            if (!recaptchaResult.success) {
-                return NextResponse.json(
-                    { error: 'reCAPTCHA verification failed. Please try again.' },
-                    { status: 400, headers: getCorsHeaders(origin) }
-                )
-            }
+        if (!validation.success) {
+            return NextResponse.json({
+                error: 'Invalid request',
+                details: validation.error.flatten().fieldErrors
+            }, { status: 400, headers: corsHeaders });
         }
 
-        // Get user profile (for authenticated users)
-        let profile = null
-        if (user) {
-            const { data } = await (supabase
-                .from('profiles') as any)
-                .select('role, wholesale_tier, full_name, phone')
-                .eq('id', user.id)
-                .single()
-            profile = data
+        const { shipping_address, billing_address, customer_notes } = validation.data;
+
+        // 1. Fetch Cart
+        const cartItems = await prisma.cartItem.findMany({
+            where: { userId },
+            include: { product: true }
+        });
+
+        if (cartItems.length === 0) {
+            return NextResponse.json({ error: 'Cart is empty' }, { status: 400, headers: corsHeaders });
         }
 
-        // Validate request
-        const validation = validateData(createOrderSchema, body)
+        // 2. Validate Stock & Pricing
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true, wholesaleTier: true, fullName: true, email: true, phone: true }
+        });
 
-        if (!validation.success || !validation.data) {
-            throw new ValidationError(
-                'Validation failed'
-            )
+        if (!user) throw new UnauthorizedError();
+
+        let subtotal = 0;
+
+        interface ProcessedItem {
+            productId: string;
+            productName: string;
+            productSku: string;
+            productImage: string;
+            quantity: number;
+            unitPrice: number;
+            discountPercent: number;
+            subtotal: number;
         }
+        const processedItems: ProcessedItem[] = [];
 
-        const { items, shipping_address, billing_address, customer_notes, customer_email } = validation.data
+        for (const item of cartItems) {
+            const product = item.product;
 
-        // Determine customer email
-        const orderEmail = isGuest
-            ? customer_email
-            : user!.email!
-
-        if (!orderEmail) {
-            return NextResponse.json(
-                { error: 'Customer email is required' },
-                { status: 400, headers: getCorsHeaders(origin) }
-            )
-        }
-
-        // Fetch all products in order
-        const productIds = items.map(item => item.product_id)
-        const { data: products, error: productsError } = await (supabase
-            .from('products') as any)
-            .select('id, sku, name, slug, base_price, wholesale_tier1_discount, wholesale_tier2_discount, wholesale_tier3_discount, images, thumbnail, total_stock, is_active')
-            .in('id', productIds)
-
-        if (productsError || !products || products.length !== items.length) {
-            return NextResponse.json(
-                { error: 'One or more products not found' },
-                { status: 400, headers: getCorsHeaders(origin) }
-            )
-        }
-
-        // Check stock and calculate pricing
-        const orderItems = []
-        let subtotal = 0
-
-        for (const item of items) {
-            const product = products.find((p: any) => p.id === item.product_id)
-
-            if (!product) {
-                return NextResponse.json(
-                    { error: `Product ${item.product_id} not found` },
-                    { status: 400, headers: getCorsHeaders(origin) }
-                )
+            // Check active
+            if (!product.isActive) {
+                return NextResponse.json({
+                    error: `Product ${product.name} is no longer available`,
+                    code: 'PRODUCT_UNAVAILABLE'
+                }, { status: 400, headers: corsHeaders });
             }
 
-            if (!product.is_active) {
-                return NextResponse.json(
-                    { error: `Product ${product.name} is not available` },
-                    { status: 400, headers: getCorsHeaders(origin) }
-                )
+            // Check stock
+            if ((product.totalStock || 0) < item.quantity) {
+                return NextResponse.json({
+                    error: `Insufficient stock for ${product.name}`,
+                    code: 'INSUFFICIENT_STOCK',
+                    available: product.totalStock || 0
+                }, { status: 400, headers: corsHeaders });
             }
 
-            if (product.total_stock < item.quantity) {
-                return NextResponse.json(
-                    {
-                        error: `Insufficient stock for ${product.name}`,
-                        available: product.total_stock,
-                        requested: item.quantity,
-                    },
-                    { status: 400, headers: getCorsHeaders(origin) }
-                )
+            // Calculate Unit Price (Wholesale Logic)
+            let unitPrice = Number(product.basePrice);
+            let discountPercentage = 0;
+
+            if (user.role === 'WHOLESALE' && user.wholesaleTier) {
+                if (user.wholesaleTier === 'TIER1') discountPercentage = Number(product.tier1Discount);
+                else if (user.wholesaleTier === 'TIER2') discountPercentage = Number(product.tier2Discount);
+                else if (user.wholesaleTier === 'TIER3') discountPercentage = Number(product.tier3Discount);
+
+                unitPrice = unitPrice * (1 - discountPercentage / 100);
             }
 
-            // Calculate price with wholesale discount
-            let unitPrice = product.base_price
-            let discountPercentage = 0
+            const itemSubtotal = unitPrice * item.quantity;
+            subtotal += itemSubtotal;
 
-            if (((profile as any))?.role === 'wholesale') {
-                switch (profile.wholesale_tier) {
-                    case 'tier1':
-                        discountPercentage = product.wholesale_tier1_discount
-                        break
-                    case 'tier2':
-                        discountPercentage = product.wholesale_tier2_discount
-                        break
-                    case 'tier3':
-                        discountPercentage = product.wholesale_tier3_discount
-                        break
-                }
-                unitPrice = product.base_price * (1 - discountPercentage / 100)
-            }
-
-            const itemSubtotal = unitPrice * item.quantity
-            subtotal += itemSubtotal
-
-            orderItems.push({
-                product_id: product.id,
-                product_name: product.name,
-                product_sku: product.sku,
-                product_image: product.thumbnail || product.images?.[0],
-                unit_price: Number(unitPrice.toFixed(2)),
-                discount_percentage: discountPercentage,
+            processedItems.push({
+                productId: product.id,
+                productName: product.name,
+                productSku: product.sku,
+                productImage: product.thumbnail || product.images[0],
                 quantity: item.quantity,
-                subtotal: Number(itemSubtotal.toFixed(2)),
-            })
+                unitPrice,
+                discountPercent: discountPercentage,
+                subtotal: itemSubtotal
+            });
         }
 
-        // Calculate totals
-        const discountAmount = orderItems.reduce((sum, item) => {
-            const originalPrice = products.find((p: any) => p.id === item.product_id)?.base_price || 0
-            return sum + ((originalPrice - item.unit_price) * item.quantity)
-        }, 0)
+        // 3. Calculate Totals
+        const taxRate = 0; // Implement tax calculation logic here
+        const taxAmount = subtotal * taxRate;
+        const shippingCost = subtotal > 100 ? 0 : 10; // Simple logic: Free shipping over $100
+        const totalAmount = subtotal + taxAmount + shippingCost;
 
-        // Simple tax calculation (7% - adjust based on your needs)
-        const taxRate = 0.07
-        const taxAmount = subtotal * taxRate
-
-        // Shipping cost (free over $50, otherwise $9.99)
-        const shippingCost = subtotal >= 50 ? 0 : 9.99
-
-        const totalAmount = subtotal + taxAmount + shippingCost
-
-        // Generate order number
-        const { data: orderNumberData } = await (supabase as any).rpc('generate_order_number')
-        const orderNumber = orderNumberData || `ORD-${Date.now()}`
-
-        // Create order
-        const { data: order, error: orderError } = await (supabase
-            .from('orders') as any)
-            .insert({
-                order_number: orderNumber,
-                user_id: user?.id || null,
-                customer_name: shipping_address.full_name,
-                customer_email: orderEmail,
-                customer_phone: shipping_address.phone || ((profile as any))?.phone,
-                subtotal: Number(subtotal.toFixed(2)),
-                discount_amount: Number(discountAmount.toFixed(2)),
-                tax_amount: Number(taxAmount.toFixed(2)),
-                shipping_cost: shippingCost,
-                total_amount: Number(totalAmount.toFixed(2)),
-                is_wholesale: ((profile as any))?.role === 'wholesale',
-                wholesale_tier: ((profile as any))?.wholesale_tier,
-                is_guest: isGuest,
-                shipping_address,
-                billing_address: billing_address || shipping_address,
-                customer_notes,
-                status: 'pending',
-                payment_status: 'pending',
-            })
-            .select()
-            .single()
-
-        if (orderError) {
-            console.error('Failed to create order:', orderError)
-            throw new Error('Failed to create order')
-        }
-
-        // Create order items
-        const orderItemsWithOrderId = orderItems.map(item => ({
-            ...item,
-            order_id: order.id,
-        }))
-
-        const { error: itemsError } = await (supabase
-            .from('order_items') as any)
-            .insert(orderItemsWithOrderId)
-
-        if (itemsError) {
-            console.error('Failed to create order items:', itemsError)
-            // Rollback order
-            await ((supabase as any).from('orders') as any).delete().eq('id', order.id)
-            throw new Error('Failed to create order items')
-        }
-
-        // Clear cart items for this order (only for authenticated users)
-        if (user) {
-            await (supabase
-                .from('cart_items') as any)
-                .delete()
-                .eq('user_id', user.id)
-                .in('product_id', productIds)
-        }
-
-        // TODO: In production, integrate with payment processor (Stripe)
-        // const paymentIntent = await stripe.paymentIntents.create({...})
-
-        return NextResponse.json(
-            {
-                message: 'Order created successfully',
+        // 4. Transaction: Create Order, Items, Update Stock, Clear Cart
+        const order = await prisma.$transaction(async (tx) => {
+            // Create Order
+            const newOrder = await tx.order.create({
                 data: {
-                    order_id: order.id,
-                    order_number: order.order_number,
-                    total_amount: order.total_amount,
-                    // In production, return payment client_secret here
-                    // client_secret: paymentIntent.client_secret,
-                },
-            },
-            { status: 201, headers: getCorsHeaders(origin) }
-        )
+                    userId,
+                    orderNumber: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Simple generation
+                    customerName: user.fullName || shipping_address.full_name,
+                    customerEmail: user.email || '',
+                    customerPhone: user.phone || shipping_address.phone || null,
+                    status: 'pending',
+                    paymentStatus: 'pending', // Payment integration later
+                    subtotal,
+                    taxAmount,
+                    shippingCost,
+                    totalAmount,
+                    isWholesale: user.role === 'WHOLESALE',
+                    wholesaleTier: user.wholesaleTier,
+                    shippingAddress: shipping_address as unknown as Prisma.InputJsonValue,
+                    billingAddress: (billing_address || shipping_address) as unknown as Prisma.InputJsonValue,
+                    customerNotes: customer_notes,
+
+                    // Create Items
+                    orderItems: {
+                        create: processedItems
+                    }
+                }
+            });
+
+            // Update Stock
+            for (const item of processedItems) {
+                await tx.product.update({
+                    where: { id: item.productId },
+                    data: {
+                        totalStock: { decrement: item.quantity }
+                    }
+                });
+            }
+
+            // Clear Cart
+            await tx.cartItem.deleteMany({
+                where: { userId }
+            });
+
+            return newOrder;
+        });
+
+        return NextResponse.json({
+            message: 'Order placed successfully',
+            data: {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                totalAmount: Number(order.totalAmount)
+            }
+        }, { status: 201, headers: corsHeaders });
 
     } catch (error) {
-        const errorRes = errorResponse(error)
-        const headers = new Headers(errorRes.headers)
-        Object.entries(getCorsHeaders(origin)).forEach(([key, value]) => {
-            headers.set(key, value)
-        })
-        return new NextResponse(errorRes.body, {
-            status: errorRes.status,
-            headers,
-        })
+        const res = errorResponse(error);
+        Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
     }
 }

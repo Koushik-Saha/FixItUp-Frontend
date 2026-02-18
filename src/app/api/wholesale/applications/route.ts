@@ -1,75 +1,49 @@
-// app/api/wholesale/applications/route.ts
-// Wholesale Applications API - List applications (Admin only)
-
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import prisma from '@/lib/prisma'
 import { errorResponse, UnauthorizedError, ForbiddenError } from '@/lib/utils/errors'
+import { Prisma } from '@prisma/client'
 
-// GET /api/wholesale/applications - List all applications (Admin only)
 export async function GET(request: NextRequest) {
     try {
-        const supabase = await createClient()
+        const userId = request.headers.get('x-user-id');
+        const userRole = request.headers.get('x-user-role');
+
+        if (userRole !== 'ADMIN') throw new ForbiddenError('Only admins can view applications');
+
         const { searchParams } = new URL(request.url)
-
-        // Get authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            throw new UnauthorizedError()
-        }
-
-        // Check if user is admin
-        const { data: profile } = await (supabase
-            .from('profiles') as any)
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        if (!profile || (profile as any).role !== 'admin') {
-            throw new ForbiddenError('Only admins can view applications')
-        }
-
-        // Get query parameters
         const page = parseInt(searchParams.get('page') || '1')
         const limit = parseInt(searchParams.get('limit') || '20')
         const status = searchParams.get('status')
+        const skip = (page - 1) * limit
 
-        // Calculate pagination
-        const from = (page - 1) * limit
-        const to = from + limit - 1
-
-        // Build query
-        let query = (supabase
-            .from('wholesale_applications') as any)
-            .select(`
-        *,
-        applicant:profiles!wholesale_applications_user_id_fkey(id, full_name, phone)
-      `, { count: 'exact' })
-
-        // Apply status filter
+        const where: Prisma.WholesaleApplicationWhereInput = {}
         if (status) {
-            query = query.eq('status', status)
+            // Map status string to enum if needed, assuming match
+            // Enum: PENDING, APPROVED, REJECTED
+            where.status = status.toUpperCase() as any;
         }
 
-        // Apply sorting and pagination
-        query = query
-            .order('created_at', { ascending: false })
-            .range(from, to)
-
-        const { data: applications, error, count } = await query
-
-        if (error) {
-            console.error('Failed to fetch applications:', error)
-            throw new Error('Failed to fetch applications')
-        }
+        const [applications, count] = await Promise.all([
+            prisma.wholesaleApplication.findMany({
+                where,
+                include: {
+                    user: { select: { id: true, fullName: true, phone: true } }
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit
+            }),
+            prisma.wholesaleApplication.count({ where })
+        ]);
 
         return NextResponse.json({
             data: applications,
             pagination: {
                 page,
                 limit,
-                total: count || 0,
-                totalPages: Math.ceil((count || 0) / limit),
-            },
+                total: count,
+                totalPages: Math.ceil(count / limit)
+            }
         })
 
     } catch (error) {

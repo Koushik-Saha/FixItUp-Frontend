@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
@@ -260,10 +264,10 @@ function OrderConfirmationContent() {
                                 <div className="flex items-center justify-between">
                                     <span className="text-neutral-400">Shipping</span>
                                     <span>
-                    {order.shipping_cost === 0
-                        ? 'FREE'
-                        : `$${order.shipping_cost.toFixed(2)}`}
-                  </span>
+                                        {order.shipping_cost === 0
+                                            ? 'FREE'
+                                            : `$${order.shipping_cost.toFixed(2)}`}
+                                    </span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-neutral-400">Tax</span>
@@ -272,8 +276,8 @@ function OrderConfirmationContent() {
                                 <div className="border-t border-neutral-800 pt-3 flex items-center justify-between">
                                     <span className="font-medium">Total Paid</span>
                                     <span className="text-lg font-semibold">
-                    ${order.total_amount.toFixed(2)}
-                  </span>
+                                        ${order.total_amount.toFixed(2)}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -329,7 +333,7 @@ function OrderConfirmationContent() {
                                         <ArrowRight className="w-4 h-4" />
                                     </Link>
                                     <button
-                                        onClick={() => {/* Dismiss prompt */}}
+                                        onClick={() => {/* Dismiss prompt */ }}
                                         className="text-sm text-neutral-400 hover:text-neutral-300"
                                     >
                                         Maybe later

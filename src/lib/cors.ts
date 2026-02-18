@@ -58,7 +58,7 @@ export function addCorsHeaders(response: NextResponse, origin: string | null): N
  * Create a JSON response with CORS headers
  */
 export function corsJsonResponse(
-    data: any,
+    data: unknown,
     options: { status?: number; origin: string | null } = { status: 200, origin: null }
 ): NextResponse {
     return NextResponse.json(data, {

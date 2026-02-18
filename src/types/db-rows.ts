@@ -1,10 +1,8 @@
-import type { Database } from "@/types/database";
+import { User, Order, Product, OrderItem, RepairTicket, WholesaleApplication } from "@prisma/client";
 
-type Tables = Database["public"]["Tables"];
-
-export type ProfileRow = Tables["profiles"]["Row"];
-export type OrderRow = Tables["orders"]["Row"];
-export type ProductRow = Tables["products"]["Row"];
-export type OrderItemRow = Tables["order_items"]["Row"];
-export type RepairTicketRow = Tables["repair_tickets"]["Row"];
-export type WholesaleApplicationRow = Tables["wholesale_applications"]["Row"];
+export type ProfileRow = User;
+export type OrderRow = Order;
+export type ProductRow = Product;
+export type OrderItemRow = OrderItem;
+export type RepairTicketRow = RepairTicket;
+export type WholesaleApplicationRow = WholesaleApplication;

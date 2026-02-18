@@ -6,7 +6,18 @@ export interface OrderItem {
     quantity: number
 }
 
-export interface Address {
+export interface OrderAddress {
+    fullName: string
+    phone?: string
+    addressLine1: string
+    addressLine2?: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+}
+
+export interface AddressInput {
     full_name: string
     phone?: string
     address_line_1: string
@@ -19,34 +30,46 @@ export interface Address {
 
 export interface CreateOrderRequest {
     items: OrderItem[]
-    shipping_address: Address
-    billing_address?: Address
+    shipping_address: AddressInput
+    billing_address?: AddressInput
     customer_notes?: string
+}
+
+// Detailed item for Order response
+export interface OrderDetailsItem {
+    id: string
+    productName: string
+    productSku: string
+    unitPrice: number
+    quantity: number
+    productImage?: string
+    productId: string
 }
 
 export interface Order {
     id: string
-    order_number: string
-    user_id: string
-    customer_name: string
-    customer_email: string
-    customer_phone?: string
+    orderNumber: string
+    userId: string
+    customerName: string
+    customerEmail: string
+    customerPhone?: string
     subtotal: number
-    discount_amount: number
-    tax_amount: number
-    shipping_cost: number
-    total_amount: number
-    is_wholesale: boolean
-    wholesale_tier?: string
-    shipping_address: Address
-    billing_address: Address
-    customer_notes?: string
+    discountAmount: number
+    taxAmount: number
+    shippingCost: number
+    totalAmount: number
+    isWholesale: boolean
+    wholesaleTier?: string
+    shippingAddress: OrderAddress
+    billingAddress: OrderAddress
+    customerNotes?: string
     status: string
-    payment_status: string
-    payment_intent_id?: string
-    payment_method?: string
-    created_at: string
-    updated_at: string
+    paymentStatus: string
+    paymentIntentId?: string
+    paymentMethod?: string
+    createdAt: string
+    updatedAt: string
+    orderItems?: OrderDetailsItem[]
 }
 
 export interface OrderResponse {
@@ -62,10 +85,10 @@ export interface OrderResponse {
 export interface CreateOrderResponse {
     message: string
     data: {
-        order_id: string
-        order_number: string
-        total_amount: number
-        client_secret?: string // For Stripe payment intent
+        orderId: string
+        orderNumber: string
+        totalAmount: number
+        clientSecret?: string // For Stripe payment intent
     }
 }
 
@@ -81,7 +104,10 @@ export async function createOrder(orderData: CreateOrderRequest): Promise<Create
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create order')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to create order'
+        throw new Error(errorMessage)
     }
 
     return response.json()
@@ -94,7 +120,7 @@ export async function getOrders(params: {
     status?: string
 } = {}): Promise<OrderResponse> {
     const searchParams = new URLSearchParams()
-    
+
     if (params.page) searchParams.set('page', params.page.toString())
     if (params.limit) searchParams.set('limit', params.limit.toString())
     if (params.status) searchParams.set('status', params.status)
@@ -108,7 +134,10 @@ export async function getOrders(params: {
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch orders')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to fetch orders'
+        throw new Error(errorMessage)
     }
 
     return response.json()
@@ -125,7 +154,10 @@ export async function getOrder(orderId: string): Promise<{ data: Order }> {
 
     if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch order')
+        const errorMessage = typeof errorData.error === 'string'
+            ? errorData.error
+            : errorData.error?.message || 'Failed to fetch order'
+        throw new Error(errorMessage)
     }
 
     return response.json()
