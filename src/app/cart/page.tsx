@@ -8,14 +8,17 @@ import { Loader2, Trash2, Minus, Plus, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
-import { getCart, updateCartItem, removeFromCart, CartItem, CartSummary } from '@/lib/api/cart'
+import { getCart, updateCartItem, removeFromCart, CartItem as ApiCartItem, CartSummary } from '@/lib/api/cart'
 import { toast } from 'sonner'
+import { useCartStore } from '@/store'
+import { Product } from '@/types'
 
 export default function CartPage() {
     const router = useRouter()
     const { user, isLoading: authLoading } = useAuth()
+    const { setItems } = useCartStore()
 
-    const [cartItems, setCartItems] = useState<CartItem[]>([])
+    const [cartItems, setCartItems] = useState<ApiCartItem[]>([])
     const [summary, setSummary] = useState<CartSummary | null>(null)
     const [loading, setLoading] = useState(true)
     const [updatingId, setUpdatingId] = useState<string | null>(null)
@@ -26,6 +29,30 @@ export default function CartPage() {
             const response = await getCart()
             setCartItems(response.data.items)
             setSummary(response.data.summary)
+
+            // Sync with local store for Header count
+            // Map API items to Local Store items
+            const localItems = response.data.items.map(item => ({
+                productId: item.product_id,
+                product: {
+                    ...item.product,
+                    // Map API fields to Product type requirements (mocking missing fields safely)
+                    id: item.product.id,
+                    name: item.product.name,
+                    sku: item.product.sku,
+                    retailPrice: item.pricing.original_price,
+                    images: [{ url: item.product.image, alt: item.product.name, isPrimary: true, id: '1', order: 0 }],
+                    thumbnail: item.product.image,
+                    description: '',
+                    brand: item.product.brand,
+                    category: { id: '', name: '', slug: '', description: '', order: 0, productCount: 0 },
+                    // Cast as any for other missing required fields to avoid runtime errors in UI components relying on simple data
+                } as unknown as Product,
+                quantity: item.quantity,
+                price: item.pricing.unit_price,
+            }))
+
+            setItems(localItems)
         } catch (error) {
             console.error('Failed to load cart', error)
             toast.error('Failed to load cart')

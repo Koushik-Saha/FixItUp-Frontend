@@ -217,8 +217,8 @@ export async function POST(request: NextRequest) {
                     customerName: user.fullName || shipping_address.full_name,
                     customerEmail: user.email || '',
                     customerPhone: user.phone || shipping_address.phone || null,
-                    status: 'PENDING',
-                    paymentStatus: 'PENDING', // Payment integration later
+                    status: 'pending',
+                    paymentStatus: 'pending', // Payment integration later
                     subtotal,
                     taxAmount,
                     shippingCost,

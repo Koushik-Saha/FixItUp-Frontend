@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import { createOrder } from '@/lib/api/orders'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
@@ -28,7 +29,17 @@ const checkoutSchema = z.object({
     postal_code: z.string().min(1, 'Zip Code is required'),
     country: z.string().default('US'),
     phone: z.string().optional(),
-    customer_notes: z.string().optional()
+    customer_notes: z.string().optional(),
+
+    // Billing Address
+    billing_full_name: z.string().optional(),
+    billing_address_line_1: z.string().optional(),
+    billing_address_line_2: z.string().optional(),
+    billing_city: z.string().optional(),
+    billing_state: z.string().optional(),
+    billing_postal_code: z.string().optional(),
+    billing_country: z.string().optional(),
+    billing_phone: z.string().optional(),
 })
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>
@@ -58,6 +69,7 @@ export default function CheckoutPage() {
     const [loadingAddresses, setLoadingAddresses] = useState(true)
     const [showNewAddressForm, setShowNewAddressForm] = useState(false)
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+    const [billingSameAsShipping, setBillingSameAsShipping] = useState(true)
 
     const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<CheckoutFormData>({
         resolver: zodResolver(checkoutSchema),
@@ -134,7 +146,26 @@ export default function CheckoutPage() {
                     country: data.country,
                     phone: data.phone
                 },
-                customer_notes: data.customer_notes
+                customer_notes: data.customer_notes,
+                billing_address: billingSameAsShipping ? {
+                    full_name: data.full_name,
+                    address_line_1: data.address_line_1,
+                    address_line_2: data.address_line_2,
+                    city: data.city,
+                    state: data.state,
+                    postal_code: data.postal_code,
+                    country: data.country,
+                    phone: data.phone
+                } : {
+                    full_name: data.billing_full_name,
+                    address_line_1: data.billing_address_line_1,
+                    address_line_2: data.billing_address_line_2,
+                    city: data.billing_city,
+                    state: data.billing_state,
+                    postal_code: data.billing_postal_code,
+                    country: data.billing_country || 'US',
+                    phone: data.billing_phone
+                }
             }
 
             // 1. Create Order
@@ -266,56 +297,120 @@ export default function CheckoutPage() {
                             <CardContent>
                                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="full_name">Full Name</Label>
-                                        <Input id="full_name" {...register('full_name')} placeholder="John Doe" />
-                                        {errors.full_name && <p className="text-sm text-red-500">{errors.full_name.message}</p>}
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="address_line_1">Address</Label>
-                                        <Input id="address_line_1" {...register('address_line_1')} placeholder="123 Main St" />
-                                        {errors.address_line_1 && <p className="text-sm text-red-500">{errors.address_line_1.message}</p>}
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="address_line_2">Apartment, Suite, etc. (Optional)</Label>
-                                        <Input id="address_line_2" {...register('address_line_2')} placeholder="Apt 4B" />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className={cn("space-y-4", !showNewAddressForm && "hidden")}>
                                         <div className="grid gap-2">
-                                            <Label htmlFor="city">City</Label>
-                                            <Input id="city" {...register('city')} placeholder="New York" />
-                                            {errors.city && <p className="text-sm text-red-500">{errors.city.message}</p>}
+                                            <Label htmlFor="full_name">Full Name</Label>
+                                            <Input id="full_name" {...register('full_name')} placeholder="John Doe" />
+                                            {errors.full_name && <p className="text-sm text-red-500">{errors.full_name.message}</p>}
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="state">State</Label>
-                                            <Input id="state" {...register('state')} placeholder="NY" />
-                                            {errors.state && <p className="text-sm text-red-500">{errors.state.message}</p>}
-                                        </div>
-                                    </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="postal_code">Zip Code</Label>
-                                            <Input id="postal_code" {...register('postal_code')} placeholder="10001" />
-                                            {errors.postal_code && <p className="text-sm text-red-500">{errors.postal_code.message}</p>}
+                                            <Label htmlFor="address_line_1">Address</Label>
+                                            <Input id="address_line_1" {...register('address_line_1')} placeholder="123 Main St" />
+                                            {errors.address_line_1 && <p className="text-sm text-red-500">{errors.address_line_1.message}</p>}
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="country">Country</Label>
-                                            <Input id="country" {...register('country')} disabled />
-                                        </div>
-                                    </div>
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="phone">Phone (Optional)</Label>
-                                        <Input id="phone" {...register('phone')} placeholder="(555) 123-4567" />
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="address_line_2">Apartment, Suite, etc. (Optional)</Label>
+                                            <Input id="address_line_2" {...register('address_line_2')} placeholder="Apt 4B" />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="city">City</Label>
+                                                <Input id="city" {...register('city')} placeholder="New York" />
+                                                {errors.city && <p className="text-sm text-red-500">{errors.city.message}</p>}
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="state">State</Label>
+                                                <Input id="state" {...register('state')} placeholder="NY" />
+                                                {errors.state && <p className="text-sm text-red-500">{errors.state.message}</p>}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="postal_code">Zip Code</Label>
+                                                <Input id="postal_code" {...register('postal_code')} placeholder="10001" />
+                                                {errors.postal_code && <p className="text-sm text-red-500">{errors.postal_code.message}</p>}
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="country">Country</Label>
+                                                <Input id="country" {...register('country')} disabled />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="phone">Phone (Optional)</Label>
+                                            <Input id="phone" {...register('phone')} placeholder="(555) 123-4567" />
+                                        </div>
                                     </div>
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="customer_notes">Order Notes (Optional)</Label>
                                         <Textarea id="customer_notes" {...register('customer_notes')} placeholder="Special instructions for delivery..." />
+                                    </div>
+
+                                    {/* Billing Address Logic */}
+                                    <div className="py-6 border-t border-neutral-200 dark:border-neutral-800">
+                                        <div className="flex items-center space-x-2 mb-6">
+                                            <Checkbox
+                                                id="billingSameAsShipping"
+                                                checked={billingSameAsShipping}
+                                                onCheckedChange={(checked) => setBillingSameAsShipping(checked as boolean)}
+                                            />
+                                            <Label htmlFor="billingSameAsShipping">
+                                                Billing address same as shipping
+                                            </Label>
+                                        </div>
+
+                                        {!billingSameAsShipping && (
+                                            <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                                                <h3 className="font-semibold text-lg text-neutral-900 dark:text-white mb-4">Billing Address</h3>
+
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="billing_full_name">Full Name</Label>
+                                                    <Input id="billing_full_name" {...register('billing_full_name')} placeholder="John Doe" />
+                                                </div>
+
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="billing_address_line_1">Address</Label>
+                                                    <Input id="billing_address_line_1" {...register('billing_address_line_1')} placeholder="123 Main St" />
+                                                </div>
+
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="billing_address_line_2">Apartment, Suite, etc. (Optional)</Label>
+                                                    <Input id="billing_address_line_2" {...register('billing_address_line_2')} placeholder="Apt 4B" />
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="billing_city">City</Label>
+                                                        <Input id="billing_city" {...register('billing_city')} placeholder="New York" />
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="billing_state">State</Label>
+                                                        <Input id="billing_state" {...register('billing_state')} placeholder="NY" />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="billing_postal_code">Zip Code</Label>
+                                                        <Input id="billing_postal_code" {...register('billing_postal_code')} placeholder="10001" />
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="billing_country">Country</Label>
+                                                        <Input id="billing_country" {...register('billing_country')} defaultValue="US" disabled />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="billing_phone">Phone (Optional)</Label>
+                                                    <Input id="billing_phone" {...register('billing_phone')} placeholder="(555) 123-4567" />
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="pt-4">

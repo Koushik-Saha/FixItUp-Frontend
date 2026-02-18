@@ -58,8 +58,7 @@ export default function ProductClient({ product }: ProductClientProps) {
     }, [product, addProduct])
 
     const handleAddToCart = async () => {
-        if (!product || !user) {
-            window.location.href = '/auth/login'
+        if (!product) {
             return
         }
         try {
@@ -72,7 +71,10 @@ export default function ProductClient({ product }: ProductClientProps) {
             toast.success('Item added to cart successfully!')
         } catch (err) {
             console.error('Failed to add to cart', err)
-            toast.error('Failed to add item to cart')
+            // Fallback for guests if API fails (likely 401)
+            // Just add to local store
+            addItemToCart(product as any, quantity)
+            toast.success('Item added to cart (Local)!')
         } finally {
             setCartLoading(false)
         }
@@ -263,11 +265,11 @@ export default function ProductClient({ product }: ProductClientProps) {
                             <div className="flex gap-3 mb-6">
                                 <Button
                                     onClick={handleAddToCart}
-                                    disabled={cartLoading || !user}
+                                    disabled={cartLoading}
                                     className="flex-1 px-6 py-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-semibold"
                                 >
                                     {cartLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShoppingCart className="h-5 w-5" />}
-                                    {!user ? 'Login to Purchase' : 'Add to Cart'}
+                                    Add to Cart
                                 </Button>
                                 <button
                                     onClick={handleToggleWishlist}

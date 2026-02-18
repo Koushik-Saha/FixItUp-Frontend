@@ -361,7 +361,12 @@ export function CategorySection() {
                                             <Link
                                                 key={brand.id}
                                                 href={`/shop?brand=${brand.slug}`}
-                                                onMouseEnter={() => { setActiveBrandId(brand.id); setPinnedSubcatId(brand.children[0]?.id || null); setActiveSubcatId(brand.children[0]?.id || null); }}
+                                                onMouseEnter={() => {
+                                                    setActiveBrandId(brand.id);
+                                                    const defaultChild = brand.children.find(c => ['iPhone', 'Galaxy Phones', 'Pixel Phones'].includes(c.name)) || brand.children[0];
+                                                    setPinnedSubcatId(defaultChild?.id || null);
+                                                    setActiveSubcatId(defaultChild?.id || null);
+                                                }}
                                                 className={`
                                                     relative py-2 px-4 whitespace-nowrap text-[13px] font-bold transition-all flex-shrink-0 flex items-center gap-1 uppercase tracking-wider
                                                     ${isActive

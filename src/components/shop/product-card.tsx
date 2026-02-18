@@ -85,7 +85,7 @@ export function ProductCard({ product, viewMode, onAddToCart, isLoading, user }:
 
                         <Button
                             onClick={() => onAddToCart(product.id)}
-                            disabled={isLoading || product.totalStock <= 0 || !user}
+                            disabled={isLoading || product.totalStock <= 0}
                             className="w-full md:w-auto"
                         >
                             {isLoading ? (
@@ -93,7 +93,7 @@ export function ProductCard({ product, viewMode, onAddToCart, isLoading, user }:
                             ) : (
                                 <ShoppingCart className="h-4 w-4 mr-2" />
                             )}
-                            {!user ? 'Login to Purchase' : 'Add to Cart'}
+                            Add to Cart
                         </Button>
                     </div>
                 </div>
@@ -171,7 +171,7 @@ export function ProductCard({ product, viewMode, onAddToCart, isLoading, user }:
                 {/* Add to Cart */}
                 <Button
                     onClick={() => onAddToCart(product.id)}
-                    disabled={isLoading || product.totalStock <= 0 || !user}
+                    disabled={isLoading || product.totalStock <= 0}
                     className="w-full"
                 >
                     {isLoading ? (
@@ -179,7 +179,7 @@ export function ProductCard({ product, viewMode, onAddToCart, isLoading, user }:
                     ) : (
                         <ShoppingCart className="h-4 w-4 mr-2" />
                     )}
-                    {!user ? 'Login to Purchase' : 'Add to Cart'}
+                    Add to Cart
                 </Button>
             </div>
         </div>

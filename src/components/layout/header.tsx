@@ -106,7 +106,7 @@ export function Header() {
           </Link>
 
           {/* Search Bar - Desktop Only */}
-          <div className="hidden lg:flex flex-1 max-w-2xl">
+          <div className="hidden lg:flex flex-1 max-w-4xl px-8">
             <SmartSearch />
           </div>
 
