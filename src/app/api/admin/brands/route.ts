@@ -5,20 +5,20 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const isActive = searchParams.get("isActive");
+        const type = searchParams.get("type");
+        const isPopular = searchParams.get("isPopular");
 
         const where: any = {};
         if (isActive) where.isActive = isActive === "true";
+        if (type) where.type = type;
+        if (isPopular) where.isPopular = isPopular === "true";
 
-        const categories = await prisma.category.findMany({
+        const brands = await prisma.brand.findMany({
             where,
-            orderBy: { sort_order: "asc" },
-            include: {
-                parent: true,
-                children: true,
-            }
+            orderBy: { sortOrder: "asc" },
         });
 
-        return NextResponse.json({ success: true, data: categories });
+        return NextResponse.json({ success: true, data: brands });
     } catch (error: any) {
         return NextResponse.json(
             { success: false, message: error.message },
@@ -30,25 +30,25 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { name, slug, icon, description, isActive, sort_order, parentId } = body;
+        const { name, slug, logo, type, isPopular, isActive, sortOrder } = body;
 
-        const category = await prisma.category.create({
+        const brand = await prisma.brand.create({
             data: {
                 name,
                 slug,
-                icon,
-                description,
+                logo,
+                type,
+                isPopular: isPopular ?? false,
                 isActive: isActive ?? true,
-                sort_order: sort_order ?? 0,
-                parentId: parentId || null,
+                sortOrder: sortOrder ?? 0,
             },
         });
 
-        return NextResponse.json({ success: true, data: category }, { status: 201 });
+        return NextResponse.json({ success: true, data: brand }, { status: 201 });
     } catch (error: any) {
         if (error.code === "P2002") {
             return NextResponse.json(
-                { success: false, message: "Category name or slug already exists." },
+                { success: false, message: "Brand name or slug already exists." },
                 { status: 400 }
             );
         }

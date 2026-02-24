@@ -7,19 +7,15 @@ export async function GET(
 ) {
     try {
         const resolvedParams = await params;
-        const category = await prisma.category.findUnique({
+        const section = await prisma.homepageSection.findUnique({
             where: { id: resolvedParams.id },
-            include: {
-                parent: true,
-                children: true,
-            }
         });
 
-        if (!category) {
-            return NextResponse.json({ success: false, message: "Category not found" }, { status: 404 });
+        if (!section) {
+            return NextResponse.json({ success: false, message: "Homepage Section not found" }, { status: 404 });
         }
 
-        return NextResponse.json({ success: true, data: category });
+        return NextResponse.json({ success: true, data: section });
     } catch (error: any) {
         return NextResponse.json(
             { success: false, message: error.message },
@@ -36,16 +32,18 @@ export async function PATCH(
         const resolvedParams = await params;
         const body = await req.json();
 
-        const category = await prisma.category.update({
+        if (body.sortOrder !== undefined) body.sortOrder = parseInt(body.sortOrder);
+
+        const section = await prisma.homepageSection.update({
             where: { id: resolvedParams.id },
             data: body,
         });
 
-        return NextResponse.json({ success: true, data: category });
+        return NextResponse.json({ success: true, data: section });
     } catch (error: any) {
         if (error.code === "P2025") {
             return NextResponse.json(
-                { success: false, message: "Category not found" },
+                { success: false, message: "Homepage Section not found" },
                 { status: 404 }
             );
         }
@@ -62,14 +60,14 @@ export async function DELETE(
 ) {
     try {
         const resolvedParams = await params;
-        await prisma.category.delete({
+        await prisma.homepageSection.delete({
             where: { id: resolvedParams.id },
         });
 
-        return NextResponse.json({ success: true, message: "Category deleted successfully." });
+        return NextResponse.json({ success: true, message: "Homepage Section deleted successfully." });
     } catch (error: any) {
         if (error.code === "P2025") {
-            return NextResponse.json({ success: false, message: "Category not found" }, { status: 404 });
+            return NextResponse.json({ success: false, message: "Homepage Section not found" }, { status: 404 });
         }
         return NextResponse.json(
             { success: false, message: error.message },

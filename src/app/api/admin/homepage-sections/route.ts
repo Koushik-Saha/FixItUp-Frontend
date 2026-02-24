@@ -9,16 +9,12 @@ export async function GET(req: NextRequest) {
         const where: any = {};
         if (isActive) where.isActive = isActive === "true";
 
-        const categories = await prisma.category.findMany({
+        const sections = await prisma.homepageSection.findMany({
             where,
-            orderBy: { sort_order: "asc" },
-            include: {
-                parent: true,
-                children: true,
-            }
+            orderBy: { sortOrder: "asc" },
         });
 
-        return NextResponse.json({ success: true, data: categories });
+        return NextResponse.json({ success: true, data: sections });
     } catch (error: any) {
         return NextResponse.json(
             { success: false, message: error.message },
@@ -30,25 +26,30 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { name, slug, icon, description, isActive, sort_order, parentId } = body;
+        const { sectionId, name, isActive, sortOrder, config } = body;
 
-        const category = await prisma.category.create({
+        if (!sectionId || !name) {
+            return NextResponse.json(
+                { success: false, message: "Section ID and Name are required" },
+                { status: 400 }
+            );
+        }
+
+        const section = await prisma.homepageSection.create({
             data: {
+                sectionId,
                 name,
-                slug,
-                icon,
-                description,
                 isActive: isActive ?? true,
-                sort_order: sort_order ?? 0,
-                parentId: parentId || null,
+                sortOrder: sortOrder ? parseInt(sortOrder) : 0,
+                config: config || undefined,
             },
         });
 
-        return NextResponse.json({ success: true, data: category }, { status: 201 });
+        return NextResponse.json({ success: true, data: section }, { status: 201 });
     } catch (error: any) {
         if (error.code === "P2002") {
             return NextResponse.json(
-                { success: false, message: "Category name or slug already exists." },
+                { success: false, message: "A section with this ID already exists." },
                 { status: 400 }
             );
         }

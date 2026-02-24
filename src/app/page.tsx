@@ -61,7 +61,7 @@ export default async function HomePage() {
             </div>
 
             {/* Shop By Category */}
-            {data?.categories?.length ? (
+            {data?.layout?.['top_categories']?.isActive && data?.categories?.length ? (
                 <ShopByCategory categories={data.categories} />
             ) : null}
 
@@ -74,7 +74,7 @@ export default async function HomePage() {
             </div>
 
             {/* New Arrivals */}
-            {data?.newArrivals?.length ? (
+            {data?.layout?.['new_arrivals']?.isActive && data?.newArrivals?.length ? (
                 <ProductGrid
                     title="New Arrivals"
                     products={data.newArrivals}
@@ -82,7 +82,7 @@ export default async function HomePage() {
             ) : null}
 
             {/* Top Brands */}
-            {data?.brands?.length ? <TopBrand topBrands={data.brands} /> : null}
+            {data?.layout?.['top_brands']?.isActive && data?.brands?.length ? <TopBrand topBrands={data.brands} /> : null}
 
             {/* CTA Section */}
             {data?.cta ? <CTASection cta={data.cta} /> : null}

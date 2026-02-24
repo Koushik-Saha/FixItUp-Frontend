@@ -78,6 +78,21 @@ export default async function RootLayout({
 }) {
     const footerSections = await getFooterSections();
 
+    // Fetch Global Site Settings
+    const { default: prisma } = await import('@/lib/prisma');
+    const dbSettings = await prisma.systemSetting.findMany({
+        where: { key: { in: ['site_contact_phone', 'site_contact_email', 'site_social_facebook', 'site_social_twitter', 'site_social_instagram'] } }
+    });
+    const settings = Object.fromEntries(dbSettings.map((s: any) => [s.key, s.value]));
+
+    const phone = settings['site_contact_phone'] || '+1-800-123-4567';
+    const email = settings['site_contact_email'] || 'support@maxphonerepair.com';
+
+    const socialLinks = [];
+    if (settings['site_social_facebook']) socialLinks.push(settings['site_social_facebook']);
+    if (settings['site_social_twitter']) socialLinks.push(settings['site_social_twitter']);
+    if (settings['site_social_instagram']) socialLinks.push(settings['site_social_instagram']);
+
     return (
         <html lang="en" suppressHydrationWarning>
             <body
@@ -99,17 +114,18 @@ export default async function RootLayout({
                             __html: JSON.stringify({
                                 '@context': 'https://schema.org',
                                 '@type': 'Organization',
-                                name: 'Max Fix IT',
+                                name: 'Max Phone Repair',
                                 url: 'https://maxphonerepair.com',
                                 logo: 'https://maxphonerepair.com/logo.png',
-                                sameAs: [
+                                sameAs: socialLinks.length > 0 ? socialLinks : [
                                     'https://facebook.com/maxfixit',
                                     'https://twitter.com/maxfixit',
                                     'https://instagram.com/maxfixit'
                                 ],
                                 contactPoint: {
                                     '@type': 'ContactPoint',
-                                    telephone: '+1-800-123-4567',
+                                    telephone: phone,
+                                    email: email,
                                     contactType: 'customer service'
                                 }
                             }),

@@ -119,6 +119,8 @@ model Product {
   createdAt         DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime?        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   model_id          String?          @db.Uuid
+  brand_id          String?          @db.Uuid
+  brandRelation     Brand?           @relation(fields: [brand_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   cartItems         CartItem[]
   inventory         Inventory[]
   orderItems        OrderItem[]
@@ -132,6 +134,7 @@ model Product {
   @@index([isActive], map: "idx_products_active")
   @@index([basePrice], map: "idx_products_base_price")
   @@index([brand], map: "idx_products_brand")
+  @@index([brand_id], map: "idx_products_brand_id")
   @@index([categoryId], map: "idx_products_category")
   @@index([categoryId], map: "idx_products_category_id")
   @@index([deviceModel], map: "idx_products_device_model")
@@ -317,8 +320,6 @@ model CartItem {
   @@index([userId], map: "idx_cart_items_user_id")
   @@map("cart_items")
 }
-
-
 
 model PhoneModel {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -529,10 +530,13 @@ model product_models {
   product_count Int?      @default(0)
   created_at    DateTime? @default(now()) @db.Timestamptz(6)
   updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+  brand_id      String?   @db.Uuid
   categories    Category? @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   products      Product[]
+  brand         Brand?    @relation(fields: [brand_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([category_id, sort_order], map: "idx_product_models_category")
+  @@index([brand_id], map: "idx_product_models_brand_id")
 }
 
 enum Role {
@@ -558,7 +562,7 @@ model SystemSetting {
   key       String   @unique
   value     Json
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   @@map("system_settings")
 }
 
@@ -588,22 +592,22 @@ enum AddressType {
 }
 
 model Address {
-  id        String   @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  fullName  String   @map("full_name")
+  id        String      @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  fullName  String      @map("full_name")
   company   String?
   street1   String
   street2   String?
   city      String
   state     String
-  zipCode   String   @map("zip_code")
-  country   String   @default("US")
+  zipCode   String      @map("zip_code")
+  country   String      @default("US")
   phone     String?
   type      AddressType @default(SHIPPING)
-  isDefault Boolean  @default(false) @map("is_default")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isDefault Boolean     @default(false) @map("is_default")
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("addresses")
@@ -618,4 +622,88 @@ model Subscriber {
   updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("subscribers")
+}
+
+model Brand {
+  id        String  @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  name      String  @unique
+  slug      String  @unique
+  logo      String?
+  type      String  @default("phone") // phone, tablet, laptop
+  isPopular Boolean @default(false) @map("is_popular")
+  isActive  Boolean @default(true) @map("is_active")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  // Relations
+  products Product[]
+  models   product_models[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("brands")
+}
+
+model Page {
+  id              String   @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  title           String
+  slug            String   @unique
+  content         String   @db.Text
+  metaTitle       String?  @map("meta_title")
+  metaDescription String?  @map("meta_description")
+  isPublished     Boolean  @default(false) @map("is_published")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("pages")
+}
+
+model StoreLocation {
+  id        String   @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  name      String
+  address   String
+  city      String
+  state     String
+  zip       String
+  phone     String?
+  email     String?
+  hours     String?
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("store_locations")
+}
+
+model SiteSetting {
+  key       String   @id
+  value     String   @db.Text
+  group     String   @default("general")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("site_settings")
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  email     String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("newsletter_subscribers")
+}
+
+model HomepageSection {
+  id        String   @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
+  sectionId String   @unique @map("section_id") // e.g., 'flash_deals', 'top_brands'
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  config    Json? // Use for extra settings like countdownTimer endDate
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("homepage_sections")
 }

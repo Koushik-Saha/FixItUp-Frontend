@@ -1,58 +1,35 @@
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
-import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
-import { errorResponse } from '@/lib/utils/errors'
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
     try {
-        const body = await request.json()
-        const { email } = body
+        const body = await req.json();
+        const { email } = body;
 
-        if (!email) {
+        if (!email || !email.includes("@")) {
             return NextResponse.json(
-                { success: false, message: 'Email is required' },
+                { success: false, message: "Valid email is required" },
                 { status: 400 }
-            )
+            );
         }
 
-        // Check if already subscribed
-        const existing = await prisma.subscriber.findUnique({
-            where: { email }
-        })
+        const subscriber = await prisma.newsletterSubscriber.create({
+            data: {
+                email,
+            },
+        });
 
-        if (existing) {
-            if (existing.isSubscribed) {
-                return NextResponse.json({
-                    success: true,
-                    message: "You're already subscribed!"
-                })
-            } else {
-                // Re-subscribe
-                await prisma.subscriber.update({
-                    where: { id: existing.id },
-                    data: {
-                        isSubscribed: true,
-                        unsubscribedAt: null
-                    }
-                })
-                return NextResponse.json({
-                    success: true,
-                    message: 'Welcome back! You have been re-subscribed.'
-                })
-            }
+        return NextResponse.json({ success: true, data: subscriber }, { status: 201 });
+    } catch (error: any) {
+        if (error.code === "P2002") {
+            return NextResponse.json(
+                { success: false, message: "Email is already subscribed." },
+                { status: 400 }
+            );
         }
-
-        // Create new subscriber
-        await prisma.subscriber.create({
-            data: { email }
-        })
-
-        return NextResponse.json({
-            success: true,
-            message: 'Thank you for subscribing!'
-        })
-
-    } catch (error) {
-        return errorResponse(error)
+        return NextResponse.json(
+            { success: false, message: error.message },
+            { status: 500 }
+        );
     }
 }

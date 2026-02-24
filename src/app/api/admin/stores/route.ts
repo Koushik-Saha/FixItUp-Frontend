@@ -1,89 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// Helper for CORS
-function getCorsHeaders(request: NextRequest) {
-    const origin = request.headers.get("origin") || "";
-    return {
-        "Access-Control-Allow-Origin": origin,
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, x-mock-auth, x-user-id, x-user-role",
-        "Access-Control-Allow-Credentials": "true",
-    };
-}
-
-export async function OPTIONS(request: NextRequest) {
-    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
-}
-
-// GET /api/admin/stores
-export async function GET(request: NextRequest) {
-    const corsHeaders = getCorsHeaders(request);
-
+export async function GET(req: NextRequest) {
     try {
-        // Auth Check
-        const userRole = request.headers.get("x-user-role");
-        if (userRole !== "ADMIN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
-        }
+        const { searchParams } = new URL(req.url);
+        const isActive = searchParams.get("isActive");
 
-        const stores = await prisma.store.findMany({
-            orderBy: { createdAt: 'desc' }
+        const where: any = {};
+        if (isActive) where.isActive = isActive === "true";
+
+        const stores = await prisma.storeLocation.findMany({
+            where,
+            orderBy: { name: "asc" },
         });
 
-        return NextResponse.json({ data: stores }, { headers: corsHeaders });
-    } catch (err) {
-        console.error("GET Stores Error", err);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: corsHeaders });
+        // Map location data cleanly
+        return NextResponse.json({ success: true, data: stores });
+    } catch (error: any) {
+        return NextResponse.json(
+            { success: false, message: error.message },
+            { status: 500 }
+        );
     }
 }
 
-// POST /api/admin/stores
-export async function POST(request: NextRequest) {
-    const corsHeaders = getCorsHeaders(request);
-
+export async function POST(req: NextRequest) {
     try {
-        // Auth Check
-        const userRole = request.headers.get("x-user-role");
-        if (userRole !== "ADMIN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
-        }
+        const body = await req.json();
+        const { name, address, city, state, zip, phone, email, hours, latitude, longitude, isActive } = body;
 
-        const body = await request.json();
-        const {
-            name,
-            address,
-            city,
-            state,
-            zipCode,
-            phone,
-            email,
-            operatingHours,
-            isActive
-        } = body;
-
-        if (!name || !address || !city || !state || !zipCode || !phone) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: corsHeaders });
-        }
-
-        const store = await prisma.store.create({
+        const store = await prisma.storeLocation.create({
             data: {
                 name,
                 address,
                 city,
                 state,
-                zipCode,
+                zip,
                 phone,
                 email,
-                operatingHours: operatingHours ?? undefined,
-                isActive: isActive !== false
-            }
+                hours,
+                latitude: latitude ? parseFloat(latitude) : null,
+                longitude: longitude ? parseFloat(longitude) : null,
+                isActive: isActive ?? true,
+            },
         });
 
-        return NextResponse.json({ message: "Store created", data: store }, { status: 201, headers: corsHeaders });
-
-    } catch (err) {
-        console.error("Create Store Error", err);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: corsHeaders });
+        return NextResponse.json({ success: true, data: store }, { status: 201 });
+    } catch (error: any) {
+        return NextResponse.json(
+            { success: false, message: error.message },
+            { status: 500 }
+        );
     }
 }

@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
             flashProducts,
             newProducts,
             phoneModels,
-            stores
+            stores,
+            homepageSections
         ] = await Promise.all([
             // 1. Hero Slides
             prisma.heroSlide.findMany({
@@ -73,6 +74,11 @@ export async function GET(request: NextRequest) {
                     operatingHours: true,
                     isActive: true
                 }
+            }),
+
+            // 7. Homepage Sections
+            prisma.homepageSection.findMany({
+                orderBy: { sortOrder: 'asc' }
             })
         ]);
 
@@ -162,6 +168,16 @@ export async function GET(request: NextRequest) {
 
         // Transform Data
 
+        // Map layout configuration
+        const layoutConfig: Record<string, any> = {};
+        homepageSections.forEach((section: any) => {
+            layoutConfig[section.sectionId] = {
+                isActive: section.isActive,
+                sortOrder: section.sortOrder,
+                config: section.config
+            };
+        });
+
         // Categories Fallback
         const mockCategories = categories.length > 0 ? categories : [
             { id: 'cat-1', name: 'Screens', slug: 'screens', icon: '📱', description: 'Replacement Screens' },
@@ -174,13 +190,13 @@ export async function GET(request: NextRequest) {
 
         // Categories Colors
         const colors = ["red", "blue", "orange", "cyan", "purple", "pink", "green", "indigo"];
-        const formattedCategories = finalCategories.map((cat, i) => ({
+        const formattedCategories = finalCategories.map((cat: any, i: number) => ({
             id: cat.id,
             name: cat.name,
             slug: cat.slug,
             icon: cat.icon || cat.name?.charAt(0) || "•",
             color: colors[i % colors.length],
-            count: (cat as any).product_count ? `${(cat as any).product_count} Products` : "Top Quality"
+            count: cat.product_count ? `${cat.product_count} Products` : "Top Quality"
         }));
 
         // Stores Fallback
@@ -200,7 +216,7 @@ export async function GET(request: NextRequest) {
         ];
 
         // Flash Deals
-        const formattedFlashDeals = flashProducts.map(p => {
+        const formattedFlashDeals = flashProducts.map((p: any) => {
             const discount = Number(p.tier1Discount || 10);
             const basePrice = Number(p.basePrice);
             const discountedPrice = basePrice * (1 - discount / 100);
@@ -224,7 +240,7 @@ export async function GET(request: NextRequest) {
         const finalHeroSlides = mockHeroSlides;
 
         // New Arrivals
-        const formattedNewArrivals = mockNewProducts.map(p => ({
+        const formattedNewArrivals = mockNewProducts.map((p: any) => ({
             id: p.id,
             name: p.name,
             slug: p.slug,
@@ -240,7 +256,7 @@ export async function GET(request: NextRequest) {
             models: { id: string; name: string; slug: string; releaseYear: number }[];
         }
 
-        const phoneModelsByBrand = phoneModels.reduce((acc: Record<string, PhoneModelGroup>, model) => {
+        const phoneModelsByBrand = phoneModels.reduce((acc: Record<string, PhoneModelGroup>, model: any) => {
             const brandSlug = model.category.slug;
             if (!acc[brandSlug]) {
                 acc[brandSlug] = {
@@ -289,7 +305,7 @@ export async function GET(request: NextRequest) {
             'OnePlus': '1+',
         }
 
-        const brands = dbBrands.map(b => ({
+        const brands = dbBrands.map((b: any) => ({
             name: b.name,
             logo: b.icon || brandEco[b.name] || '📱',
             products: "View All" // Could count products later
@@ -317,21 +333,28 @@ export async function GET(request: NextRequest) {
             ],
         };
 
+        const layoutFlashDeals = layoutConfig['flash_deals'];
+        let flashDealsResponse = null;
+        if (!layoutFlashDeals || layoutFlashDeals.isActive) {
+            flashDealsResponse = {
+                title: "Flash Deals",
+                subtitle: "Limited Time Offers",
+                endsAt: layoutFlashDeals?.config?.countdownTimerEndDate || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                products: formattedFlashDeals
+            };
+        }
+
         return NextResponse.json({
             success: true,
             data: {
+                layout: layoutConfig,
                 hero: finalHeroSlides, // Replacing static hero with DB slides if frontend handles array
                 heroSlides: finalHeroSlides,
                 categories: formattedCategories,
-                flashDeals: {
-                    title: "Flash Deals",
-                    subtitle: "Limited Time Offers",
-                    endsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                    products: formattedFlashDeals
-                },
+                flashDeals: flashDealsResponse,
                 newArrivals: formattedNewArrivals,
                 brands,
-                stores: finalStores.map(s => ({
+                stores: finalStores.map((s: any) => ({
                     id: s.id,
                     name: s.name,
                     badge: "POPULAR",

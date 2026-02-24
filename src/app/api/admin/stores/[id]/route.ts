@@ -1,97 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// Helper for CORS
-function getCorsHeaders(request: NextRequest) {
-    const origin = request.headers.get("origin") || "";
-    return {
-        "Access-Control-Allow-Origin": origin,
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, x-mock-auth, x-user-id, x-user-role",
-        "Access-Control-Allow-Credentials": "true",
-    };
-}
-
-export async function OPTIONS(request: NextRequest) {
-    return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
-}
-
-// PUT /api/admin/stores/[id]
-export async function PUT(
-    request: NextRequest,
-    props: { params: Promise<{ id: string }> }
+export async function GET(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    const corsHeaders = getCorsHeaders(request);
-    const { id } = await props.params;
-
     try {
-        // Auth Check
-        const userRole = request.headers.get("x-user-role");
-        if (userRole !== "ADMIN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
-        }
-
-        const body = await request.json();
-        const {
-            name,
-            address,
-            city,
-            state,
-            zipCode,
-            phone,
-            email,
-            operatingHours,
-            isActive
-        } = body;
-
-        const store = await prisma.store.update({
-            where: { id },
-            data: {
-                name,
-                address,
-                city,
-                state,
-                zipCode,
-                phone,
-                email,
-                operatingHours: operatingHours ?? undefined,
-                isActive
-            }
+        const resolvedParams = await params;
+        const store = await prisma.storeLocation.findUnique({
+            where: { id: resolvedParams.id },
         });
 
-        return NextResponse.json({ message: "Store updated", data: store }, { headers: corsHeaders });
+        if (!store) {
+            return NextResponse.json({ success: false, message: "Store Location not found" }, { status: 404 });
+        }
 
-    } catch (err) {
-        console.error("Update Store Error", err);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: corsHeaders });
+        return NextResponse.json({ success: true, data: store });
+    } catch (error: any) {
+        return NextResponse.json(
+            { success: false, message: error.message },
+            { status: 500 }
+        );
     }
 }
 
-// DELETE /api/admin/stores/[id]
-export async function DELETE(
-    request: NextRequest,
-    props: { params: Promise<{ id: string }> }
+export async function PATCH(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    const corsHeaders = getCorsHeaders(request);
-    const { id } = await props.params;
-
     try {
-        // Auth Check
-        const userRole = request.headers.get("x-user-role");
-        if (userRole !== "ADMIN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
-        }
+        const resolvedParams = await params;
+        const body = await req.json();
 
-        // Optional checks for inventory or repair tickets linked to store could be added here
+        // Parse lat/lng if provided
+        if (body.latitude) body.latitude = parseFloat(body.latitude);
+        if (body.longitude) body.longitude = parseFloat(body.longitude);
 
-        await prisma.store.delete({
-            where: { id }
+        const store = await prisma.storeLocation.update({
+            where: { id: resolvedParams.id },
+            data: body,
         });
 
-        return NextResponse.json({ message: "Store deleted" }, { headers: corsHeaders });
+        return NextResponse.json({ success: true, data: store });
+    } catch (error: any) {
+        if (error.code === "P2025") {
+            return NextResponse.json(
+                { success: false, message: "Store Location not found" },
+                { status: 404 }
+            );
+        }
+        return NextResponse.json(
+            { success: false, message: error.message },
+            { status: 500 }
+        );
+    }
+}
 
-    } catch (err) {
-        console.error("Delete Store Error", err);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: corsHeaders });
+export async function DELETE(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const resolvedParams = await params;
+        await prisma.storeLocation.delete({
+            where: { id: resolvedParams.id },
+        });
+
+        return NextResponse.json({ success: true, message: "Store Location deleted successfully." });
+    } catch (error: any) {
+        if (error.code === "P2025") {
+            return NextResponse.json({ success: false, message: "Store Location not found" }, { status: 404 });
+        }
+        return NextResponse.json(
+            { success: false, message: error.message },
+            { status: 500 }
+        );
     }
 }
