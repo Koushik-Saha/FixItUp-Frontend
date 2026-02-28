@@ -4,26 +4,51 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-    const email = 'admin@maxphonerepair.com'
-    const password = 'AdminPassword123!'
-    const hashedPassword = await bcrypt.hash(password, 10)
+    // 1. Create Normal User
+    const userEmail = 'mnhque@gmail.com'
+    const userPassword = 'UserPassword123!'
+    const hashedUserPassword = await bcrypt.hash(userPassword, 10)
 
-    const admin = await prisma.user.upsert({
-        where: { email },
+    const user = await prisma.user.upsert({
+        where: { email: userEmail },
         update: {
-            role: 'ADMIN',
-            password: hashedPassword
+            password: hashedUserPassword,
+            role: 'CUSTOMER'
         },
         create: {
-            email,
-            fullName: 'System Administrator',
-            password: hashedPassword,
+            email: userEmail,
+            fullName: 'Mnhque User',
+            password: hashedUserPassword,
+            role: 'CUSTOMER'
+        }
+    })
+    console.log('Customer user ready!')
+    console.log('Email:', userEmail)
+    console.log('Password:', userPassword)
+
+    console.log('-------------------')
+
+    // 2. Create Admin User
+    const adminEmail = 'admin2@maxphonerepair.com'
+    const adminPassword = 'AdminPassword456!'
+    const hashedAdminPassword = await bcrypt.hash(adminPassword, 10)
+
+    const admin = await prisma.user.upsert({
+        where: { email: adminEmail },
+        update: {
+            role: 'ADMIN',
+            password: hashedAdminPassword
+        },
+        create: {
+            email: adminEmail,
+            fullName: 'System Administrator 2',
+            password: hashedAdminPassword,
             role: 'ADMIN'
         }
     })
     console.log('Admin user ready!')
-    console.log('Email:', email)
-    console.log('Password:', password)
+    console.log('Email:', adminEmail)
+    console.log('Password:', adminPassword)
 }
 
 main()

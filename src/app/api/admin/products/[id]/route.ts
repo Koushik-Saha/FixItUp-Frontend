@@ -17,7 +17,7 @@ const allowedOrigins = [
 
 function getCorsHeaders(request: NextRequest) {
     const origin = request.headers.get("origin") || "";
-    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || origin;
+    const allowOrigin = origin || "*";
 
     return {
         "Access-Control-Allow-Origin": allowOrigin,
